@@ -1,227 +1,410 @@
 ---
 name: agentic_kg_memory
-description: Architecture and operating protocol for agentic memory built from a retrieved knowledge graph. Use when defining or updating wiki-memory entries, intent/objective routing, throughlines, entity bags, merge rules, and judge-driven memory updates.
+description: >
+  Graph-backed semantic memory and reasoning protocol. Use when extracting
+  premises into a knowledge graph, retrieving evidence with BM25/NLI, updating
+  memory entries from new evidence, or maintaining wiki-like throughlines that
+  evolve as the graph learns.
 ---
+
 # Agentic KG Memory
 
-## Core Thesis
-The memory layer is not generic chat history. It is a persistent, structured wiki built from retrieved graph evidence and updated by an LLM judge.
+## Scope Boundary
 
-- Organize memory by **intent first**
-- Normalize what the user is trying to accomplish as an **objective**
-- Keep a weighted **entity bag** as supporting evidence, not as the primary key
-- Save **throughlines** as the compressed thematic spine associated with the objective
-- Separate **semantic fit** from **usage counts**
-- Let the judge decide whether to **update**, **merge**, or **create**
+This skill is for **memory architecture**, **retrieval**, and **evolving
+graph-backed conclusions**.
+
+Filter out control-flow or orchestration taxonomies that are orthogonal here:
+- StateFlow
+- ADAS
+- DSPy
+- AWM
+
+Those may be useful elsewhere, but they are not the memory model.
+
+This skill owns:
+- triplet extraction and evidence storage
+- intent/objective-centered memory pages
+- BM25 narrowing and NLI or judge-based validation
+- reinforce/weaken/add memory evolution
+- throughlines as retrievable meta-memory
+- runtime quality updates on conclusions
+
+## Core Thesis
+
+The graph stores facts. The memory layer stores what those facts mean together.
+
+The clean architecture is a **three-tier memory stack**:
+
+1. **Triplets** — local premises and provenance
+2. **Pages / wiki entries** — objective-centered memory clusters
+3. **Throughlines** — competing abductive conclusions over those clusters
+
+The page is not a summary blob. It is a durable memory surface that links:
+
+`intent -> objective -> supporting premises -> throughlines`
+
+## Why These Papers Matter
+
+### MemRL
+MemRL is the strongest validation of this design.
+
+- Its two-phase retrieval validates the existing intuition that semantic match
+  and memory quality should both contribute to ranking.
+- Its runtime update rule turns confidence from a one-time prior into a learned
+  posterior:
+
+```text
+Q_new <- Q_old + α(r - Q_old)
+```
+
+Here `r` can come from downstream NLI or judge signal:
+- entailment -> reinforce
+- contradiction -> weaken
+- neutral -> weak update or no-op, depending on policy
+
+### A-MEM
+A-MEM validates that two-stage memory linking is load-bearing:
+
+1. candidate narrowing
+2. connection-quality judgment
+
+In this skill that becomes:
+
+1. BM25 or intent/objective narrowing
+2. NLI / judge validation of whether the memory should connect, update, or fork
+
+### Neuro-symbolic memory evolution
+The reinforce / weaken / add rule maps directly onto KG maintenance:
+
+```text
+if sim(new_observation, existing_memory) > τ_pos: reinforce
+elif sim(new_observation, existing_memory) < τ_neg: weaken
+else: add new memory
+```
+
+That is more principled than a binary merge-or-add policy and supports partial
+contradiction cleanly.
+
+### Generative Agents
+Their recency + importance + relevance framing matters most at the page or
+throughline layer.
+
+- Recency is optional for static corpora
+- Recency becomes useful for sequential corpora such as scenes, incidents, or
+  evolving case files
 
 ## Canonical Memory Shape
-Each wiki entry should carry:
 
-1. `intent`
-2. `objective`
-3. `throughlines`
+Each **page / wiki entry** should carry:
+
+1. `page_id`
+2. `intent`
+3. `objective`
 4. `entity_bag`
-5. `fit_score`
-6. `read_count`
-7. `confirmed_read_count`
-8. `update_count`
-9. `wiki_summary`
-10. `history`
+5. `supporting_triplets`
+6. `fit_score`
+7. `read_count`
+8. `confirmed_read_count`
+9. `update_count`
+10. `wiki_summary`
+11. `throughlines`
+12. `history`
 
 Example:
 
 ```json
 {
+  "page_id": "page_042",
   "intent": "compare-philosophies",
   "objective": "contrast the ethical throughlines of two thinkers",
-  "throughlines": [
-    "virtue ethics versus value transvaluation",
-    "moral framework comparison through recurring themes"
-  ],
   "entity_bag": {
     "aristotle": 0.92,
     "nietzsche": 0.88,
-    "ethics": 0.71,
-    "virtue": 0.66
+    "ethics": 0.71
   },
+  "supporting_triplets": ["t_18", "t_44", "t_51"],
   "fit_score": 0.81,
   "read_count": 14,
   "confirmed_read_count": 9,
   "update_count": 4,
   "wiki_summary": "Prior queries focused on ethical contrast, especially virtue and value frameworks.",
+  "throughlines": ["th_7", "th_9"],
   "history": []
 }
 ```
 
-## Field Semantics
+## Throughlines Are the Meta-Layer
 
-### Intent
-- Intent is a mutually exclusive routing label for the downstream use case.
-- Retrieve candidate wiki entries by intent first.
-- If multiple stored intents are not truly exclusive, repair the taxonomy.
+The page answers: **what evidence clusters together?**
 
-### Objective
-- Objective is the normalized statement of what the query is trying to accomplish under that intent.
-- Objectives are also treated as mutually exclusive sets.
-- If two objectives are judged non-exclusive, merge them rather than keeping parallel duplicates.
+The throughline answers: **what is the graph trying to tell us?**
 
-### Throughlines
-- Throughlines are the saved conceptual spine of the entry.
-- They are associated with the objective, not stored as unrelated notes.
-- A query can refine or add throughlines when the judge says the new evidence sharpens the objective rather than changing it.
+A throughline is a materialized syllogism: a first-class claim whose provenance
+points back to the triplets and pages that support it.
 
-### Entity Bag
-- The entity bag is weighted supporting evidence between intent and objective.
-- It is not the primary key.
-- The judge may add, remove, or reweight entities if doing so improves fit.
+It is not a flattened summary. It is a retrievable, updateable conclusion that
+can itself serve as a premise later.
 
-### Fit Score
-- `fit_score` is the semantic quality and reuse fitness of the entry.
-- It is judge-derived.
-- Score updates should be monotonic: only increase when the new query and retrieved evidence improve fit.
+### Throughline Schema
 
-### Counts
-- `read_count` measures retrieval frequency
-- `confirmed_read_count` measures how often the entry contributed to a confirmed useful answer
-- `update_count` measures how often the entry absorbed new useful variance
+```text
+throughline_id   TEXT PRIMARY KEY
+page_id          TEXT
+claim_text       TEXT   # mutable, LLM-rewritten as evidence accumulates
+supporting_fks   LIST   # triplet_ids and/or page_ids
+q_score          REAL   # runtime-learned trust score
+status           TEXT   # active | competing | deprecated
+created_at       DATETIME
+updated_at       DATETIME
+history          JSON
+```
 
-Counts are utility signals, not correctness.
+### Throughline Update Cycle
 
-### Wiki Summary
-- The wiki summary is the recursive free-form explanation of what this entry has learned so far.
-- It should stay aligned with the objective and throughlines.
+```text
+new triplet arrives
+    |
+    v
+retrieve affected pages / throughlines
+    |
+    +- if hit:
+    |    LLM reads old throughline + new evidence
+    |    decision: reinforce / refine / contradict
+    |    if refine: rewrite claim_text
+    |    q_score <- q_score + α(r - q_score)
+    |
+    +- if no hit:
+         keep in candidate pool until density threshold supports a new throughline
+```
+
+The roles are separate:
+- **LLM** updates what the throughline says
+- **Q-score** updates how much to trust it
+
+### Competing Throughlines
+
+Do not force one conclusion too early.
+
+Multiple throughlines may coexist over the same evidence cluster. They compete
+by `q_score`. The highest score is the current best abductive explanation, not
+the permanent winner.
+
+## Three-Tier Confidence Stack
+
+```text
+triplet      extraction prior      -> observed/inferred + mutable confidence
+page         retrieval fitness     -> objective/throughline/entity fit
+throughline  runtime posterior     -> MemRL-style Q-score
+```
+
+Each tier answers a different question:
+
+- **Triplet**: was this locally well-grounded?
+- **Page**: is this memory entry a good semantic match for the current task?
+- **Throughline**: has this conclusion held up under repeated use?
+
+## Triplet Layer
+
+The atom is still the semantic triplet `(S, P, O)` with provenance.
+
+Minimum fields:
+
+```text
+triplet_id
+subject_signal
+predicate_signal
+object_signal
+span_id
+doc_id
+epistemics        # observed | inferred
+confidence        # mutable, not write-once
+created_at
+updated_at
+```
+
+### Triplet Confidence
+
+Use extraction-time priors, but do not freeze them forever.
+
+A minimal prior:
+- observed -> `1.0`
+- inferred -> `0.5`
+
+Then update confidence with downstream evidence:
+
+```text
+confidence_new <- confidence_old + α(r_nli - confidence_old)
+```
+
+If retrieving a triplet repeatedly supports correct entailment, confidence rises.
+If it repeatedly contributes to contradiction, confidence falls.
 
 ## Retrieval and Update Loop
-When using this skill, follow this order:
 
-1. Normalize or restate the incoming query
-2. Classify the mutually exclusive intent
-3. Retrieve candidate wiki entries by intent
-4. Use throughlines and objective text as the primary semantic match surface
-5. Use entity bag overlap as supporting evidence
-6. Ask the judge whether the query fits an existing objective
-7. If yes, update the entry
-8. If two entries are not mutually exclusive, merge them
-9. If no candidate fits, create a new entry
+Follow this order:
 
-The organizing principle is:
+1. Normalize the incoming query
+2. Classify the **intent**
+3. Retrieve candidate **pages** by intent first
+4. Rank by objective text and throughline fit
+5. Use entity-bag overlap as supporting evidence, not the primary key
+6. BM25-narrow supporting triplets
+7. Run NLI or judge validation on the narrowed set
+8. Decide whether to reinforce, refine, merge, create, or reject
+9. Update page and throughline state
+10. Persist score updates and history
 
-`query -> intent -> objective -> throughlines -> entity_bag -> fit_score`
+The organizing chain is:
+
+`query -> intent -> objective/page -> triplets -> NLI/judge -> throughline update`
+
+## Ranking Surface
+
+The retrieval surface is deliberately layered.
+
+### Candidate narrowing
+- BM25 over triplet or page text fields
+- intent routing
+- objective and throughline semantic similarity
+
+### Quality weighting
+MemRL-style blending should inform page or throughline ranking:
+
+```text
+score = (1 - λ) * sim(query, objective_or_throughline) + λ * q_value
+```
+
+For triplets, a simpler blended or multiplicative surface is fine:
+
+```text
+triplet_score = bm25_score * confidence
+```
+
+Use the simple version first. Add the learned component where repeated usage
+provides stable reward.
+
+## Intent, Objective, and Entity Bag Policy
+
+### Intent
+- Intent is the top-level routing label
+- It should be mutually exclusive for downstream use
+- If two intents are not exclusive in practice, repair the taxonomy
+
+### Objective
+- Objective is the normalized statement of what the query is trying to accomplish
+- Objectives should also be treated as mutually exclusive within an intent
+- If two stored objectives are really the same task, merge them
+
+### Entity Bag
+- The entity bag is supporting evidence between triplets and pages
+- It is not the primary key
+- Add, remove, or reweight entities only when doing so improves fit
 
 ## Judge Contract
-The judge should return a structured decision, not prose only.
+
+The judge must return structure, not prose only.
 
 Required outputs:
-
-- `matched_entry_id` or `null`
+- `matched_page_id` or `null`
 - `intent_fit`
 - `objective_fit`
 - `throughline_fit`
+- `triplet_fit`
 - `context_precision`
 - `context_recall`
 - `proposed_objective`
-- `proposed_throughlines`
 - `entity_bag_updates`
-- `proposed_summary`
-- `merge_candidates`
+- `triplet_updates`
+- `throughline_updates`
 - `fit_score_delta`
+- `q_score_delta`
 - `decision`
 - `decision_reason`
 
 Valid decisions:
-- `update`
+- `reinforce`
+- `refine`
 - `merge`
 - `create`
 - `reject`
+- `contradict`
 
-## Update Rules
-Apply these gates:
+## Merge and Evolution Policy
 
-1. **Intent gate** — compare inside predicted intent unless intent confidence is low
-2. **Objective gate** — update only if the query is not mutually exclusive with the objective
-3. **Throughline gate** — update throughlines only if they sharpen the same objective rather than creating drift
-4. **Entity gate** — use entity bag changes as support, not as sole authority
-5. **Score gate** — increase `fit_score` only when fit improves
-6. **Count gate** — increment counts based on actual retrieval/use/update events
-7. **Merge gate** — merge non-exclusive entries into the higher-fit survivor
-8. **Create gate** — create a new entry if fit is low rather than corrupting an old one
+### Reinforce
+Use when new evidence supports an existing triplet, page, or throughline.
 
-## Score Interpretation
-Do not collapse all quality into one popularity number.
+Effects:
+- raise confidence or q-score
+- increment counts
+- append provenance
 
-Keep at least two categories:
+### Refine
+Use when the old memory is mostly right but needs a better formulation.
 
-1. **Semantic quality**
-   - `fit_score`
-   - derived from the judge, typically from RAGAS-style `context_precision` and `context_recall`
+Effects:
+- rewrite objective, wiki summary, or throughline claim text
+- keep lineage in history
+- only increase trust if the refined memory fits better
 
-2. **Behavioral utility**
-   - `read_count`
-   - `confirmed_read_count`
-   - `update_count`
+### Weaken / contradict
+Use when new evidence cuts against the existing memory without fully invalidating
+the surrounding page.
 
-If a single retrieval ranking score is needed later, derive it from both:
+Effects:
+- lower confidence or q-score
+- preserve both the old memory and the contradiction trail
+- avoid forced collapse
 
-`rank_score = fit_score + a*log1p(confirmed_read_count) + b*log1p(update_count)`
+### Add new memory
+Use when evidence is too dissimilar for reinforcement and too incompatible for
+safe merge.
 
-But do not replace semantic quality with raw counts.
-
-## Throughline Policy
-Throughlines should be persisted explicitly.
-
-- They belong to the objective
-- They summarize recurring thematic resolution
-- They can be a list, not just one string
-- Keep them stable enough to be reusable, but updateable when the judge finds a sharper abstraction
-
-Use throughlines when:
-- ranking candidate memory entries
-- explaining why an objective matched
-- deciding whether two objectives should merge
-
-## Merge Policy
+### Merge
 Merge when:
-- intents are the same or judged compatible
+- intents are compatible
 - objectives are not mutually exclusive
-- throughlines are compatible or reconcilable
-- the merged entry is cleaner than keeping two partial duplicates
+- throughlines are reconcilable
+- the merged survivor is cleaner than parallel duplicates
 
 When merging:
-- keep the higher `fit_score` survivor
-- union and reweight the entity bag
-- combine or compress throughlines
-- sum counts where appropriate
+- keep the higher-fit page
+- union and reweight entity bags
+- merge supporting triplets
+- preserve competing throughlines if they are still meaningfully distinct
 - append a merge record to history
 
 ## History Policy
+
 History should record:
-- query snapshot or identifier
-- action taken: `read`, `update`, `merge`, `create`, `reject`
-- before/after objective or throughlines if changed
-- `fit_score_delta`
+- query snapshot or ID
+- action: `read`, `reinforce`, `refine`, `merge`, `create`, `reject`, `contradict`
+- before/after objective or throughline text if changed
+- confidence or q-score deltas
 - count increments
 - rationale
 
 History is for auditability, not ranking.
 
 ## Anti-Patterns
-Avoid these:
 
-- using entity overlap as the primary key
-- replacing `fit_score` with raw read count
-- updating objectives on weak evidence
-- merging entries just because they share entities
-- treating throughlines as disposable prose instead of structured memory
-- lowering semantic score due to one noisy query instead of refusing the update
+Avoid:
+- treating entity overlap as the primary key
+- storing triplets as write-once forever
+- collapsing throughlines into one summary too early
+- replacing semantic quality with popularity counts
+- merging memories just because they mention the same entities
+- updating conclusions without preserving provenance
+- importing control-flow frameworks into the memory model
 
 ## Minimal Output Contract
-When using this skill, the final answer should report:
 
-- the chosen intent
-- the matched or created objective
-- any throughline changes
-- any entity bag changes
-- whether the action was update, merge, create, or reject
-- any `fit_score` change
-- any count increments
-- the reasoning for the decision
+When using this skill, report:
+- chosen intent
+- matched or created page/objective
+- triplet changes
+- throughline changes
+- whether the action was reinforce, refine, merge, create, reject, or contradict
+- fit-score and q-score changes
+- rationale for the decision
