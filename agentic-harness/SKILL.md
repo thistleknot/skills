@@ -936,3 +936,42 @@ If the next session cannot reload that sheet and continue coherently, the harnes
 - [ ] Pipeline completes without `retry` for a straightforward prompt
 - [ ] All tests in the generated project pass (or known skips are documented)
 - [ ] Expected artifact exists at a known path and can be reopened after the run
+
+---
+
+## Skill Authoring Workflow
+
+The same waterfall → agile pipeline used to manage software projects applies to
+**creating and evolving skills**.
+
+```
+topics      rough ideas, observations, pain points, things that keep coming up
+    ↓
+plans       structured approach: what the skill covers, what it doesn't, key decisions
+    ↓
+specs       precise behavioral contracts: trigger rules, scope boundaries, interfaces
+    ↓
+tasks       executable changes: which files, what sections, what wording
+```
+
+The harness is its own stationmaster for the skill graph.
+
+### Skill lifecycle rules
+
+- A skill should be opened as a **topic** when a pattern or approach recurs across sessions.
+- A topic graduates to a **plan** once the scope and design decisions are stable enough to write down.
+- A plan graduates to a **spec** once the trigger rules, scope boundary, and interfaces are unambiguous.
+- A spec graduates to **tasks** when the author can hand each task to an agent and expect a deterministic diff.
+- A skill should be **archived or merged** when its spec is fully absorbed by another skill and it no longer warrants its own invocation rule.
+
+### Self-documentation via memory-bank pattern
+
+Each mature skill folder should carry the three-file complement from `memory-bank`:
+
+- `DESCRIPTION.md` — why this skill exists, when to invoke it
+- `ARCHITECTURE.md` — how it works, design decisions, data flow
+- `HISTORY.md` — changes, milestones, lessons, known gaps
+
+`SKILL.md` remains the behavioral contract (the API). The three files carry the
+development context (the internals). Together they allow a new session to onboard
+to a skill the same way `memory-bank` allows a new session to onboard to a project.

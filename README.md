@@ -5,23 +5,50 @@ Reusable skill library for agentic coding, memory, retrieval, tuning, and orches
 Each skill lives in its own folder as `SKILL.md`. The repo is no longer just an
 old `.copilot` module scaffold; it is a composable skill graph.
 
-## Current Skill Graph
+## Skill Graph (AST View)
 
-| Layer | Skills | Role |
-|---|---|---|
-| Execution | `react-agent`, `reasoning`, `code`, `debugging`, `validation`, `architecture` | General planning, implementation, debugging, verification |
-| Orchestration | `agentic-harness`, `continuity-log` | Multi-agent control plane and compact-safe working memory |
-| Memory / retrieval | `memory-bank`, `todo`, `agentic_kg_memory`, `gist-retriever`, `kg_ontology`, `request-intent-resolution` | Durable project memory, semantic retrieval, ontology control, and request-thread routing |
-| Tuning / experiment tracking | `hyper-parm_tuning`, `optuna-nested-cv`, `mlflow`, `representation-pipeline` | Methodology, search engine, experiment ledger, representation design |
+Each node is a skill. Indentation encodes parent → child dependency. Peers share the same indent level.
+
+```
+skills/
+├── execution/                       # plan, implement, verify
+│   ├── react-agent                  # outer execution OS; drives all other skills
+│   ├── reasoning                    # open-ended problem decomposition + multi-perspective analysis
+│   ├── code                         # implementation standards, naming, refactor sequence
+│   ├── debugging                    # error isolation, salience tiers, diagnostic strategy
+│   ├── validation                   # test design, verification protocol, behavior contracts
+│   └── architecture                 # system design, abstract-class planning, domain → code mapping
+│
+├── orchestration/                   # route work, enforce policy, manage cross-session state
+│   ├── agentic-harness              # dark-task control plane; backbone = OpenClaw/Claude Code/OpenCode/Copilot CLI
+│   │   └── continuity-log           # compact-safe session memory; distilled decisions, resume points
+│   └── timeout-guard                # runaway-task policy; interrupt and recovery rules
+│
+├── memory/                          # persist knowledge across sessions and tasks
+│   ├── memory-bank                  # durable project memory (brief, context, patterns, progress)
+│   │   # meta: DESCRIPTION/ARCHITECTURE/HISTORY pattern — applies to any skill folder
+│   ├── todo                         # sqlite-backed task tracking with FastMCP bridge
+│   ├── agentic_kg_memory            # semantic memory policy; owns graph update contract
+│   │   ├── gist-retriever           # layered sparse+dense retrieval engine (BM25 + Chroma)
+│   │   └── kg_ontology              # canonicalization, synset narrowing, hypernym repair
+│   └── request-intent-resolution    # request-thread routing, retrieval evaluation
+│
+└── tuning/                          # measure, optimize, record
+    ├── hyper-parm_tuning            # methodology: what to tune, nested-CV framing
+    ├── optuna-nested-cv             # search engine: inner tune / outer unbiased estimate
+    ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
+    └── representation-pipeline      # representation design: raw signal → embedding space
+```
 
 ## Key Relationships
 
-1. `react-agent` is the outer execution OS.
-2. `agentic-harness` is the programmatic train station / control plane for coding frameworks like Claude Code, OpenCode, and GitHub Copilot CLI.
-3. `continuity-log` is the compact-safe working-memory layer. It stores distilled decisions, rejected paths, blockers, and resume points. It is **not** a raw hidden chain-of-thought dump.
-4. `hyper-parm_tuning` defines what to optimize, `optuna-nested-cv` runs the search, and `mlflow` records params, metrics, artifacts, and lineage.
-5. `agentic_kg_memory` owns semantic memory policy, `gist-retriever` owns the layered retrieval engine, and `kg_ontology` owns canonicalization and ontology narrowing.
-6. `memory-bank` and `todo` are the durable project-memory surfaces that support the rest of the stack.
+1. `react-agent` is the outer execution OS. All other skills are invoked from inside it.
+2. `agentic-harness` is the programmatic train station for coding frameworks (Claude Code, OpenCode, GitHub Copilot CLI, OpenClaw). It routes, gates, and reconciles work; each framework is a worker line.
+3. `continuity-log` is a child of `agentic-harness`. It holds the compact-safe distilled state that lets the harness resume without re-deriving decisions.
+4. `hyper-parm_tuning` defines what to optimize; `optuna-nested-cv` runs the nested search; `mlflow` records every run with lineage.
+5. `agentic_kg_memory` owns semantic memory policy. `gist-retriever` is its retrieval sub-skill. `kg_ontology` handles canonicalization before insertion.
+6. `memory-bank` carries the three-file pattern (DESCRIPTION / ARCHITECTURE / HISTORY) that any skill folder can adopt for self-documentation.
+7. `agentic-harness` (waterfall → agile: topics → plans → specs → tasks) is the lifecycle template for skill authoring, not just software projects.
 
 ## Repository Layout
 

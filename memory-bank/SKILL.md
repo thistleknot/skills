@@ -30,6 +30,25 @@ Do **not** use `memory-bank` for:
 
 Those belong to `agentic_kg_memory`.
 
+## Meta-documentation pattern
+
+The six-file structure inside `~/memory-bank/` is a reusable documentation template —
+not just for the project, but for **any skill folder**.
+
+| Canonical memory-bank file | Skill-folder equivalent | Covers |
+|---|---|---|
+| `projectbrief.md` + `productContext.md` | `DESCRIPTION.md` | Why this skill exists, when to invoke it, what problem it solves |
+| `systemPatterns.md` + `techContext.md` | `ARCHITECTURE.md` | How it works, key design decisions, data flow, constraints |
+| `activeContext.md` + `progress.md` | `HISTORY.md` | What changed, milestones reached, lessons learned, known gaps |
+
+When a skill becomes complex enough to need its own onboarding story, add these three
+files to its folder. They give a new session (or new agent) the same cold-start
+advantage the project memory-bank gives to a new project session.
+
+The skill graph is then self-documenting at two levels:
+- **`SKILL.md`** — behavioral contract and trigger conditions (the API)
+- **`DESCRIPTION.md`, `ARCHITECTURE.md`, `HISTORY.md`** — development context (the internals)
+
 ## Setup Mode
 
 If the user invokes **`memory-bank setup`**, treat that as an installation request,
