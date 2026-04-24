@@ -69,9 +69,18 @@ The split is:
 - throughline synthesis
 - reinforce / weaken / add updates
 - retrieval and ranking
+- cluster budgets, MMR, and recall backstops
 
 Do not let pages, objectives, or throughlines invent their own node identities.
 They should consume the ontology winners.
+
+`kg_ontology` should not decide:
+
+- which clusters get retrieval budget
+- how many candidates come from each cluster
+- whether to mix in global backstop results
+
+Those are retrieval-policy questions, not identity questions.
 
 ## Canonicalization Pipeline
 
@@ -95,6 +104,90 @@ Generate candidates as **lemma/synset + POS** options where possible.
 This means the ontology can be richer than the visible node label. The visible
 graph stays simple; the candidate set and rejected options live in provenance/debug.
 
+### Candidate retrieval surface
+
+Do not make the LLM choose from the whole ontology blindly.
+
+Instead, build a tightly scoped candidate set for each span:
+
+1. look up the normalized token/span in a **first-synset dictionary** if available
+2. retrieve embedding-near lexical neighbors for the span
+3. take the top `21` related words as expansion hints
+4. for each strong related word, retrieve the top `3` first-synset candidates
+5. derive a compact hypernym candidate set from those synsets
+6. present that narrowed set to the LLM for selection or abstention
+
+This same narrowing rule applies to **hypernyms** as well as synsets.
+
+### First-synset dictionary
+
+If a first-synset dictionary is available, use it as the first narrowing layer.
+
+The important contract is not that the LLM sees an unlimited WordNet dump. The
+important contract is that it sees a **small, relevant candidate set**.
+
+That candidate set may come from:
+
+- direct first-synset dictionary hits
+- embedding-neighbor expansion
+- role-aware lexical filters
+- named-entity preservation rules
+
+### Embedding-assisted candidate expansion
+
+If direct dictionary lookup is too sparse, use word embeddings to retrieve
+semantic neighbors first.
+
+Recommended narrowing pattern:
+
+- retrieve the top `21` related words for the span
+- collect the top `3` first-synset candidates for each strong neighbor
+- score the resulting synset pool by role, POS, lexical fit, and frequency
+- derive a Pareto-like shortlist for the LLM rather than a flat unbounded list
+
+This keeps correction retrievals tightly scoped and reduces absurd jumps such as
+`john -> toilet`.
+
+### Hypernym narrowing
+
+The same approach should be used for hypernyms.
+
+Do not retrieve hypernyms globally from the entire ontology tree.
+
+Instead:
+
+1. narrow to candidate synsets first
+2. derive hypernym candidates only from that narrowed synset set
+3. score those hypernyms with local context and role constraints
+4. let the LLM choose from the shortlist or reject all of them
+
+Hypernyms are ontology scaffolding, not free-floating replacement labels.
+They should remain tightly coupled to the candidate synset pool that produced them.
+
+### WordNet topology notes
+
+If WordNet is the backing ontology, remember the structure:
+
+- noun hypernyms form a **DAG**, not a simple tree
+- verbs behave more like a **forest** of smaller hierarchies
+- adjectives and adverbs should not be treated like the noun hypernym lattice
+- multiple inheritance exists, so one candidate may legitimately map upward in more than one way
+
+That means the system should not assume one universal parent chain for every item.
+Hypernym correction must stay local to the narrowed synset set.
+
+### Corpus-availability rule
+
+If the runtime cannot reach the corpus or the exact inventory is unavailable:
+
+- do **not** guess exact global counts
+- do **not** expand to the entire ontology blindly
+- continue using the local narrowed candidate set from dictionary hits, embeddings, and role filters
+- preserve uncertainty in provenance/debug metadata
+
+The ontology workflow depends more on **good local narrowing** than on knowing the
+exact global synset or hypernym totals.
+
 ### Candidate scoring
 
 Score candidates with local and corpus-aware signals:
@@ -106,6 +199,10 @@ Score candidates with local and corpus-aware signals:
 - corpus/head frequency priors
 - stopword removal and phrase cleanup
 - named-entity preservation rules
+
+If you have a narrowed candidate set from dictionary hits, embedding neighbors,
+or derived hypernyms, score **within that set**. Do not reopen the search space
+after narrowing unless confidence is explicitly too low.
 
 The winner should be deterministic for the same evidence and scoring policy.
 
@@ -119,6 +216,9 @@ The winner should be deterministic for the same evidence and scoring policy.
 4. Score candidates using role-aware and corpus-aware signals.
 5. Choose one canonical winner.
 6. Store original phrases, rejected candidates, and aliases as provenance only.
+
+If the entity is a person or other preserved named entity, strongly penalize
+candidate synsets or hypernyms that would collapse it into an unrelated common noun.
 
 Examples:
 - `What Happiness Consists Of` -> `happiness`
@@ -209,6 +309,12 @@ If explicit synset grounding is unavailable or too weak:
 - use the best lemma-level candidate as the canonical winner
 - do not expose low-confidence ontology branching in the default graph
 
+If dictionary lookup, embedding neighbors, and hypernym narrowing all remain weak:
+
+- let the LLM abstain from synset/hypernym commitment
+- keep the lemma-level identity
+- preserve the candidate shortlist in provenance for later repair
+
 This keeps the graph deterministic now without blocking a later upgrade to
 explicit synset ids plus a hidden hypernym layer.
 
@@ -227,6 +333,7 @@ When applying this skill, report:
 - the canonical entity rule
 - the canonical predicate rule
 - the candidate generation and scoring rule
+- how synset and hypernym candidate sets are narrowed before LLM choice
 - how semantic role affects identity choice
 - which layers are visible by default
 - which layers are hidden/debug only

@@ -23,12 +23,63 @@ Filter out control-flow or orchestration taxonomies that are orthogonal here:
 Those may be useful elsewhere, but they are not the memory model.
 
 This skill owns:
+- preprocessing source text into KG-ready triplets
 - triplet extraction and evidence storage
 - intent/objective-centered memory pages
 - BM25 narrowing and NLI or judge-based validation
 - reinforce/weaken/add memory evolution
 - throughlines as retrievable meta-memory
 - runtime quality updates on conclusions
+- source-backed conclusion synthesis for final answers
+
+## Setup Mode
+
+If the user invokes **`agentic_kg_memory setup`**, treat that as a storage and
+retrieval installation request.
+
+### Required paths
+
+Use these explicit paths on this machine:
+
+- `C:\Users\user\memory-bank\wiki_memory.sqlite3`
+- `C:\Users\user\.copilot\chroma\memory-bank\`
+- `C:\Users\user\memory-bank\clusters.json`
+- `C:\Users\user\memory-bank\cluster_metrics.json`
+
+The SQLite file is the sparse/metadata surface.
+The Chroma directory is the dense embedding surface.
+
+### Setup actions
+
+When running setup, do all of the following:
+
+1. Create `C:\Users\user\memory-bank\wiki_memory.sqlite3`
+2. Create or migrate a page table that includes:
+   - `bm25_text`
+   - `triplet_sequence_text`
+   - `embedding_ref`
+   - `cluster_id`
+3. Create `C:\Users\user\.copilot\chroma\memory-bank\` as the Chroma persist directory
+4. Build `triplet_sequence_text` from canonicalized extracted triplets in source order
+5. Embed `triplet_sequence_text` and store vectors in Chroma
+6. Cluster the normalized dense vectors
+7. Write the winning `cluster_id` back into SQLite
+8. Persist human-readable cluster outputs to:
+   - `C:\Users\user\memory-bank\clusters.json`
+   - `C:\Users\user\memory-bank\cluster_metrics.json`
+
+### Evaluation outputs
+
+The setup step is not complete until it persists:
+
+- cluster count
+- clustering method
+- normalization method
+- `bss`
+- `tss`
+- `bss_tss_ratio`
+
+If the system has only the design and no fitted clustering run yet, say so plainly.
 
 ## Core Thesis
 
@@ -94,6 +145,62 @@ throughline layer.
 - Recency becomes useful for sequential corpora such as scenes, incidents, or
   evolving case files
 
+## Preprocessing Contract
+
+Before retrieval, pages, or throughlines exist, source text must be converted into
+triplets. That preprocessing step belongs to `agentic_kg_memory`.
+
+The high-level chain is:
+
+`source text -> Pydantic extraction -> normalized triplets -> ontology winner ids -> storage`
+
+### Source-to-triplet extraction
+
+The default extraction mode should stay simple and controllable.
+
+Use a Pydantic model that asks the LLM for **comma-separated strings** rather than
+free-form prose.
+
+One workable contract is:
+
+```python
+from pydantic import BaseModel
+
+
+class TripletExtraction(BaseModel):
+    subjects_csv: str
+    predicates_csv: str
+    objects_csv: str
+```
+
+Interpretation rule:
+
+1. split each csv field on commas
+2. trim whitespace
+3. align by position
+4. drop empty rows
+5. send each `(subject, predicate, object)` tuple into ontology normalization
+
+This keeps extraction cheap, deterministic, and easy to repair.
+
+### Extraction rules
+
+- extract triplets directly from the **source text**
+- keep source order
+- prefer short normalized spans over long prose phrases
+- preserve named entities before aggressive collapse
+- do not ask the model for a final conclusion during preprocessing
+- store provenance so every triplet still points back to the original source span
+
+### Why this preprocessing matters
+
+This is the load-bearing step that makes the later retrieval design possible:
+
+- `bm25_text` can be built from the normalized lexical surface
+- `triplet_sequence_text` can be built from the ordered triplets
+- ontology can resolve canonical ids before graph storage
+- pages and throughlines can operate on normalized evidence rather than raw prose
+
 ## Canonical Memory Shape
 
 Each **page / wiki entry** should carry:
@@ -109,7 +216,11 @@ Each **page / wiki entry** should carry:
 9. `update_count`
 10. `wiki_summary`
 11. `throughlines`
-12. `history`
+12. `bm25_text`
+13. `triplet_sequence_text`
+14. `embedding_ref`
+15. `cluster_id`
+16. `history`
 
 Example:
 
@@ -129,10 +240,32 @@ Example:
   "confirmed_read_count": 9,
   "update_count": 4,
   "wiki_summary": "Prior queries focused on ethical contrast, especially virtue and value frameworks.",
+  "bm25_text": "contrast the ethical throughlines of two thinkers virtue value frameworks",
+  "triplet_sequence_text": "aristotle [SEP] argue_for [SEP] virtue [SEP] nietzsche [SEP] challenge [SEP] morality [SEP] ethics [SEP] concern [SEP] flourishing",
+  "embedding_ref": "chroma://memory-bank/page_042",
+  "cluster_id": "cluster_03",
   "throughlines": ["th_7", "th_9"],
   "history": []
 }
 ```
+
+### Retrieval columns
+
+Use a deliberately hybrid storage surface rather than a single retrieval field.
+
+- `bm25_text` = sparse lexical field for BM25 or equivalent inverted-index retrieval
+- `triplet_sequence_text` = dense semantic field built from the extracted triplets in
+  document order, concatenated with `[SEP]` tokens
+- `embedding_ref` = pointer to the stored vector for `triplet_sequence_text`
+- `cluster_id` = routing label derived from the dense embedding space
+
+The dense field should be built from **normalized extracted triplets in textual order**:
+
+```text
+subject_1 [SEP] predicate_1 [SEP] object_1 [SEP] subject_2 [SEP] predicate_2 [SEP] object_2 ...
+```
+
+Do not shuffle triplets. Their order in the source text is part of the signal.
 
 ## Throughlines Are the Meta-Layer
 
@@ -146,19 +279,50 @@ points back to the triplets and pages that support it.
 It is not a flattened summary. It is a retrievable, updateable conclusion that
 can itself serve as a premise later.
 
+This is where the **living updateable graph** should live.
+
+Do **not** make the raw triplet layer carry all the mutability burden.
+Keep the triplets as the source-grounded fact layer, and let the throughline
+layer absorb:
+
+- rewritten conclusions
+- trust-score updates
+- merges of equivalent claims
+- branching into competing claims when evidence conflicts
+
 ### Throughline Schema
 
 ```text
 throughline_id   TEXT PRIMARY KEY
 page_id          TEXT
 claim_text       TEXT   # mutable, LLM-rewritten as evidence accumulates
-supporting_fks   LIST   # triplet_ids and/or page_ids
+supporting_fks   LIST   # source_ids, triplet_ids, and/or page_ids
+source_fks       LIST   # concrete user-visible provenance used for the claim
+fact_fks         LIST   # normalized facts/triplets supporting the claim
 q_score          REAL   # runtime-learned trust score
-status           TEXT   # active | competing | deprecated
+merge_score      REAL   # how strongly this aligns with another candidate claim
+status           TEXT   # active | competing | deprecated | merged
+merged_into      TEXT   # nullable canonical survivor id
+canonical        BOOL   # whether this is the current canonical phrasing
 created_at       DATETIME
 updated_at       DATETIME
 history          JSON
 ```
+
+### Storage rule
+
+If you want this to stay manageable, store throughlines as **rows or nodes attached
+to page ids**, not as direct replacements for triplets.
+
+That gives you:
+
+- stable fact storage
+- mutable conclusion storage
+- explicit provenance
+- easier merge and rollback semantics
+
+The graph remains "living" because the conclusion layer evolves, not because the
+raw evidence layer keeps getting rewritten destructively.
 
 ### Throughline Update Cycle
 
@@ -170,17 +334,55 @@ retrieve affected pages / throughlines
     |
     +- if hit:
     |    LLM reads old throughline + new evidence
-    |    decision: reinforce / refine / contradict
+    |    decision: reinforce / refine / merge / contradict
     |    if refine: rewrite claim_text
+    |    if merge: attach loser to canonical survivor
     |    q_score <- q_score + α(r - q_score)
     |
     +- if no hit:
-         keep in candidate pool until density threshold supports a new throughline
+          keep in candidate pool until density threshold supports a new throughline
 ```
 
 The roles are separate:
 - **LLM** updates what the throughline says
 - **Q-score** updates how much to trust it
+
+### Minimal score update
+
+Keep the score update simple:
+
+```text
+q_new <- q_old + α(r - q_old)
+```
+
+Where `r` is the latest evidence outcome:
+
+- support / entailment -> positive reward
+- neutral / mixed -> weak or zero reward
+- contradiction -> negative reward or sharp downweight
+
+You do not need an elaborate learned merger before this becomes useful.
+
+### Mergeable conclusion rule
+
+Conclusions should be mergeable, but only at the conclusion layer.
+
+Use a merge when:
+
+- two claims are semantically equivalent or differ only in phrasing
+- their evidence is compatible
+- keeping both would create duplicate conclusions rather than real alternatives
+
+When merging:
+
+1. choose a canonical survivor
+2. union the `source_fks`, `fact_fks`, and `supporting_fks`
+3. preserve both prior phrasings in `history`
+4. mark the loser as `status = merged`
+5. set `merged_into` on the loser
+6. update the survivor's `q_score` from the combined evidence
+
+Do **not** merge contradictory claims just because they touch the same entities.
 
 ### Competing Throughlines
 
@@ -189,6 +391,12 @@ Do not force one conclusion too early.
 Multiple throughlines may coexist over the same evidence cluster. They compete
 by `q_score`. The highest score is the current best abductive explanation, not
 the permanent winner.
+
+This is the escape hatch that keeps the living graph from becoming a headache:
+
+- equivalent claims -> merge
+- genuinely different claims -> keep as competing
+- disproven claims -> deprecate, do not erase history
 
 ## Three-Tier Confidence Stack
 
@@ -223,6 +431,38 @@ created_at
 updated_at
 ```
 
+### Dense triplet representation
+
+In addition to local triplet rows, maintain a **retrieval-time concatenated
+representation** for the surrounding unit you want to retrieve (page, chunk, or
+article). Build it by:
+
+1. extracting canonicalized triplets in source order
+2. normalizing each `(S, P, O)` to the ontology winner ids
+3. concatenating them with `[SEP]` separators
+4. embedding the resulting string
+
+This gives you:
+
+- a sparse lexical column for BM25
+- a dense semantic column for embedding search
+
+Use both. Do not make dense retrieval replace sparse retrieval outright.
+
+### Triplets as the semantic compressor
+
+Before adding another heavy summarizer, treat the triplet layer itself as the
+first semantic compression step.
+
+The ordered triplets are already a kind of structured auto-encoding of the source:
+
+- they discard most irrelevant syntax
+- they preserve actor / relation / target structure
+- they are stable enough to support sparse and dense retrieval together
+
+So the default dense object should usually be the **ordered triplet sequence**,
+not a second LLM-generated semantic summary unless you can show a clear gain.
+
 ### Triplet Confidence
 
 Use extraction-time priors, but do not freeze them forever.
@@ -246,18 +486,81 @@ Follow this order:
 
 1. Normalize the incoming query
 2. Classify the **intent**
-3. Retrieve candidate **pages** by intent first
-4. Rank by objective text and throughline fit
-5. Use entity-bag overlap as supporting evidence, not the primary key
-6. BM25-narrow supporting triplets
-7. Run NLI or judge validation on the narrowed set
-8. Decide whether to reinforce, refine, merge, create, or reject
-9. Update page and throughline state
-10. Persist score updates and history
+3. Write a HyDE-style translated query for the target evidence or throughline
+4. Embed that translated query
+5. Route into the nearest semantic cluster (and optionally adjacent clusters)
+6. Retrieve candidate **pages** by intent first
+7. Run sparse retrieval over `bm25_text`
+8. Run dense retrieval over `triplet_sequence_text` embeddings
+9. Fuse sparse, dense, and quality signals
+10. Use entity-bag overlap as supporting evidence, not the primary key
+11. BM25-narrow supporting triplets
+12. Run NLI or judge validation on the narrowed set
+13. Build a user-visible evidence packet of retrieved sources and extracted facts
+14. Decide whether to reinforce, refine, merge, create, or reject
+15. Update page and throughline state
+16. Persist score updates, cluster metadata, and history
 
 The organizing chain is:
 
-`query -> intent -> objective/page -> triplets -> NLI/judge -> throughline update`
+`query -> intent -> HyDE query -> cluster -> sparse+dense retrieval -> triplets -> sources+facts -> NLI/judge -> throughline update`
+
+### HyDE query translation
+
+The dense query should not always be the raw user string.
+
+Prefer a translated query that states the target memory in the form the store is
+meant to retrieve:
+
+- intended objective
+- likely entities
+- likely predicates
+- likely throughline shape
+
+This HyDE-style text is what you embed for cluster routing and dense retrieval.
+
+## Final Answer Contract
+
+The sparse/dense/cluster representation is **guidance for retrieval**, not the
+final user-facing answer.
+
+When the LLM produces the final response, it should expose:
+
+1. the **retrieved sources**
+2. the **facts extracted from those sources**
+3. the **updated conclusion** written from that evidence
+
+The user should see the evidence surface, not just the rewritten throughline.
+
+### Conclusion synthesis rule
+
+The conclusion is produced from:
+
+`retrieved source -> extracted facts -> LLM synthesis -> updated conclusion`
+
+Do not present `bm25_text`, `triplet_sequence_text`, `embedding_ref`, or
+`cluster_id` as if they are the evidence itself. They are retrieval machinery.
+
+### User-visible response shape
+
+At minimum, the final answer should contain:
+
+- `sources`: the retrieved source ids, titles, spans, or citations actually used
+- `facts`: the normalized facts or triplets grounded in those sources
+- `conclusion`: the LLM's updated synthesis from those sources and facts
+
+If the answer updates an existing throughline, the rewritten conclusion should still
+point back to the concrete sources that justified the update.
+
+### Throughline update rule
+
+The throughline is the current best conclusion, but it should be revised from
+retrieved evidence rather than treated as a source in isolation.
+
+- sources remain the provenance
+- facts remain the normalized evidence layer
+- the throughline/conclusion is the current synthesis over that evidence
+- score updates and merges happen on the throughline record, not on the cited sources
 
 ## Ranking Surface
 
@@ -265,6 +568,8 @@ The retrieval surface is deliberately layered.
 
 ### Candidate narrowing
 - BM25 over triplet or page text fields
+- dense similarity over `triplet_sequence_text` embeddings
+- cluster routing from HyDE query embeddings
 - intent routing
 - objective and throughline semantic similarity
 
@@ -283,6 +588,150 @@ triplet_score = bm25_score * confidence
 
 Use the simple version first. Add the learned component where repeated usage
 provides stable reward.
+
+### Dual-column retrieval contract
+
+Treat sparse and dense retrieval as separate columns with separate jobs:
+
+- **Sparse** (`bm25_text`) catches exact lexical overlap, rare names, and sharp token cues
+- **Dense** (`triplet_sequence_text` embedding) catches paraphrase, reordered wording,
+  and semantic proximity across triplet bundles
+
+Dense text should be the ordered `[SEP]`-joined triplet string, not a loose summary.
+The point is to embed the extracted semantic structure directly.
+
+### Cluster routing
+
+Dense retrieval should also maintain a cluster layer.
+
+- build embeddings from `triplet_sequence_text`
+- min-max normalize or otherwise normalize features before final vector normalization
+- L2-normalize vectors before clustering when the geometry is directional
+- cluster the dense space
+- store `cluster_id` beside the sparse and dense retrieval fields
+
+At query time:
+
+1. embed the HyDE-translated query
+2. derive its nearest cluster
+3. retrieve primarily within that cluster
+4. optionally expand to neighboring clusters when recall is too low
+
+The cluster is a routing aid, not the memory identity.
+
+### Soft cluster routing, not hard gating
+
+Do **not** retrieve only from a single winning cluster.
+
+That creates a recall trap: if the nearest cluster is slightly wrong, you miss
+useful evidence in nearby or minority clusters.
+
+Better pattern:
+
+1. run a **global seed retrieval** across all clusters with cosine similarity
+2. inspect the cluster distribution of the top-ranked seeds
+3. allocate retrieval budget across clusters from that distribution
+4. run in-cluster retrieval with diversity control
+5. keep a small global backstop outside the selected clusters
+
+This makes clusters a prior, not a prison.
+
+### Budget allocation rule
+
+One workable strategy is:
+
+- turn the top global seed scores into a softened cluster distribution
+- allocate per-cluster budget roughly in proportion to that distribution
+- enforce a minimum floor so minority clusters with real signal still get sampled
+
+That is close to what you proposed and is a good default.
+
+### In-cluster retrieval
+
+Within each selected cluster, use something like **MMR** or another diversity-aware
+retriever so the cluster budget does not collapse onto near-duplicates.
+
+Good pattern:
+
+- cluster-level budget for recall
+- MMR within cluster for diversity
+- one small global tail for surprise recall
+
+### Global backstop
+
+Always keep a few non-cluster-restricted results in the final candidate pool.
+
+This is the simplest guardrail against:
+
+- bad cluster assignment
+- underfit clustering
+- novel cross-cluster queries
+- evidence that legitimately spans more than one semantic region
+
+### Retrieval ownership
+
+This routing policy belongs to the retrieval layer, not the ontology layer.
+
+- `kg_ontology` decides canonical ids
+- `agentic_kg_memory` decides cluster budgets, MMR, and recall/backstop policy
+
+If you later turn your GIST retriever into a dedicated skill, it should sit here
+as the retrieval implementation surface rather than inside ontology.
+
+That skill is now `gist-retriever`.
+
+- `agentic_kg_memory` defines the retrieval policy and memory-update contract
+- `gist-retriever` implements the layered retrieval engine
+- `kg_ontology` supplies canonical ids but does not own retrieval budgets
+
+### Retrieval sub-skill
+
+Treat `gist-retriever` as a **sub-skill within `agentic_kg_memory`**.
+
+Use it when `agentic_kg_memory` needs a concrete retrieval implementation for:
+
+- BM25 + dense seed gathering
+- RRF fusion
+- L2 triplet expansion
+- cluster-mixture budgeting
+- MMR within cluster slices
+- ColBERT reranking
+
+In this repo, that sub-skill should default to the **derived Chroma triplet space**,
+not a pgvector dependency.
+
+### Why graph-based clustering is reasonable
+
+Do not assume semantic memory is nicely spherical.
+
+Graph-based methods such as spectral clustering are often a better fit than plain
+KMeans because semantic neighborhoods can be curved, chained, or density-shaped
+rather than round blobs. The transferable point is:
+
+- cluster by connectivity structure in embedding space
+- do not treat Euclidean centroid distance as the only geometry that matters
+
+### Cluster evaluation contract
+
+If clustering is fitted, persist:
+
+- `bss`
+- `tss`
+- `bss_tss_ratio`
+- cluster sizes
+- the chosen cluster count
+
+The final `bss_tss_ratio` belongs in `C:\Users\user\memory-bank\cluster_metrics.json`.
+
+### Storage guidance
+
+One workable storage split is:
+
+- SQLite or equivalent for page rows, triplet metadata, counts, scores, and `bm25_text`
+- Chroma or another vector store for `triplet_sequence_text` embeddings
+- a shared `page_id` / `embedding_ref` seam between the two
+
+Keep the sparse and dense surfaces linked, not duplicated blindly.
 
 ## Intent, Objective, and Entity Bag Policy
 
@@ -372,8 +821,20 @@ When merging:
 - keep the higher-fit page
 - union and reweight entity bags
 - merge supporting triplets
+- merge equivalent throughlines at the conclusion layer
 - preserve competing throughlines if they are still meaningfully distinct
 - append a merge record to history
+
+### Throughline-specific merge policy
+
+For conclusions specifically:
+
+- merge **equivalent** claims
+- keep **competing** claims side by side
+- deprecate **collapsed or disproven** claims
+
+That lets the graph remain updateable without pretending every new conclusion
+must overwrite the old one.
 
 ## History Policy
 
