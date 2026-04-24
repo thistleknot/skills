@@ -4,21 +4,22 @@ description: >
   Protocol for synthesizing, debugging, iterating on, and verifying automated LLM
   pipeline harnesses (dark software factories, code-generation wrappers, multi-stage
   agentic systems). Think of it as the programmatic train station for agentic coding
-  frameworks like Claude Code, OpenCode, and GitHub Copilot CLI: it routes work,
-  enforces legality, tracks branch/story state, and reconciles failures into general
-  harness fixes. Use when a harness produces incoherent output, illegal or prohibited
-  actions, gate failures, LLM truncation bugs, test-generation failures, or
-  violation-count divergence. The core contract: set a coherence=False todo at task
-  start and iterate until you can flip it to True.
+  systems like OpenClaw, Claude Code, OpenCode, and GitHub Copilot CLI: they define
+  the default backbone, while the harness routes work, enforces legality, tracks
+  branch/story state, and reconciles failures into general harness fixes. Use when a
+  harness produces incoherent output, illegal or prohibited actions, gate failures,
+  LLM truncation bugs, test-generation failures, or violation-count divergence. The
+  core contract: set a coherence=False todo at task start and iterate until you can
+  flip it to True.
 ---
 
 # Agentic Harness Skill
 
 ## Programmatic Train Station Thesis
 
-Think of `agentic-harness` as the **programmatic train station** for agentic coding frameworks.
+Think of `agentic-harness` as the **programmatic train station** for agentic coding systems.
 
-- Claude Code, OpenCode, GitHub Copilot CLI, or similar tools are the trains
+- OpenClaw, Claude Code, OpenCode, GitHub Copilot CLI, or similar systems are the backbone templates
 - tasks, stories, and prompts are the passengers
 - branches and artifacts are the platforms
 - legality gates, critics, and retry policies are the signals and switchyard logic
@@ -35,6 +36,28 @@ The harness is not just a wrapper around one model. It is the control layer that
 
 If several coding agents can enter the same project, the harness should be the
 shared station contract they all pass through.
+
+### Backbone operating model
+
+When building a new coding harness, start from the operational backbone used by
+systems like **OpenClaw, OpenCode, GitHub Copilot CLI, and Claude Code**.
+
+Minimum backbone behaviors:
+
+- terminal-native tool execution, not chat-only ideation
+- explicit search -> inspect -> edit -> run -> verify loop
+- branch or worktree awareness
+- artifact and evidence production at known paths
+- checkpointed plan / todo / state tracking
+- critic-gated completion rather than "looks good" completion
+
+Extra planners, evaluators, memory layers, or multi-agent rooms can sit on top
+of this backbone, but they should not replace it.
+
+The intended stance is **dark for a specific task**: once a story or work item is
+well-scoped, the harness should be able to run that task end-to-end with minimal
+human interruption. The darkness is scoped to the assigned task, not treated as a
+blanket license for unrestricted repo-wide autonomy.
 
 ## Core Contract — The Coherence Flag
 
@@ -197,6 +220,9 @@ Support two explicit operating modes:
 - **semi-autonomous** - workers advance until a checkpoint, then pause for review
 - **fully autonomous** - workers continue without a human checkpoint, but only
   inside a verified envelope with strong monitoring
+
+For dark-factory use, prefer **fully autonomous for the current task** once the
+story, artifact target, and guardrails are explicit.
 
 Default checkpoint triggers:
 
@@ -768,8 +794,10 @@ Branch naming examples:
 
 ### Agent platform routing
 
-Treat each coding framework as a worker line that can be routed by the station:
+Treat each coding framework as both a worker line and a reference backbone the
+station can inherit from:
 
+- OpenClaw -> autonomous coding backbone with explicit control loop expectations
 - Claude Code -> strong long-horizon coding / editing worker
 - OpenCode -> alternate coding worker or experimentation lane
 - GitHub Copilot CLI -> terminal-native execution / inspection lane
@@ -783,6 +811,16 @@ The harness should decide:
 
 Do not let every agent freestyle its own lifecycle. Shared station rules should
 outlive any one framework.
+
+If building a new harness from scratch, copy the backbone shape first:
+
+1. inspect the repo and active state
+2. plan and track work explicitly
+3. use tools to search, edit, and execute
+4. emit artifacts and evidence
+5. let critics or verifiers decide completion
+
+Only then add more exotic orchestration.
 
 ### Task taxonomy and capability routing
 
