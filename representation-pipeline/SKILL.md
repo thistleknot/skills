@@ -99,6 +99,58 @@ N×N affinity matrix. Each song becomes an N-dim relational profile.
 feature space. The two are not comparable — they measure separability
 in different geometries.
 
+## Modeling Tip — Transform -> Search -> Measure
+
+When clustering quality jumps dramatically, separate the gain into three
+distinct decisions rather than treating it as "the model just got better."
+
+### 1. Transform
+
+The biggest lever is often the representation change.
+
+- Raw feature vectors may describe the signal
+- Affinity rows describe each item's **relationship to the corpus**
+
+For similarity and recommendation tasks, that relational view can be more
+useful than the raw coordinates. This is the GIST-style move: cluster items
+by how they relate to everything else, not just by their original features.
+
+### 2. Search
+
+Once the representation is fixed, search the algorithm family and the tuning
+surface instead of assuming one clustering method.
+
+- compare k-means, agglomerative variants, spectral, GMM, HDBSCAN
+- use nested CV when you need an unbiased estimate
+- let the inner loop tune and the outer loop evaluate
+
+### 3. Measure in-space
+
+BSS/TSS is the **R^2 of clustering**: the fraction of total variance explained
+by the cluster assignments.
+
+- `0.9664` means the clustering explains about 97% of the variance
+- that number is only meaningful in the space where it was computed
+
+If the transform produced an affinity space, compute BSS/TSS there.
+Do not switch back to raw features for evaluation and then claim the transformed
+representation won on its own terms.
+
+### The recipe
+
+```text
+transform -> search -> measure in-space
+```
+
+Each step is load-bearing:
+
+- transform without search leaves performance on the table
+- search without the right transform explores the wrong geometry
+- transform and search without in-space measurement misreads the result
+
+Use this pattern whenever BSS/TSS, silhouette, or downstream retrieval quality
+depends more on representation geometry than on the raw source features.
+
 ### Layer 2 → 3: Affinity Clusters to Metric-Learned Embeddings
 
 **Before:** Cluster labels derived from affinity-space KMeans.
@@ -183,7 +235,8 @@ Layer 8  Final selection                iterate to unique result set
 
 **Each layer's k value, weights, and thresholds are hyperparameters.**
 Optuna can tune them jointly or layerwise (layerwise preferred — see
-`optuna` skill).
+`optuna-nested-cv` skill), and MLflow should log the run lineage and artifacts
+(see `mlflow` skill).
 
 **Instructional use:** When designing a new pipeline, ask for each
 module: what are its inputs, what are its tunables, and what is its
@@ -239,7 +292,8 @@ Tunables: algo in {kmeans, spectral, agg_ward, agg_complete, gmm, hdbscan}
 ```
 
 When the tunable space is large or the evaluations are expensive,
-hand the layer to Optuna (see `optuna` skill).
+hand the layer to Optuna (see `optuna-nested-cv` skill) and record the
+campaign in MLflow (see `mlflow` skill).
 
 ## Bootstrap Loop Protocol
 

@@ -3,13 +3,38 @@ name: agentic-harness
 description: >
   Protocol for synthesizing, debugging, iterating on, and verifying automated LLM
   pipeline harnesses (dark software factories, code-generation wrappers, multi-stage
-  agentic systems). Use when a harness produces incoherent output, illegal or
-  prohibited actions, gate failures, LLM truncation bugs, test-generation failures,
-  or violation-count divergence. The core contract: set a coherence=False todo at
-  task start and iterate until you can flip it to True.
+  agentic systems). Think of it as the programmatic train station for agentic coding
+  frameworks like Claude Code, OpenCode, and GitHub Copilot CLI: it routes work,
+  enforces legality, tracks branch/story state, and reconciles failures into general
+  harness fixes. Use when a harness produces incoherent output, illegal or prohibited
+  actions, gate failures, LLM truncation bugs, test-generation failures, or
+  violation-count divergence. The core contract: set a coherence=False todo at task
+  start and iterate until you can flip it to True.
 ---
 
 # Agentic Harness Skill
+
+## Programmatic Train Station Thesis
+
+Think of `agentic-harness` as the **programmatic train station** for agentic coding frameworks.
+
+- Claude Code, OpenCode, GitHub Copilot CLI, or similar tools are the trains
+- tasks, stories, and prompts are the passengers
+- branches and artifacts are the platforms
+- legality gates, critics, and retry policies are the signals and switchyard logic
+- the harness is the stationmaster that routes traffic, prevents collisions, and
+  records what actually departed and arrived
+
+The harness is not just a wrapper around one model. It is the control layer that:
+
+- normalizes work requests into explicit stories or scenes
+- routes them to the right coding agent or subagent
+- enforces policy before side effects happen
+- reconciles failures into reusable repair logic
+- tracks which branch, artifact, and critic state belongs to which work item
+
+If several coding agents can enter the same project, the harness should be the
+shared station contract they all pass through.
 
 ## Core Contract — The Coherence Flag
 
@@ -35,6 +60,57 @@ UPDATE todos SET status = 'done' WHERE id = 'coherence';
 
 ---
 
+## Relation to React Agent
+
+Keep `agentic-harness` and `react-agent` as **adjacent but separate** skills.
+
+- `react-agent` is the general-purpose execution loop for planning, progress,
+  evidence, and multi-step delivery.
+- `agentic-harness` is the specialist loop for **self-repairing automated systems**:
+  legality, coherence, critic routing, retry discipline, and harness synthesis.
+
+Recommended composition:
+
+```text
+react-agent
+    -> Phase 0-2: contract, recon, plan, kanban, branch discipline
+    -> delegates harness-specific execution to agentic-harness
+agentic-harness
+    -> diagnoses coherence failures
+    -> repairs proposer / validator / critic logic
+    -> returns a stable harness candidate plus coherence verdict
+```
+
+Do not collapse them into one skill unless you find repeated evidence that the
+outer delivery loop and the inner harness-repair loop cannot be maintained independently.
+
+## No Band-Aid Repair Rule
+
+This skill is explicitly **anti ad-hoc repair**.
+
+- Do not patch only the current generated artifact if the defect comes from the
+  proposer, validator, critic, retry policy, or state contract.
+- Fix the mechanism that produced the defect class.
+- A repair only counts when it suppresses the failure mode on:
+  1. a minimal isolated reproduction
+  2. a representative full harness run
+
+If the only way to "fix" the system is to hand-edit each bad output, the harness
+is still incoherent.
+
+## Artifact-Backed Coherence Gate
+
+Coherence is not true just because logs look better.
+
+Before flipping the coherence flag, confirm that:
+
+- the expected artifact exists at a known path
+- the artifact was produced by the repaired pipeline, not by manual patching
+- the artifact can be reopened and inspected after the run
+- the artifact satisfies the task-specific completion condition
+
+---
+
 ## AutoHarness Thesis — Learn the Harness, Not Just the Prompt
 
 AutoHarness (arXiv:2603.03329) matters because it validates a stronger pattern than
@@ -48,6 +124,84 @@ The paper's core result is that a smaller model with a synthesized harness can
 outperform a larger unharnessed model. The transferable lesson is not "use games";
 it is: **if the environment has hard rules, move those rules into code and refine
 that code from live failures**.
+
+## Orchestration Patterns to Carry Forward
+
+These patterns are in scope for this skill and should be used explicitly when they fit.
+
+### LangGraph pattern
+
+Use a LangGraph-style architecture when you need:
+
+- explicit typed shared state
+- named nodes with stable contracts
+- router / supervisor nodes
+- bounded loops with counters in state
+- checkpointed recovery between turns
+- human-review or approval nodes
+
+Default node set for a software harness:
+
+- planner
+- router
+- implementer
+- executor
+- critic
+- verifier
+- recovery / retry
+- human-review
+
+State should carry:
+
+- current objective
+- current story or scene id
+- current branch
+- artifact paths
+- retry counters
+- critic findings
+- coherence status
+
+### Anthropic agentic orchestration patterns
+
+Treat the following as canonical patterns:
+
+- **Prompt chaining** — linear stage-by-stage transformations
+- **Routing** — classify work, then send to the right specialist
+- **Parallelization** — fan out independent workers, then reduce
+- **Orchestrator-workers** — one coordinator delegates subproblems
+- **Evaluator-optimizer** — critic loop that scores and refines outputs
+
+Mapping to harness work:
+
+- prompt chaining -> multi-stage codegen pipeline
+- routing -> choose planner / coder / test-writer / repair path
+- parallelization -> run multiple candidate harnesses or rollouts
+- orchestrator-workers -> PM / implement / verify split
+- evaluator-optimizer -> reconcile / critic / fix loop
+
+### AutoGen pattern
+
+AutoGen-style multi-agent chat is appropriate when role conflict is useful, not decorative.
+
+Useful roles:
+
+- product manager
+- planner
+- coder
+- code critic
+- tool executor
+- verifier
+- repo steward
+
+If using group chat / chat room capability:
+
+- cap rounds explicitly
+- define termination conditions up front
+- keep the code critic independent from the coder
+- require artifact output, not just conversation consensus
+- have one manager agent decide when a discussion ends and work product is accepted
+
+The point of a chat room is perspective separation, not theatrical dialogue.
 
 ### Canonical split
 
@@ -435,6 +589,132 @@ of the real implementation requires a separate integration pass.
 
 ---
 
+## Dark Software Factory Delivery Model
+
+Beyond the internal reconcile loop, keep the **project-management mentality** explicit.
+
+### Kanban from the project plan
+
+Translate the project plan into story cards with at least:
+
+- story id
+- objective
+- acceptance condition
+- current status
+- branch
+- artifact path
+- latest critic note
+
+Recommended statuses:
+
+- backlog
+- ready
+- in_progress
+- review
+- blocked
+- done
+
+Update the story as development continues; do not let the kanban lag behind the branch state.
+
+### Git discipline
+
+If the user has authorized repository setup and the project is not yet under git:
+
+1. initialize the repository
+2. create the main branch
+3. create one branch per story or tightly-coupled feature
+4. keep commits causal and small
+5. merge only after artifact-backed verification
+
+Branch naming examples:
+
+- `story/<id>-<slug>`
+- `feature/<slug>`
+- `bugfix/<slug>`
+- `chore/<slug>`
+
+### Agent platform routing
+
+Treat each coding framework as a worker line that can be routed by the station:
+
+- Claude Code -> strong long-horizon coding / editing worker
+- OpenCode -> alternate coding worker or experimentation lane
+- GitHub Copilot CLI -> terminal-native execution / inspection lane
+
+The harness should decide:
+
+- which agent gets which story
+- what context packet each agent receives
+- what artifact path the agent must produce
+- what critic or verifier checks the result afterward
+
+Do not let every agent freestyle its own lifecycle. Shared station rules should
+outlive any one framework.
+
+### MLflow experiment ledger
+
+Use `mlflow` as the station ledger when the harness compares multiple frameworks,
+prompt packets, critics, or retry policies.
+
+Recommended mapping:
+
+- experiment -> project or harness family
+- parent run -> story, benchmark suite, or repair campaign
+- child run -> framework-specific attempt, critic pass, or verification pass
+
+Minimum tags:
+
+- `framework`
+- `story_id`
+- `branch`
+- `artifact_path`
+- `coherence_status`
+- `critic_round`
+
+Minimum metrics:
+
+- `illegal_action_rate`
+- `gate_pass_rate`
+- `critic_violation_count`
+- `artifact_generated`
+- `time_to_first_artifact_sec`
+
+Minimum artifacts:
+
+- logs
+- critic reports
+- generated repo or output bundle
+- evidence packet
+
+This keeps Claude Code, OpenCode, GitHub Copilot CLI, and future worker lines
+on one shared comparison surface.
+
+### Studio analogies
+
+Use the studio metaphor to control context:
+
+- stories are scenes
+- the kanban is the shooting board
+- the continuity script is the artifact / evidence packet
+- sparse retrieved context is the actor prompt
+- the critic is script supervision
+
+Only hand each worker the context needed for its scene.
+
+### RPG memory analogy
+
+Between sessions, the agent should reread the equivalent of a character sheet:
+
+- current objective
+- current branch
+- open story cards
+- artifact inventory
+- unresolved status effects (blockers, retries, critic findings)
+
+If the next session cannot reload that sheet and continue coherently, the harness memory is insufficient.
+
+---
+
 ## Iteration Protocol
 
 1. **Identify**: run the pipeline; capture log; label each failure by checklist item number.
@@ -458,3 +738,4 @@ of the real implementation requires a separate integration pass.
 - [ ] No ParseError sentinel fed to any downstream LLM call
 - [ ] Pipeline completes without `retry` for a straightforward prompt
 - [ ] All tests in the generated project pass (or known skips are documented)
+- [ ] Expected artifact exists at a known path and can be reopened after the run

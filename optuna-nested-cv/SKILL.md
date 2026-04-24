@@ -16,6 +16,10 @@ description: >
 This skill is the **Optuna implementation layer** on top of the general
 `hyper-parm_tuning` methodology.
 
+Pair it with `mlflow` when you need searchable experiment history, artifact
+comparison, or cross-run lineage. Optuna owns the search loop; MLflow owns
+the experiment ledger.
+
 It owns:
 - SQLite-backed study persistence and resumability
 - TPE sampler configuration and startup budget
@@ -30,12 +34,18 @@ It does **not** own:
 - product-level decisions about which metrics matter
 - architecture changes mid-search
 - LLM judge scoring (see `hyper-parm_tuning` for that path)
+- experiment UI / artifact registry behavior (see `mlflow`)
 
 ## Core Thesis
 
 Optuna is a persistent, resumable black-box optimizer.
 Its value is not just finding good params — it is **making every trial
 auditable and the search reproducible**.
+
+In practice:
+
+- Optuna's SQLite backend preserves sampler state
+- MLflow should preserve run metadata, metrics, and artifacts
 
 Three rules before any search begins:
 
@@ -102,6 +112,15 @@ study = optuna.create_study(
 )
 ```
 
+Then mirror the same campaign into MLflow:
+
+```python
+import mlflow
+
+mlflow.set_tracking_uri("file:./mlruns")
+mlflow.set_experiment("pipeline_search")
+```
+
 Name conventions that prevent collisions:
 
 | Segment | Purpose |
@@ -114,6 +133,39 @@ Name conventions that prevent collisions:
 
 If any segment changes, Optuna treats it as a new study and starts fresh.
 This is the correct behavior — do not reuse stale studies across config changes.
+
+Apply the same rule to MLflow experiment or tag naming so runs from different
+representations are not mixed together.
+
+## MLflow Pairing
+
+Recommended run hierarchy:
+
+```text
+campaign run
+    outer_fold_0
+        trial_000
+        trial_001
+    outer_fold_1
+        trial_000
+    final_train
+    holdout_eval
+```
+
+Minimum MLflow logging for each trial:
+
+- params suggested by Optuna
+- scalar objective
+- component metrics
+- fold index
+- study name
+- trial number
+- any plot or artifact needed to explain the result
+
+Rule:
+
+- do not use MLflow as a replacement for Optuna storage
+- do not use Optuna SQLite as a replacement for MLflow artifact tracking
 
 ## Composite Scalar Objective
 
@@ -210,6 +262,12 @@ those four are stable.
 
 This is the seeded recipe for unsupervised clustering search.
 
+**Important boundary:** for quote embeddings or retrieval corpora, clustering may
+be useful as a routing or diagnostic layer without being the right winner metric.
+If the real task is retrieval quality, let Optuna optimize the retrieval
+architecture against the real eval target and keep clustering metrics as
+diagnostics unless evidence shows clustering is genuinely load-bearing.
+
 ### Algorithm candidates
 
 Include multiple algorithm families so Optuna explores the landscape:
@@ -251,6 +309,50 @@ Observed effect: affinity-space BSS/TSS consistently higher than
 feature-space BSS/TSS on small corpora because the dimensionality matches
 the cluster count, making separability easier to achieve.
 
+### Modeling tip: transform before search, measure in-space
+
+For clustering, treat the winning result as a three-part recipe:
+
+```text
+transform -> search -> measure in-space
+```
+
+1. **Transform**
+   - move from raw features to the affinity / relational space when the task
+     is fundamentally about pairwise similarity
+2. **Search**
+   - let Optuna compare algorithm families and `k` values under nested CV
+3. **Measure in-space**
+   - BSS/TSS is the **R^2 of clustering**, so report it in the transformed space
+     that the clustering actually used
+
+Example interpretation:
+
+- `BSS/TSS = 0.9664` means the cluster assignments explain about 97% of the
+  variance in that representation space
+
+Do not mix spaces when reporting the result. A strong affinity-space BSS/TSS
+is evidence about the affinity geometry, not the original raw feature geometry.
+
+### Retrieval-stack note: tune the architecture, not the cluster story
+
+When clustering on quote embeddings does not produce stable gains, stop trying to
+make global external clustering "win" the search by itself.
+
+Instead, let Optuna search the retrieval architecture against the real eval
+target. Common factors include:
+
+1. broad-pool size
+2. GIST utility vs diversity weight
+3. graph path weight / hop budget
+4. local community threshold or expansion budget inside layer 2
+5. entity-overlap bonus
+6. whether local grouping is enabled
+
+Use clustering outputs for diagnostics, routing priors, or summarization support
+only. Their weak point is that they can still be locally helpful even when they
+should not dominate model selection.
+
 ### Study namespace for clustering
 
 ```python
@@ -259,6 +361,9 @@ study_name = f"cluster_{chash[:12]}_d{ndim_tag}_outer{fold_i}"
 # composite variant:
 study_name_composite = study_name + "_composite"
 ```
+
+Mirror `study_name` into MLflow tags so the same logical search is queryable
+from both systems.
 
 ## Trial Budget Guidelines
 
@@ -329,3 +434,4 @@ Avoid:
   evaluation metric only
 - Changing the objective function between trials in the same study
 - Skipping holdout validation after search completes
+- Logging only the winning trial and throwing away the artifact trail of the rest

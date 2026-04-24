@@ -25,9 +25,9 @@ It does **not** own:
 
 Those belong to `memory-bank` and `agentic_kg_memory`.
 
-Once this skill exists, treat `copilot_todo.ps1` as a bootstrap reference, not the
-only place the setup knowledge lives. `todo\SKILL.md` should be sufficient for an
-agent to install and operate the todo server.
+This skill is the canonical setup surface. `todo\SKILL.md` should be sufficient
+for an agent to install and operate the todo server without relying on a
+separate PowerShell bootstrap file.
 
 ## Setup Mode
 
@@ -75,8 +75,8 @@ When running setup, do all of the following:
 
 ### Python server scaffold
 
-Transplant the old script-based setup into agent-readable markdown snippets rather
-than treating the PowerShell file as the only source of truth.
+Keep the full setup logic here in agent-readable markdown rather than depending
+on an external bootstrap script.
 
 ```python
 import sqlite3

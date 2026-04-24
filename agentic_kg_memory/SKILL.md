@@ -723,6 +723,22 @@ If clustering is fitted, persist:
 
 The final `bss_tss_ratio` belongs in `C:\Users\user\memory-bank\cluster_metrics.json`.
 
+Treat these cluster metrics as **diagnostics**, not as the default winner metric
+for quote-embedding retrieval systems. The real selection target should stay on
+retrieval quality unless clustering has been shown to materially improve it.
+
+In that setting, the better tuning surface is usually the retrieval architecture:
+
+1. broad-pool size
+2. GIST utility vs diversity weight
+3. graph path weight / hop budget
+4. local community threshold or expansion budget inside layer 2
+5. entity-overlap bonus
+6. whether local grouping is enabled at all
+
+The weak point is that local clustering can still help summarize or organize the
+retrieved evidence after recall has already been won.
+
 ### Storage guidance
 
 One workable storage split is:

@@ -90,6 +90,22 @@ Recommended pattern:
 
 Clusters should bias retrieval, not imprison it.
 
+For quote embeddings, do **not** assume that global external clustering should be
+the winner metric. If it does not improve the real retrieval eval target, keep it
+as a routing diagnostic or post-retrieval summarization aid instead.
+
+Tune the retrieval architecture first:
+
+1. broad-pool size
+2. GIST utility vs diversity weight
+3. graph path weight / hop budget
+4. local community threshold or expansion budget inside layer 2
+5. entity-overlap bonus
+6. whether local grouping is enabled at all
+
+The weak point in this stance is that local grouping can still help summarize the
+retrieved neighborhood after the main candidate pool is already found.
+
 ## Relationship to KG Memory
 
 This skill is a retrieval engine that feeds higher-level reasoning.

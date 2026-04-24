@@ -64,7 +64,9 @@ When running setup, do all of the following:
 5. Write `C:\Users\user\.copilot\memory_mcp.py`
 6. Register the `memory-bank` MCP server in `C:\Users\user\.copilot\mcp-config.json`
 7. If `C:\Users\user\.config\github-copilot\config.toml` exists, mirror the MCP registration there
-8. Ensure the semantic backend directories exist for KG search:
+8. Set the user environment variable `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` to `C:\Users\user\memory-bank`
+9. Ensure `fastmcp` is importable in the active Python environment; install it if missing
+10. Ensure the semantic backend directories exist for KG search:
    - `C:\Users\user\memory-bank\wiki_memory.sqlite3`
    - `C:\Users\user\.copilot\chroma\memory-bank\`
 
@@ -81,6 +83,26 @@ When running setup, do all of the following:
   }
 }
 ```
+
+### Windows bootstrap snippets
+
+If setup is running on Windows, these two checks are part of the install contract:
+
+```powershell
+[System.Environment]::SetEnvironmentVariable(
+    "COPILOT_CUSTOM_INSTRUCTIONS_DIRS",
+    "C:\Users\user\memory-bank",
+    "User"
+)
+
+python -c "import fastmcp" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    python -m pip install fastmcp
+}
+```
+
+Do not consider setup complete unless the environment variable is present and
+`fastmcp` imports successfully.
 
 ### Python MCP server scaffold
 
@@ -214,8 +236,10 @@ When the user says **`memory-bank setup`**, the agent should:
 1. write the markdown files
 2. write `memory_mcp.py` from the Python scaffold above
 3. register the MCP server
-4. provision the optional SQLite + Chroma backend if semantic search is requested
-5. report the exact paths created or updated
+4. set `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` for the user profile
+5. verify or install `fastmcp`
+6. provision the optional SQLite + Chroma backend if semantic search is requested
+7. report the exact paths created or updated
 
 ### Semantic backend note
 
@@ -236,6 +260,8 @@ After setup, an agent should be able to confirm:
 - `AGENTS.md` exists
 - `/mcp show` lists `memory-bank`
 - `C:\Users\user\.copilot\mcp-config.json` contains the registration
+- `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` points at `C:\Users\user\memory-bank`
+- `python -c "import fastmcp"` exits successfully
 - if semantic KG mode is enabled, the SQLite and Chroma paths exist
 
 ## Canonical Files

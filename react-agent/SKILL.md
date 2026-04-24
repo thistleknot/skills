@@ -55,6 +55,102 @@ The architecture draws from five research patterns:
 - **Progressive disclosure** — load context incrementally, not all at once
 - **Planner-executor separation** — reason about *what* at plan level, handle *how* at execution level
 
+## Relation to Agentic Harness
+
+Keep `react-agent` and `agentic-harness` separate.
+
+- `react-agent` is the **outer execution operating system**:
+  - reframe
+  - reconnaissance
+  - plan
+  - execute
+  - verify
+  - preserve memory across turns
+- `agentic-harness` is the **specialist sub-skill** for:
+  - self-repairing code-generation pipelines
+  - dark software factories
+  - legality gates
+  - reconcile / critic loops
+  - harness synthesis from environment failures
+
+When the system being changed is itself an agentic pipeline, use this split:
+
+```text
+react-agent      -> manages task contract, plan, progress, evidence, and handoffs
+agentic-harness  -> manages coherence loop, legality loop, critic loop, and harness repair
+```
+
+Do not merge them by default. Merge only if the generic execution loop and the
+harness-specific repair loop become operationally inseparable.
+
+## Studio Model for Long-Running Work
+
+Two analogies are load-bearing for this skill.
+
+### RPG character sheet
+
+The `.react_agent/` workspace is the **character sheet between sessions**.
+
+- `task.md` = quest and win condition
+- `recon.md` = what the party knows
+- `plan.md` = intended route
+- `progress.md` = current HP, inventory, and open status effects
+- `evidence.md` = proof of what actually happened
+
+If a future session cannot reopen those files and resume cleanly, the sheet is incomplete.
+
+### Studio continuity packet
+
+Treat long tasks like a production pipeline:
+
+- the task is the film
+- subtasks are scenes
+- `plan.md` is the shooting schedule
+- `progress.md` is the production board
+- sparse retrieved context is the actor packet
+- `evidence.md` is the continuity report
+
+Each subtask should receive only the context needed to play its role well.
+Do not dump the whole script into every actor packet.
+
+## Kanban and Branch Discipline
+
+When a task spans multiple features, fixes, or workstreams, promote the plan into
+a lightweight kanban model.
+
+Recommended states:
+
+- `backlog`
+- `ready`
+- `in_progress`
+- `review`
+- `blocked`
+- `done`
+
+Minimum story fields:
+
+- story id
+- objective
+- acceptance condition
+- current status
+- owner / agent
+- branch name
+- evidence path
+
+Branch policy:
+
+- one story or tightly-coupled subtask per branch
+- branch names should be stable and descriptive:
+  - `story/<id>-<slug>`
+  - `feature/<slug>`
+  - `bugfix/<slug>`
+  - `chore/<slug>`
+- update story status when branch state changes
+- do not mark a story `done` until its evidence path exists and its acceptance condition is satisfied
+
+If no git repository exists and the user has authorized repository setup, initialize
+the repo before multi-story execution so branch and kanban state stay coherent.
+
 ## When You Receive a Task
 
 Before writing any code or making any change, execute this sequence:
@@ -303,6 +399,12 @@ After each REFLECT step, append to `memory.jsonl`. Include:
 - Why (diagnosis if failed, confirmation if succeeded)
 - What to do next (informed by what was learned)
 
+When a decision, blocker, or rejected path is important enough that a future
+turn would otherwise need to reconstruct it from scratch, write a distilled
+continuity packet as well. Use the `continuity-log` skill for that style of
+compact-safe note. Do **not** try to dump raw chain-of-thought; persist the
+decision, evidence, dead end, and exact resume point.
+
 ### Context Budget Management
 
 The context window is the most constrained resource during long tasks. Manage it actively:
@@ -311,6 +413,7 @@ The context window is the most constrained resource during long tasks. Manage it
 - **Prefer CLI tools over MCP servers** — CLI tools (git, grep, find, npm) are context-neutral; MCP server tool definitions load on every request. Use CLI where both options exist.
 - **Write before forgetting** — if a key finding, decision, or error message appears in context that you will need later, write it to `.react_agent/` immediately. Do not rely on it surviving context truncation.
 - **When context is filling** — proactively checkpoint current subtask state to `progress.md` before auto-compaction fires. Fields that must survive any compaction: current subtask number, `task.md` completion conditions, and the last known working state.
+- **Use continuity packets for pivots** — when the load-bearing thing to preserve is a decision or rejected approach rather than a file diff, write a `continuity-log` style packet so the next turn does not repeat the same analysis.
 - **Protect on compaction**: `task.md` execution contract, `progress.md` status table, current subtask's `plan.md` entry, and any unresolved blockers.
 
 ### Progress Tracking
@@ -410,6 +513,8 @@ domain, delegate:
 - File format tasks (docx, xlsx, pdf, pptx) → use the relevant format skill
 - Frontend/UI work → use the frontend-design skill
 - Browser/QA testing → use the gstack skill
+- Self-repairing codegen pipelines, dark software factories, and legality / critic loops -> use the `agentic-harness` skill as a specialist sub-skill
+- Between-compaction decision capture and resume notes -> use the `continuity-log` skill
 
 The ReAct loop wraps around delegated skill execution — the delegated skill
 handles the *how*, this skill handles the *whether it worked*.

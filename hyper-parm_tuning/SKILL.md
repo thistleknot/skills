@@ -15,6 +15,23 @@ Treat tuning as experimental design, not blind search.
 
 If the system includes a persistent memory layer, define that layer in its own skill first. This skill only covers how to optimize it after the behavior is already specified.
 
+## Skill Topology
+
+This skill is the **methodology layer**.
+
+Use it with:
+
+- `optuna-nested-cv` for the Optuna / TPE implementation layer
+- `mlflow` for experiment tracking, run lineage, and artifact comparison
+
+Think of the split this way:
+
+```text
+hyper-parm_tuning -> what to optimize, in what order, against what scalar
+optuna-nested-cv  -> how to run the search
+mlflow            -> how to record the search and compare outcomes
+```
+
 ## When to Use
 Use this skill when:
 - evaluations are expensive
@@ -185,6 +202,9 @@ For this workflow, the default multiple-sampler setting is the fixed trio:
 ## Persistence
 Persist every trial artifact.
 
+Prefer MLflow as the searchable run ledger, even when another tool stores
+search state underneath it.
+
 Each saved trial should include:
 - parameter values
 - scalar score
@@ -193,6 +213,11 @@ Each saved trial should include:
 - timestamp
 - trial index
 - evaluator notes or reason text, if available
+
+If Optuna is involved:
+
+- keep the Optuna SQLite study for resumability
+- log the trial to MLflow for comparison, artifact browsing, and cross-run lineage
 
 This turns tuning into a reproducible experiment instead of an ephemeral chat outcome.
 
@@ -206,6 +231,31 @@ For each trial:
 5. Persist the artifact
 6. Compare against the incumbent
 7. Update best params only if the score improves
+
+## Retrieval-Architecture Tuning vs Clustering Diagnostics
+When tuning quote retrieval or similar semantic-memory systems, do **not** make
+global external clustering the winner metric.
+
+Use the real retrieval eval target for selection, and treat clustering outputs as:
+
+- diagnostics for geometry
+- optional routing aids
+- optional post-retrieval summarization structure
+
+This is the stronger default when quote embeddings do not cluster cleanly enough
+to deserve ownership of model selection.
+
+Typical retrieval-architecture factors to tune instead:
+
+1. broad-pool size
+2. GIST utility vs diversity weight
+3. graph path weight / hop budget
+4. local community threshold or expansion budget inside layer 2
+5. entity-overlap bonus
+6. whether local grouping is enabled at all
+
+Weak point: some local clustering may still help summarization after retrieval.
+That does **not** make cluster quality the primary objective.
 
 ## Post-Selection Validation
 After selecting the final config:
@@ -254,6 +304,9 @@ When invoked, apply this sequence:
 10. Persist the final chosen params
 11. Run holdout once for confirmation
 12. Convert recurring misses into a repair queue
+
+Where available, log every step above into MLflow so the campaign, final fit,
+and holdout pass all remain tied together.
 
 ## Minimal Output Contract
 When using this skill, the final answer should report:
