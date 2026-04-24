@@ -109,6 +109,35 @@ Before flipping the coherence flag, confirm that:
 - the artifact can be reopened and inspected after the run
 - the artifact satisfies the task-specific completion condition
 
+## Autonomy Should Be Inspectable from Code
+
+Do not treat autonomy as a vibe or a marketing label. Treat it as a property of
+the **orchestration code**.
+
+When reviewing a harness, inspect:
+
+- how much task decomposition happens without a human turn
+- how much decision authority is delegated to workers
+- what monitoring hooks exist
+- where intervention points still exist
+- whether approval nodes protect irreversible actions
+
+Use a simple code-inspection lens:
+
+```text
+assess_autonomy(code):
+    orchestration = extract_orchestration_logic(code)
+    impact = score_task_and_decision_independence(orchestration)
+    oversight = score_monitoring_and_intervention_points(orchestration)
+    return weighted_autonomy_score(impact, oversight)
+```
+
+Operational rule:
+
+- higher autonomy requires **more explicit oversight**, not less
+- if impact rises while intervention points disappear, the harness is becoming reckless
+- inspect the orchestration graph before trusting a "fully autonomous" claim
+
 ---
 
 ## AutoHarness Thesis — Learn the Harness, Not Just the Prompt
@@ -160,6 +189,25 @@ State should carry:
 - retry counters
 - critic findings
 - coherence status
+
+### Operating modes
+
+Support two explicit operating modes:
+
+- **semi-autonomous** - workers advance until a checkpoint, then pause for review
+- **fully autonomous** - workers continue without a human checkpoint, but only
+  inside a verified envelope with strong monitoring
+
+Default checkpoint triggers:
+
+- destructive file operations
+- dependency installation or environment mutation
+- branch merge or deployment
+- low-confidence critic verdicts
+- novelty or ambiguity that changes the project plan
+
+Do not let a harness drift between these modes implicitly. The current mode
+should be named in state and visible in logs.
 
 ### Anthropic agentic orchestration patterns
 
@@ -257,6 +305,28 @@ For day-to-day engineering, a simpler equivalent is acceptable:
 - maintain 2-4 materially different harness candidates
 - score them on legality first, then reward / usefulness
 - kill candidates that repeat the same failure mode
+
+### Archive-driven discovery
+
+Keep an archive of prior harness candidates, not just the current best attempt.
+
+Minimum archive contents:
+
+- candidate id
+- control structure summary
+- benchmark or story set used
+- legality / trust / completion metrics
+- critic report
+- artifact path
+- failure class labels
+
+Promotion rule:
+
+- only promote a candidate into the archive if it beats the incumbent on the
+  benchmark suite or introduces a materially different control structure worth keeping
+
+The point is to let the station learn from previous harnesses instead of
+re-deriving the same loops every session.
 
 ### Failure sampling
 
@@ -557,6 +627,69 @@ DEFAULT_TIMEOUT = 300 s per attempt.  A 216-second generation is slow but valid.
 
 ---
 
+## Secure Execution Envelope
+
+If the harness performs real software work, give it a controlled execution
+envelope rather than raw host access.
+
+Minimum envelope:
+
+- isolated worktree, container, or sandboxed repo copy
+- mounted codebase or bounded workspace path
+- explicit security guardrails on commands, files, and network access
+- static analysis tools available to the critic / verifier layer
+- audit logs for actions, errors, security events, and outputs
+
+Security loop:
+
+```text
+while run_active:
+    monitor_for_unauthorized_access()
+    monitor_for_data_leakage()
+    verify_workspace_integrity()
+    if security_issue_detected:
+        isolate_run()
+        emit_security_report()
+        route_to_recovery()
+```
+
+Do not call a system "autonomous" if it is only autonomous because it was given
+unsafe unrestricted access.
+
+### Trust gate for generated code
+
+The verifier should aggregate multiple analysis tools into a trust pass, not rely
+on one model's confidence.
+
+Minimum trust inputs:
+
+- tests
+- static analysis
+- lint or type checks when available
+- security scan or policy checks
+- dependency / import reality checks
+
+Use trust as a gate for acceptance, not as a substitute for artifact-backed verification.
+
+### Hallucination control
+
+Treat hallucinations in repository-level codegen as a tracked failure class.
+
+Useful buckets:
+
+- invented imports or APIs
+- nonexistent files, modules, or symbols
+- false assumptions about repo structure
+- security or policy violations
+
+Mitigation order:
+
+1. improve retrieval and context grounding
+2. improve verifier / critic detection
+3. only then retry generation
+
+---
+
 ## Dark Software Factory — Specific Internals
 
 These apply to the `dark_factory` harness at `/home/user/harness`:
@@ -650,6 +783,32 @@ The harness should decide:
 
 Do not let every agent freestyle its own lifecycle. Shared station rules should
 outlive any one framework.
+
+### Task taxonomy and capability routing
+
+Keep a simple task taxonomy beyond "write code":
+
+- requirements / scoping
+- design / architecture
+- implementation
+- test generation
+- debugging / repair
+- maintenance / migration
+- research / evaluation
+
+Route work using:
+
+- task type
+- task complexity
+- agent capability
+- developer expertise
+- required oversight level
+
+Rule of thumb:
+
+- give agents work they are structurally equipped to do
+- keep high-risk, underspecified, or capability-mismatched work under tighter human control
+- professionals do not just let the agent vibe; they control routing, checkpoints, and acceptance
 
 ### MLflow experiment ledger
 
