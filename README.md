@@ -21,7 +21,8 @@ skills/
 │
 ├── orchestration/                   # route work, enforce policy, manage cross-session state
 │   ├── agentic-harness              # dark-task control plane; backbone = OpenClaw/Claude Code/OpenCode/Copilot CLI
-│   │   └── continuity-log           # compact-safe session memory; distilled decisions, resume points
+│   │   ├── continuity-log           # compact-safe session memory; distilled decisions, resume points
+│   │   └── deep-research            # multi-source web evidence pipeline; LangGraph planner→researcher→synthesizer
 │   └── timeout-guard                # runaway-task policy; interrupt and recovery rules
 │
 ├── memory/                          # persist knowledge across sessions and tasks
@@ -45,6 +46,7 @@ skills/
 1. `react-agent` is the outer execution OS. All other skills are invoked from inside it.
 2. `agentic-harness` is the programmatic train station for coding frameworks (Claude Code, OpenCode, GitHub Copilot CLI, OpenClaw). It routes, gates, and reconciles work; each framework is a worker line.
 3. `continuity-log` is a child of `agentic-harness`. It holds the compact-safe distilled state that lets the harness resume without re-deriving decisions.
+4. `deep-research` is a child of `agentic-harness`. It decomposes a question into parallel subquestions, gathers web evidence via a 3-tier fetch pipeline (httpx → retry → Selenium), and synthesizes a claim-backed report seeding the harness TaskSpec.
 4. `hyper-parm_tuning` defines what to optimize; `optuna-nested-cv` runs the nested search; `mlflow` records every run with lineage.
 5. `agentic_kg_memory` owns semantic memory policy. `gist-retriever` is its retrieval sub-skill. `kg_ontology` handles canonicalization before insertion.
 6. `memory-bank` carries the three-file pattern (DESCRIPTION / ARCHITECTURE / HISTORY) that any skill folder can adopt for self-documentation.
@@ -67,6 +69,6 @@ skills/
 
 ## Recent Direction
 
-- Added `mlflow` as the experiment-ledger skill.
+- Added `deep-research` as a child of `agentic-harness`: LangGraph research graph with Selenium fallback fetch pipeline.
 - Reframed `agentic-harness` as the multi-framework stationmaster.
 - Added `continuity-log` to preserve compact-safe reasoning products between long turns and compactions.
