@@ -1,6 +1,6 @@
 ---
 name: timeout-guard
-description: Use for hung or slow local LLM generations, retry policy design, timeout tuning, or documenting latency-outlier handling. Covers hard per-attempt timeout caps, success-only timing baselines, log-space MAD thresholds with silence-based kill, and restart policy for stale runs.
+description: Use for hung or slow local LLM generations, retry policy design, timeout tuning, or documenting latency-outlier handling. Covers hard per-attempt timeout caps, completion-inclusive baselines (kills/cancels excluded), log-space MAD thresholds with silence-based kill, and restart policy for stale runs.
 ---
 # Timeout Guard
 
@@ -22,13 +22,15 @@ This skill documents the current policy used by the dark_factory harness.
 The timeout is what actually stops bad calls. Everything else here is
 observability and diagnosis.
 
-### 2. Only successful completions count toward the baseline
-- Build latency statistics from **successful completions only**
-- Do **not** include timed-out, cancelled, or transport-failed calls in the
+### 2. All completions count toward the baseline; only kills/cancellations are excluded
+- Build latency statistics from **every call that returned a completion**, regardless of how slow it was
+- Do **not** include timed-out, silence-killed, cancelled, or transport-failed calls in the
   timing baseline
 
-The goal is to model normal completion behavior, not contaminate the baseline
-with failure modes.
+The rolling window is the adaptive mechanism. Excluding slow completions anchors the baseline
+to stale "normal" behavior — causing increasingly aggressive kills as model load grows.
+A slow completion is evidence of what the model actually does; a killed call has no valid
+completion time and must be excluded.
 
 ### 3. Wait for a minimum baseline before flagging outliers
 - Minimum successful samples before outlier detection: **5**
@@ -106,7 +108,7 @@ Rule of precedence: hard cap (300s) ≥ kill_threshold ≥ silence timeout. Whic
 1. Record its duration into the per-model rolling window
 2. If there are fewer than **5** successful samples, stop there
 3. Otherwise compute both log-space thresholds
-4. A completion between `watch_threshold` and `kill_threshold` is a valid data point — include it in the baseline; it completed, it was just slow
+4. Include the completion in the rolling window regardless of which zone it fell in — it completed
 
 ### If a pipeline run predates policy changes
 Restart the run instead of trusting it to "pick up" new timeout settings.
@@ -118,8 +120,8 @@ An in-flight process keeps the constants it imported at startup.
 - **Kill threshold (4×MAD)**: absolute ceiling — a flowing model still gets killed here
 - **Silence kill**: fired from watch tier — stalled model killed before `kill_threshold`
 - **Watch tier (2×MAD)**: not a warning, not a kill — activates the silence monitor
-- A call killed by silence is a failed call; exclude from baseline
-- A call that completed in the watch zone (between 2×MAD and 4×MAD) succeeded — include in baseline
+- **Silence kill / hard cap / cancel**: failed call — exclude from baseline entirely
+- **Any completion**: include in baseline — slow completions are real evidence of model behavior, not contamination
 
 ## What to Log
 For slow completed calls, log:
@@ -143,7 +145,7 @@ Do **not** restart just because one call logged as a slow outlier.
 
 ## Anti-Patterns
 - Computing thresholds before 5 successful samples
-- Mixing failed calls into the timing baseline
+- Mixing killed/cancelled calls into the timing baseline
 - Using nominal-space `median + 2*MAD` instead of log-space on right-tailed latency data
 - Using mean/stddev on long-tail generation latency
 - Treating outlier warnings as hard failures
