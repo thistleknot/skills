@@ -168,18 +168,33 @@ from pydantic import BaseModel
 
 
 class TripletExtraction(BaseModel):
-    subjects_csv: str
-    predicates_csv: str
-    objects_csv: str
+    subjects_csv: str    # e.g. "Alice, Bob, meeting"
+    predicates_csv: str  # e.g. "attended, skipped, was_held"
+    objects_csv: str     # e.g. "meeting, conference, office"
+    polarity_csv: str    # e.g. "affirmed, negated, affirmed"
+    inference_csv: str   # e.g. "observed, inferred, observed"
+    throughline: str     # local abductive best-fit from THIS source alone
 ```
+
+**`polarity`** captures what the source text actually asserts:
+- `affirmed` — the text states the triplet holds
+- `negated` — the text explicitly denies the triplet ("Alice did NOT attend")
+
+**`inference_type`** captures how the triplet was derived:
+- `observed` — directly stated in the source
+- `inferred` — derived from the source via a stated logical chain
+
+**`throughline`** is a local, per-document abductive summary — the best-fit hypothesis
+that explains the affirmed/negated triplets in this source. It is **not** a cross-document
+conclusion. Global deductive reasoning happens in a later cross-page pass.
 
 Interpretation rule:
 
 1. split each csv field on commas
 2. trim whitespace
-3. align by position
+3. align by position (all five csv fields must have equal element count)
 4. drop empty rows
-5. send each `(subject, predicate, object)` tuple into ontology normalization
+5. send each `(subject, predicate, object, polarity, inference_type)` tuple into ontology normalization
 
 This keeps extraction cheap, deterministic, and easy to repair.
 
@@ -189,8 +204,10 @@ This keeps extraction cheap, deterministic, and easy to repair.
 - keep source order
 - prefer short normalized spans over long prose phrases
 - preserve named entities before aggressive collapse
-- do not ask the model for a final conclusion during preprocessing
+- do **not** apply cross-document deduction during extraction — the extractor reads one source;
+  deductive/syllogistic reasoning over multiple sources belongs to the throughline reasoning pass
 - store provenance so every triplet still points back to the original source span
+- negated triplets are first-class facts; do not drop them or flatten polarity
 
 ### Why this preprocessing matters
 
@@ -278,6 +295,18 @@ points back to the triplets and pages that support it.
 
 It is not a flattened summary. It is a retrievable, updateable conclusion that
 can itself serve as a premise later.
+
+**Two levels of throughline:**
+
+- **Local throughline** (extracted inline per document) — the abductive best-fit
+  conclusion from the affirmed and negated triplets in a single source. Cheap to
+  produce; lives in `TripletExtraction.throughline`.
+- **Global throughline** (derived cross-page by the reasoning layer) — the deductive
+  conclusion that holds across multiple pages. Produced by applying syllogistic
+  chains: if pages P1 and P2 both affirm premises A→B and B→C, the global
+  throughline can conclude A→C. This is where polarity tension across sources
+  surfaces: if P1 affirms X and P2 negates X, the global layer must record the
+  conflict, not resolve it silently.
 
 This is where the **living updateable graph** should live.
 
