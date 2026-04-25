@@ -79,13 +79,47 @@ All six tools registered in `mcp_server/server.py`.
 |---|---|---|
 | `searxng_search(query, max_results)` | Primary homelab search (SearXNG at `SEARXNG_URL`) | `{results: [{url, title, snippet}]}` |
 | `web_search(query, max_results, recency)` | Fallback — Brave or Tavily APIs | same shape |
-| `web_fetch(url)` | Fetch + extract content; **creates source_id** | `{source_id, title, text, url}` |
+| `web_fetch(url)` | httpx → retry → Selenium tiered pipeline; **creates source_id** at all tiers | `{source_id, title, text, url}` |
 | `pgvector_retrieve(query, top_k)` | Semantic search over prior corpus | `{chunks: [{source_id, text, score}]}` |
 | `pgvector_upsert(triplets, run_id)` | Write triplets — **requires source_id** | `{upserted: int}` |
 | `sqlite_scratch(thread_id, op, key, value)` | Per-thread KV scratchpad | varies |
 
 **Critical invariant:** every `Triplet.source_id` MUST exist in the `sources` table.
 The only way to produce a valid `source_id` is via `web_fetch`. Schema-enforced at upsert.
+
+### web_fetch Fetch Pipeline
+
+`web_fetch` uses a tiered acquisition strategy. Both tiers feed the same downstream
+pipeline that extracts content and mints `source_id` — the invariant is preserved
+regardless of which tier succeeds.
+
+```
+httpx GET (user-agent rotation, 10 s timeout)
+  ├─ 2xx + no wall signal  →  extract, mint source_id, return
+  ├─ transport / transient error  →  retry up to FETCH_RETRY_ATTEMPTS with exponential backoff
+  └─ wall detected after retries  →  escalate to Selenium
+                 │
+                 ▼
+    Selenium headless Chrome  [asyncio.to_thread + Semaphore(SELENIUM_MAX_CONCURRENCY)]
+      ├─ renders page, waits for <body>
+      ├─ post-render wall check  (rerun heuristics on rendered text)
+      ├─ len(text) > 200 and no challenge markers  →  extract, mint source_id, return
+      └─ still walled or timeout  →  ValueError  (researcher node skips URL)
+```
+
+**Wall detection heuristics** (applied at httpx tier and again after Selenium render):
+
+| Tier | Hard triggers — always escalate/fail | Soft triggers — escalate when combined |
+|---|---|---|
+| HTTP status | 403, 429, 503 | — |
+| Challenge markers | "Enable JavaScript", "cf-browser-verification", "Checking your browser", "verify you are human", "Bot detection", "cf-chl", "Just a moment" | — |
+| Content | — | `text/html` body < 500 chars with no `<p>` or `<article>` tags |
+
+**Selenium scope:**
+- Handles: client-rendered SPAs, cookie-consent interstitials, light JS redirects.
+- Does NOT bypass: Cloudflare Enterprise, DataDome, PerimeterX, CAPTCHA challenges.
+- Always run via `asyncio.to_thread(_fetch_with_selenium, url)` — never block the event loop.
+- Guarded by `asyncio.Semaphore(SELENIUM_MAX_CONCURRENCY)` to prevent grid exhaustion.
 
 ---
 
@@ -162,6 +196,16 @@ SEARXNG_URL=http://localhost:8888          # homelab SearXNG
 MCP_URL=http://localhost:8765/mcp
 PGVECTOR_DSN=postgresql://user:pass@localhost:5432/harness
 SQLITE_PATH=./store/harness.sqlite
+```
+
+### Selenium fallback
+```bash
+SELENIUM_ENABLED=true                              # master switch; false disables tier 2 entirely
+SELENIUM_REMOTE_URL=http://localhost:4444/wd/hub   # optional; uses local chromedriver if unset
+SELENIUM_TIMEOUT_SECONDS=30                        # page-load + wait timeout per attempt
+SELENIUM_MAX_CONCURRENCY=3                         # max parallel browser sessions
+FETCH_RETRY_ATTEMPTS=2                             # httpx retry count before Selenium escalation
+FETCH_RETRY_BACKOFF_SECONDS=1.5                    # base delay for exponential backoff
 ```
 
 ### Termination thresholds
@@ -293,7 +337,14 @@ the `/completion` endpoint pattern (triplet-abductive pipeline) which uses an em
 | Graph loops indefinitely | Budget caps not set | Always pass explicit `BudgetCaps`; default `max_iterations=10` is the backstop |
 | `<think>` tokens fill context | Qwen3 reasoning enabled | Set `chat_template_kwargs: {"enable_thinking": False}` in researcher role config |
 | Planner returns 0 subquestions | LLM output not valid JSON | Check planner endpoint; `should_dispatch` routes to `__end__` cleanly |
-| pgvector not reachable | Postgres not running | `pgvector_retrieve` degrades gracefully; `pgvector_upsert` raises — catch and log |
+| `pgvector` not reachable | Postgres not running | `pgvector_retrieve` degrades gracefully; `pgvector_upsert` raises — catch and log |
+| Selenium fallback never activates | `SELENIUM_ENABLED=false` or unset | Set to `true`; ensure Chrome and matching chromedriver are installed |
+| `chromedriver` not found | Binary missing or version mismatch | Install matching chromedriver or set `SELENIUM_REMOTE_URL` to point to a Selenium grid |
+| Remote Selenium grid unreachable | Grid host down or wrong URL | Check grid health; unset `SELENIUM_REMOTE_URL` to fall back to local Chrome |
+| Selenium page-load timeout | Page too slow or requires auth | Increase `SELENIUM_TIMEOUT_SECONDS`; log and skip URL after timeout |
+| Selenium still returns challenge page | Modern anti-bot (Cloudflare Enterprise, DataDome, PerimeterX) | Expected — post-render wall check will reject it; log and skip URL |
+| Selenium blocks asyncio event loop | Called directly without `to_thread` | Always wrap via `asyncio.to_thread(_fetch_with_selenium, url)` |
+| Browser concurrency exhausted | `SELENIUM_MAX_CONCURRENCY` too low under parallel research | Increase limit or provision more Selenium grid nodes |
 
 ---
 
