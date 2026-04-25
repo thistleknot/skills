@@ -34,11 +34,14 @@ skills/
 │   │   └── kg_ontology              # canonicalization, synset narrowing, hypernym repair
 │   └── request-intent-resolution    # request-thread routing, retrieval evaluation
 │
-└── tuning/                          # measure, optimize, record
-    ├── hyper-parm_tuning            # methodology: what to tune, nested-CV framing
-    ├── optuna-nested-cv             # search engine: inner tune / outer unbiased estimate
-    ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
-    └── representation-pipeline      # representation design: raw signal → embedding space
+├── tuning/                          # measure, optimize, record
+│   ├── hyper-parm_tuning            # methodology: what to tune, nested-CV framing
+│   ├── optuna-nested-cv             # search engine: inner tune / outer unbiased estimate
+│   ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
+│   └── representation-pipeline      # representation design: raw signal → embedding space
+│
+└── learning/                        # reinforcement learning and policy optimization
+    └── deep-q-rl                    # DQN + Russian Doll MCTS for any scored discrete-action framework
 ```
 
 ## Key Relationships
@@ -47,10 +50,11 @@ skills/
 2. `agentic-harness` is the programmatic train station for coding frameworks (Claude Code, OpenCode, GitHub Copilot CLI, OpenClaw). It routes, gates, and reconciles work; each framework is a worker line.
 3. `continuity-log` is a child of `agentic-harness`. It holds the compact-safe distilled state that lets the harness resume without re-deriving decisions.
 4. `deep-research` is a child of `agentic-harness`. It decomposes a question into parallel subquestions, gathers web evidence via a 3-tier fetch pipeline (httpx → retry → Selenium), and synthesizes a claim-backed report seeding the harness TaskSpec.
-4. `hyper-parm_tuning` defines what to optimize; `optuna-nested-cv` runs the nested search; `mlflow` records every run with lineage.
-5. `agentic_kg_memory` owns semantic memory policy. `gist-retriever` is its retrieval sub-skill. `kg_ontology` handles canonicalization before insertion.
-6. `memory-bank` carries the three-file pattern (DESCRIPTION / ARCHITECTURE / HISTORY) that any skill folder can adopt for self-documentation.
-7. `agentic-harness` (waterfall → agile: topics → plans → specs → tasks) is the lifecycle template for skill authoring, not just software projects.
+5. `hyper-parm_tuning` defines what to optimize; `optuna-nested-cv` runs the nested search; `mlflow` records every run with lineage.
+6. `agentic_kg_memory` owns semantic memory policy. `gist-retriever` is its retrieval sub-skill. `kg_ontology` handles canonicalization before insertion.
+7. `memory-bank` carries the three-file pattern (DESCRIPTION / ARCHITECTURE / HISTORY) that any skill folder can adopt for self-documentation.
+8. `agentic-harness` (waterfall → agile: topics → plans → specs → tasks) is the lifecycle template for skill authoring, not just software projects.
+9. `deep-q-rl` is the generalized RL framework for any scored discrete-action environment. Combines value-head Q-network, experience replay, target network, Russian Doll MCTS, AHA online mistake correction, and training-progress annealing. Derived from `thistleknot/chess-deep-q`.
 
 ## Repository Layout
 
@@ -72,3 +76,4 @@ skills/
 - Added `deep-research` as a child of `agentic-harness`: LangGraph research graph with Selenium fallback fetch pipeline.
 - Reframed `agentic-harness` as the multi-framework stationmaster.
 - Added `continuity-log` to preserve compact-safe reasoning products between long turns and compactions.
+- Added `deep-q-rl` under new `learning/` section: DQN + Russian Doll MCTS pattern generalized from chess-deep-q; applies to any scored discrete-action environment.
