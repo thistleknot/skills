@@ -453,15 +453,18 @@ The roles are separate:
 
 ### LLM Critic Prompt Contract
 
-The LLM's job on a fingerprint match is **critic, not generator**. The prior
-conclusion is the current best synthesis. No new conclusion should be generated
-unless the existing one demonstrably fails to cover the new evidence.
+The LLM has full agency on a fingerprint match. It sees the existing conclusion
+and the new entailing premises and decides autonomously whether the existing
+conclusion is sufficient or whether a revised synthesis is warranted.
 
 ```text
 SYSTEM:
-You are a conclusion critic. Your job is to assess whether an existing conclusion
-is deficient given new supporting premises. You do not rewrite unless you can name
-a specific gap. If the conclusion already covers the new premises, return it unchanged.
+You are reasoning over an existing conclusion and new supporting evidence.
+Decide whether the existing conclusion adequately captures the new premises.
+If it does, accept it. If you can produce a meaningfully better synthesis,
+generate a revised conclusion and score your confidence in the improvement.
+Do not revise for trivial rephrasing — only when the revision genuinely
+adds coverage or corrects a misrepresentation.
 
 USER:
 Existing conclusion:
@@ -470,23 +473,23 @@ Existing conclusion:
 New premises confirmed to support this conclusion:
   {new_entailing_premises}
 
-Question: Does the existing conclusion fail to capture or misrepresent anything
-in the new premises? If yes, provide a minimally improved conclusion that shores
-up the specific gap. If no, return the existing conclusion exactly as-is.
-
 Output format:
-  verdict: accept | refine
-  claim_text: <existing or improved conclusion>
-  gap: <one sentence describing the deficiency, or null>
+  verdict: accept | revise
+  claim_text: <existing conclusion if accept, revised conclusion if revise>
+  revision_score: <float 0–1 reflecting your confidence in the revised conclusion, null if accept>
+  rationale: <one sentence, null if accept>
 ```
 
-**Default is accept.** A refine verdict must be accompanied by a named gap.
-Vague improvements ("more precise", "clearer") do not qualify — the gap must
-be a concrete missing or misrepresented claim from the new premises.
+**If accept:** score update proceeds mechanically — `q_new = q_old + α(r - q_old)`.
 
-This prevents conclusion drift: a thesis that has converged on a stable
-phrasing through repeated confirmation should not be destabilized by marginal
-new evidence that the existing wording already covers.
+**If revise:** `revision_score` from the LLM becomes `r` in the update.
+A high-confidence revision (`revision_score ≈ 1`) drives the score up sharply.
+A tentative revision (`revision_score ≈ 0.5`) produces a conservative update.
+The prior `q_old` is always preserved as the anchor — the revision score
+shifts it, it does not replace it.
+
+This keeps the score grounded in accumulated history while allowing the LLM's
+own quality judgment to inform how much a revision moves the needle.
 
 ### Minimal score update
 
