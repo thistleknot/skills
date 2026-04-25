@@ -564,7 +564,7 @@ produces degraded or diverging output.
 - The LLM treats the sentinel as content and generates responses around it,
   creating new files / new import chains → violation count grows each round.
 - **Fix**: return `[]` / `{}` / `None` on parse failure; log a warning instead.
-  Salvage partially-truncated JSON by slicing at the last `}` before `]`.
+  Do **not** salvage truncated JSON — see #3 for the correct upstream fix.
 
 ### 2. Gate timeouts as false negatives
 - Long-running shell commands in gates (e.g. `pip install -e .`) take 30-40 s
@@ -579,29 +579,19 @@ produces degraded or diverging output.
 
 ### 3. LLM output truncation mid-structure
 - At `max_completion_tokens=4096`, the LLM truncates mid-JSON.
-- **Fix pattern**:
-  ```python
-  def _salvage_json_array(raw: str) -> list:
-      last_brace = raw.rfind("}")
-      if last_brace == -1:
-          return []
-      candidate = raw[: last_brace + 1].rstrip() + "]"
-      # find opening bracket
-      start = candidate.find("[")
-      if start == -1:
-          return []
-      try:
-          return json.loads(candidate[start:])
-      except json.JSONDecodeError:
-          return []
-  ```
-- Always validate completeness: check for a sentinel like `# END OF FILE` or
-  verify the JSON is syntactically closed before accepting the response.
+- **Root cause**: the audit/fix prompt asks the LLM to enumerate all violations with no count limit.  The response overflows the token cap, the JSON is malformed, and the parser either silently drops data (salvage) or raises — either way the next round starts with corrupted input.
+- **Fix — bound at the prompt, not the parser**:
+  - Add `LIMIT: Report at most 10 violations.` to the audit prompt.
+  - 10 violations × ~100 tokens each ≈ 1000 tokens — comfortably within the 4096 cap.
+  - In the parser, call `json.loads` directly and let it raise on malformed JSON.  A hard failure surfaces the problem immediately rather than hiding it behind partial data.
+- **Do not use a salvage parser** (`rfind("}")` + slice).  Salvage masks token-cap overflows, silently drops violations, and causes the audit loop to believe it is making progress when it is not.
+- Always validate completeness with an EOF sentinel (`# END OF FILE`) for generated code files, but for structured JSON responses prefer prompt-side bounds over post-hoc repair.
 
 ### 4. Violation-count divergence (getting worse, not better)
-- Symptom: violations grow round-over-round (7 → 12 → 11 → 26).
-- Diagnosis: either sentinel objects (see #1) or the LLM is introducing new
-  imports / files to fix existing violations, creating a cascade.
+- Symptom: violations grow round-over-round (6 → 14, or 7 → 12 → 26).
+- **Primary trigger (most common)**: audit LLM hits token cap mid-JSON — see #3.  The truncated response is misread as fewer violations than actually exist, so the fix pass targets the wrong things and introduces new problems.  Fix #3 first.
+- **Secondary trigger**: sentinel objects fed back as content — see #1.
+- **Tertiary trigger**: the LLM introduces new imports/files to fix existing violations, creating a cascade.
 - **Distinguish import violations from LLM-reported violations**:
   - Import violations (from actual Python import attempts) are authoritative.
   - LLM-reported NameErrors / style issues are advisory; treat as soft.
@@ -745,6 +735,20 @@ Note: `round` increments *after* fix, so 4 fix passes happen before the `< 4` gu
 **Test stub pattern**: tests use inline class stubs, not real `src.*` imports.
 This avoids pygame `ImportError` at collection time but means test coverage
 of the real implementation requires a separate integration pass.
+
+**Structured TaskSpec input**: `regression_run.py` accepts a JSON file path or inline JSON object in place of a plain idea string.  `_resolve_input()` detects format in order: `.json` file path → inline `{...}` string → plain idea string.  When a `TaskSpec` is detected it is parsed with pydantic and serialised to a Markdown requirements document via `task_spec_to_idea()` before entering the pipeline — all downstream nodes see the enriched Markdown.  The raw JSON is preserved in `state["task_requirements"]` for programmatic inspection.
+
+`TaskSpec` fields:
+- `title` / `project_name` — human label vs directory slug
+- `datasets`, `data_fields` — HuggingFace or local datasets to use
+- `libraries` — `LibrarySpec(name, install, purpose)` objects
+- `behaviors` — ordered list of what the code must do
+- `constraints` — hard non-negotiable rules (get their own section heading)
+- `llm_output_schema` — `LLMOutputField(key, field_type, required, description)` for structured LLM outputs
+- `acceptance_criteria` — verifiable pass/fail statements
+- `output_format` — free-text description + pydantic model definitions
+
+Schema lives at `dark_factory/schemas/task_spec.py`.
 
 ---
 
