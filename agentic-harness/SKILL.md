@@ -706,6 +706,16 @@ Mitigation order:
 
 ---
 
+## Sub-Skills
+
+This skill has the following sub-skills. Invoke the relevant sub-skill when the task falls in its domain:
+
+| Sub-skill | File | When to invoke |
+|---|---|---|
+| `deep-research` | `~/.copilot/skills/deep-research/SKILL.md` | Task requires web evidence gathering, multi-source corroboration, or report generation before/alongside harness work |
+
+---
+
 ## Dark Software Factory — Specific Internals
 
 These apply to the `dark_factory` harness at `/home/user/harness`:
