@@ -46,15 +46,21 @@ Formula:
 log_samples      = ln(duration_seconds)
 log_median       = median(log_samples)
 log_mad          = median(|log_sample - log_median|)
-log_threshold    = log_median + 2 * log_mad
+log_threshold    = log_median + 4 * log_mad
 threshold_nominal = exp(log_threshold)
 ```
 
 Outlier rule:
 
 ```text
-duration_seconds > exp(log_median + 2 * log_mad)
+duration_seconds > exp(log_median + 4 * log_mad)
 ```
+
+Multiplier rationale: under normality, Tukey's IQR×1.5 fence sits at ≈ μ ± 2.698σ.
+Since MAD ≈ 0.6745σ → σ ≈ 1.4826·MAD, that fence converts to **median ± 4·MAD**.
+The two rules are equivalent in σ-distance (~2.7σ); the difference is unit conversion only.
+Caveat: equivalence holds under normality. Heavy-tailed distributions shift the MAD-unit
+fence; calibrate empirically if the log-duration distribution is strongly non-normal.
 
 Do **not** use mean/stddev here. Long-tail latency makes that too noisy.
 
@@ -125,7 +131,7 @@ Do **not** restart just because one call logged as a slow outlier.
 ## Anti-Patterns
 - Computing thresholds before 5 successful samples
 - Mixing failed calls into the timing baseline
-- Using nominal-space `median + 2*MAD` on heavily skewed latency data
+- Using nominal-space `median + 4*MAD` on heavily skewed latency data
 - Using mean/stddev on long-tail generation latency
 - Treating outlier warnings as hard failures
 - Assuming a live process sees new timeout constants without restart
