@@ -14,6 +14,75 @@ Apply this skill when:
 The pattern originated in `chess-deep-q` but is domain-agnostic. Any framework where
 you can define a score per state can host this approach.
 
+---
+
+## Score Correlate Design
+
+**This is the highest-leverage design decision in the whole skill.**
+
+The Q-network does not directly observe the true objective (winning, task completion,
+final reward). It sees only what `evaluate(state)` returns at each step. If your
+correlate is wrong, Q-learning optimizes the wrong thing — perfectly.
+
+### Why a correlate is necessary
+
+Terminal rewards alone (`+1` win, `-1` loss, `0` draw) are too sparse: in a 60-move game,
+99% of transitions carry a zero reward signal and the network gets almost no gradient.
+`evaluate` provides **dense intermediate signal** — a step-level proxy that correlates
+with the true objective and fires on every transition.
+
+### Properties of a good correlate
+
+| Property | Description |
+|---|---|
+| **Correlation with true objective** | States that score higher heuristically should win more often |
+| **Density** | Returns a meaningful non-zero value on every non-terminal state |
+| **Monotonic alignment** | Improvement in score should predict improvement in outcome |
+| **Current-player POV** | Sign must reflect the acting player's advantage, not an absolute side |
+| **Bounded or normalizable** | MCTS leaf evaluation uses `tanh(score / K)`; calibrate K to ~1σ of score range |
+
+### How to find your correlate
+
+1. **Decompose the true objective into features that are observable mid-episode.**
+   Chess: material balance + mobility + king safety + pawn structure + space control.
+   Each feature is individually meaningful and measurable without knowing the outcome.
+
+2. **Weight features by their empirical correlation with outcomes.**
+   Run self-play or use labeled data; compute Pearson/Spearman between each feature
+   and episode outcome. Drop features with near-zero correlation.
+
+3. **Calibrate scale.**
+   Compute the std of your raw score across a sample of positions. Set `K = std`.
+   `tanh(score / K)` will then map ±1σ to ±0.76, keeping most scores well-separated.
+
+4. **Validate directionally.**
+   Pick 10 "obviously better" and 10 "obviously worse" state pairs for your domain.
+   Your correlate must rank them correctly in the right direction. If it doesn't,
+   the Q-network will learn to seek the wrong states.
+
+### AHA learning depends on correlate quality
+
+AHA learning triggers when `eval_drop > aha_threshold`. If your correlate is noisy
+or poorly aligned, AHA fires on false positives (corrects good moves) or misses real
+mistakes. Budget the AHA threshold at roughly **0.5σ–1.5σ** of typical single-step
+eval change, not an absolute constant.
+
+### Chess reference decomposition
+
+```text
+score = material_balance           # piece values (pawn=1, knight/bishop=3, rook=5, queen=9)
+      + 0.1 * mobility             # number of legal moves available
+      + king_safety                # shelter pawns, castling rights, exposure penalty
+      + pawn_structure             # doubled/isolated/passed pawn bonuses/penalties
+      + space_control              # center square control
+      + piece_coordination         # connected rooks, bishop pairs
+```
+
+Each term is independently meaningful. The sum correlates with win probability even
+without knowing the game outcome. This is what makes dense reward shaping work here.
+
+---
+
 ## When to Use vs. Plain DQN
 Use Russian Doll MCTS + value head when:
 - The action space is wide (>10 moves) but most actions are noise
@@ -37,7 +106,10 @@ class ScoredEnvironment(Protocol):
     """Convert state to float tensor. Shape is network-specific (e.g., [C, H, W] for grids)."""
 
     def evaluate(self, state) -> float
-    """Domain heuristic: scalar score. Positive = favorable. Need not be normalized."""
+    """Dense correlate of the true objective. Must be current-player-POV.
+    Not the true reward — a per-step proxy that correlates with episode outcome.
+    Design process: decompose objective into observable mid-episode features,
+    weight by empirical correlation with outcomes, calibrate scale to ~1σ."""
 
     def legal_actions(self, state) -> list
     """All valid actions from this state."""
@@ -301,6 +373,17 @@ heuristic_norm_k     = 10.0         # tanh(score / k) for heuristic fallback
 
 - **Missing neural fallback**: if the Q-network errors during MCTS evaluation, the simulation
   must fall back to the heuristic. Unhandled exceptions silently zero out rollout values.
+
+- **Terminal-only reward signal**: relying solely on `{+1,-1,0}` at episode end makes the
+  gradient signal too sparse for stable learning. Always define a dense step-level correlate.
+
+- **Uncalibrated correlate scale**: using a raw score with arbitrary magnitude means `tanh(score / K)`
+  saturates (all values near ±1) and the leaf evaluator loses resolution. Set K ≈ 1σ of your
+  score distribution across sampled positions.
+
+- **Misaligned correlate**: a correlate that doesn't rank "better" states above "worse" ones
+  will cause Q-learning to converge on the wrong policy confidently. Validate directionally
+  on 10–20 known state pairs before training.
 
 ---
 
