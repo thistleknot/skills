@@ -176,13 +176,28 @@ class TripletExtraction(BaseModel):
     throughline: str     # local abductive best-fit from THIS source alone
 ```
 
-**`polarity`** captures what the source text actually asserts:
+**`polarity`** captures what the source text actually asserts — a **stable property of the text**:
 - `affirmed` — the text states the triplet holds
-- `negated` — the text explicitly denies the triplet ("Alice did NOT attend")
+- `negated` — the text explicitly denies or limits the triplet ("Alice did NOT attend")
+
+`negated` serves the same purpose as a `qualifications` field: it records what the source
+explicitly contradicts or constrains. This is knowable at ingestion time from the text alone.
 
 **`inference_type`** captures how the triplet was derived:
 - `observed` — directly stated in the source
 - `inferred` — derived from the source via a stated logical chain
+
+**What is NOT stored at ingestion: entailment direction.**
+
+Do not split premises into `entailed_premises` / `not_entailed_premises` at ingestion.
+Entailment is a relation between a premise and a **specific conclusion** — and at ingestion
+time you only have one source's throughline. At retrieval you have N sources and a query;
+the entailment direction is entirely different. Labeling at ingestion bakes in a reasoning
+direction that may be wrong for every query that follows.
+
+The ingestion contract is: premises: `[str]` tagged `[observed]` / `[inferred]`, with
+`polarity` capturing what the text explicitly commits to or denies. Nothing more.
+Entailment chains emerge at query time, not indexing time.
 
 **`throughline`** is a local, per-document abductive summary — the best-fit hypothesis
 that explains the affirmed/negated triplets in this source. It is **not** a cross-document
@@ -330,6 +345,7 @@ supporting_fks   LIST   # source_ids, triplet_ids, and/or page_ids that entailed
 source_fks       LIST   # concrete user-visible provenance used for the claim
 fact_fks         LIST   # normalized facts/triplets supporting the claim
 q_score          REAL   # runtime-learned trust score; always updated from prior, never reset
+visit_count      INT    # total confirmed retrievals; use as frequency signal or for α=1/n decay
 merge_score      REAL   # how strongly this aligns with another candidate claim
 status           TEXT   # active | competing | deprecated | merged
 merged_into      TEXT   # nullable canonical survivor id
@@ -416,12 +432,15 @@ inference pass completes
 fingerprint match found
     |
     v
-q_score <- q_old + α(r - q_old)    ← old score is always the prior; never reset
+q_score <- q_old + α(r - q_old)    ← score always updated; prior never reset
+visit_count += 1
     |
     v
-if r == entailment:    text defers to current (reinforce only)
-if r == refine:        LLM rewrites claim_text using old + new evidence
-if r == contradict:    q_score driven down; status → competing or deprecated
+LLM critic pass (see below)
+    |
+    +- no deficiency found:   claim_text unchanged (accept as-is)
+    +- gap identified:        claim_text refined to shore up the deficiency
+    +- contradiction:         q_score driven down; status → competing or deprecated
 ```
 
 **The old score is always the prior.** Repeated confirmation of the same premise set
@@ -429,8 +448,45 @@ compounds the score asymptotically toward 1. Contradiction drives it down from
 wherever it currently stands. The score is never discarded or restarted.
 
 The roles are separate:
-- **LLM** updates what the throughline says (only on refine/contradict)
-- **Q-score** updates how much to trust it (on every retrieval that includes this premise set)
+- **Q-score** updates on every retrieval that includes this premise set
+- **LLM** intervenes only when it can identify a specific deficiency in the existing claim
+
+### LLM Critic Prompt Contract
+
+The LLM's job on a fingerprint match is **critic, not generator**. The prior
+conclusion is the current best synthesis. No new conclusion should be generated
+unless the existing one demonstrably fails to cover the new evidence.
+
+```text
+SYSTEM:
+You are a conclusion critic. Your job is to assess whether an existing conclusion
+is deficient given new supporting premises. You do not rewrite unless you can name
+a specific gap. If the conclusion already covers the new premises, return it unchanged.
+
+USER:
+Existing conclusion:
+  "{claim_text}"
+
+New premises confirmed to support this conclusion:
+  {new_entailing_premises}
+
+Question: Does the existing conclusion fail to capture or misrepresent anything
+in the new premises? If yes, provide a minimally improved conclusion that shores
+up the specific gap. If no, return the existing conclusion exactly as-is.
+
+Output format:
+  verdict: accept | refine
+  claim_text: <existing or improved conclusion>
+  gap: <one sentence describing the deficiency, or null>
+```
+
+**Default is accept.** A refine verdict must be accompanied by a named gap.
+Vague improvements ("more precise", "clearer") do not qualify — the gap must
+be a concrete missing or misrepresented claim from the new premises.
+
+This prevents conclusion drift: a thesis that has converged on a stable
+phrasing through repeated confirmation should not be destabilized by marginal
+new evidence that the existing wording already covers.
 
 ### Minimal score update
 
@@ -443,6 +499,29 @@ Where `r` is the latest evidence outcome:
 - support / entailment -> positive reward
 - neutral / mixed -> weak or zero reward
 - contradiction -> negative reward or sharp downweight
+
+**Emergent frequency scoring.** With fixed α and binary `r=1` on every confirmation,
+this update converges monotonically toward 1 — making `q_score` a de-facto
+confirmation counter. That is useful: frequently retrieved and confirmed premise sets
+naturally accumulate higher scores, surfacing the most-used thesis positions.
+
+**To separate frequency from strength**, track `visit_count` alongside `q_score`
+and use a decaying learning rate `α = 1 / visit_count`:
+
+```text
+visit_count += 1
+α = 1 / visit_count
+q_new <- q_old + α(r - q_old)    ← running average; converges to mean(r) over all visits
+```
+
+Under this regime:
+- `q_score` reflects average entailment strength across all retrievals
+- `visit_count` reflects raw frequency independently
+- A thesis confirmed 100× with weak signal and one confirmed 5× with strong signal
+  are distinguishable; with fixed α they would conflate
+
+Use fixed α when frequency IS the signal you want. Use `α = 1/n` when you want
+mean strength and frequency as separate queryable dimensions.
 
 You do not need an elaborate learned merger before this becomes useful.
 
