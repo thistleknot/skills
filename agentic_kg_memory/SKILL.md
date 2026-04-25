@@ -324,11 +324,12 @@ layer absorb:
 ```text
 throughline_id   TEXT PRIMARY KEY
 page_id          TEXT
-claim_text       TEXT   # mutable, LLM-rewritten as evidence accumulates
-supporting_fks   LIST   # source_ids, triplet_ids, and/or page_ids
+claim_text       TEXT   # mutable, LLM-rewritten only when evidence warrants refine
+thesis_fingerprint TEXT # frozenset hash of normalized supporting_fks — dedup key
+supporting_fks   LIST   # source_ids, triplet_ids, and/or page_ids that entailed this conclusion
 source_fks       LIST   # concrete user-visible provenance used for the claim
 fact_fks         LIST   # normalized facts/triplets supporting the claim
-q_score          REAL   # runtime-learned trust score
+q_score          REAL   # runtime-learned trust score; always updated from prior, never reset
 merge_score      REAL   # how strongly this aligns with another candidate claim
 status           TEXT   # active | competing | deprecated | merged
 merged_into      TEXT   # nullable canonical survivor id
@@ -353,32 +354,85 @@ That gives you:
 The graph remains "living" because the conclusion layer evolves, not because the
 raw evidence layer keeps getting rewritten destructively.
 
+### Thesis Identity and Deduplication
+
+**The identity of a throughline is its premise set, not its claim text.**
+
+`thesis_fingerprint = frozenset(normalize(supporting_fks))`
+
+- If an inference pass produces a conclusion whose entailing premise set matches
+  an existing throughline's fingerprint → **update**, do not insert.
+- If no match → create a new throughline node.
+
+This prevents duplicate theses drifting apart when the same premises are retrieved
+under different queries. The premise grouping is the canonical key.
+
+**Defer to current claim text**: a score update alone does not rewrite `claim_text`.
+The existing phrasing is canonical until evidence explicitly warrants a refine.
+Score and text are updated on independent triggers.
+
+### Inference-Time Entailment and Write-Back
+
+Entailment is never pre-computed at ingestion. It is evaluated at inference time,
+against a specific candidate conclusion, over a flat retrieved premise set.
+
+```text
+query
+    |
+    v
+retrieve all relevant premises flat (BM25 + dense; no entailment pre-tagged)
+    |
+    v
+for each candidate conclusion / throughline:
+    classify each premise: {entails | neutral | contradicts}
+    |
+    v
+entailing_premises = {p for p in retrieved if classify(p, conclusion) == entails}
+    |
+    v
+fingerprint = frozenset(normalize(entailing_premises))
+    |
+    +- fingerprint matches existing throughline:
+    |    update q_score (see below)
+    |    if evidence warrants: refine claim_text
+    |
+    +- no match:
+          create new throughline node
+          supporting_fks = entailing_premises
+          q_score = initial prior
+```
+
+The conclusion node ties the entailing premises together. No direct cross-premise
+edges are needed — the shared pointer to the conclusion is the connection.
+Premises that were retrieved but classified neutral or contradicting are not tagged
+to the conclusion (contradicting premises may receive a polarity edge instead).
+
 ### Throughline Update Cycle
 
 ```text
-new triplet arrives
+inference pass completes
     |
     v
-retrieve affected pages / throughlines
+fingerprint match found
     |
-    +- if hit:
-    |    LLM reads old throughline + new evidence
-    |    decision: reinforce / refine / merge / contradict
-    |    if refine: rewrite claim_text
-    |    if merge: attach loser to canonical survivor
-    |    q_score <- q_score + α(r - q_score)
+    v
+q_score <- q_old + α(r - q_old)    ← old score is always the prior; never reset
     |
-    +- if no hit:
-          keep in candidate pool until density threshold supports a new throughline
+    v
+if r == entailment:    text defers to current (reinforce only)
+if r == refine:        LLM rewrites claim_text using old + new evidence
+if r == contradict:    q_score driven down; status → competing or deprecated
 ```
 
+**The old score is always the prior.** Repeated confirmation of the same premise set
+compounds the score asymptotically toward 1. Contradiction drives it down from
+wherever it currently stands. The score is never discarded or restarted.
+
 The roles are separate:
-- **LLM** updates what the throughline says
-- **Q-score** updates how much to trust it
+- **LLM** updates what the throughline says (only on refine/contradict)
+- **Q-score** updates how much to trust it (on every retrieval that includes this premise set)
 
 ### Minimal score update
-
-Keep the score update simple:
 
 ```text
 q_new <- q_old + α(r - q_old)
@@ -399,7 +453,7 @@ Conclusions should be mergeable, but only at the conclusion layer.
 Use a merge when:
 
 - two claims are semantically equivalent or differ only in phrasing
-- their evidence is compatible
+- their evidence is compatible (overlapping or identical `supporting_fks`)
 - keeping both would create duplicate conclusions rather than real alternatives
 
 When merging:
