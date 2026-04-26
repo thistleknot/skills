@@ -21,6 +21,7 @@ skills/
 │
 ├── orchestration/                   # route work, enforce policy, manage cross-session state
 │   ├── agentic-harness              # dark-task control plane; backbone = OpenClaw/Claude Code/OpenCode/Copilot CLI
+│   │   ├── checklist                # LLM-as-judge validation pattern; structured findings with novelty proof
 │   │   ├── continuity-log           # compact-safe session memory; distilled decisions, resume points
 │   │   └── deep-research            # multi-source web evidence pipeline; LangGraph planner→researcher→synthesizer
 │   └── timeout-guard                # runaway-task policy; interrupt and recovery rules
@@ -55,6 +56,7 @@ skills/
 7. `memory-bank` carries the three-file pattern (DESCRIPTION / ARCHITECTURE / HISTORY) that any skill folder can adopt for self-documentation.
 8. `agentic-harness` (waterfall → agile: topics → plans → specs → tasks) is the lifecycle template for skill authoring, not just software projects.
 9. `deep-q-rl` is the generalized RL framework for any scored discrete-action environment. Combines value-head Q-network, experience replay, target network, Russian Doll MCTS, AHA online mistake correction, and training-progress annealing. Derived from `thistleknot/chess-deep-q`.
+10. `checklist` is a subskill of `agentic-harness`. It is the Pydantic-schema LLM-as-judge pattern: structured findings with novelty proofs, non-fatal execution, `review_required` flag, and cross-run fingerprinting via throughline Q-scores. Reference implementation: `gap_critic.py` in storywriter.
 
 ## Repository Layout
 

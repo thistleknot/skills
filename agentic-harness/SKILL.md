@@ -989,3 +989,35 @@ Each mature skill folder should carry the three-file complement from `memory-ban
 `SKILL.md` remains the behavioral contract (the API). The three files carry the
 development context (the internals). Together they allow a new session to onboard
 to a skill the same way `memory-bank` allows a new session to onboard to a project.
+
+---
+
+## Subskill: Checklist (LLM-as-Judge Validation)
+
+The `checklist` skill is the canonical pattern for structured LLM-as-judge validation
+nodes inside a harness.
+
+Use it when a harness stage must:
+- audit a generated artifact and return structured findings (gaps, violations, proposals)
+- gate continuation on a quality verdict
+- propose new guard rails from observed failures, with novelty proof
+
+**Key distinction from `todo`:** checklist items are findings about artifacts.
+They have no status lifecycle and are not tasks. They require human review before
+being applied. The `todo` skill tracks work to be done; the `checklist` skill
+surfaces what is wrong and what rule would catch it next time.
+
+**Integration points:**
+- Call the checklist node after every significant generation pass
+- Write output to a known path alongside the artifact (`{run_id}_checklist.json`)
+- Set `review_required: true` in output; never auto-apply proposals
+- Use `schema_model=ChecklistOutput` in the LLM call for constrained output
+- Feed confirmed proposals back into the harness rule set after human approval
+
+**Cross-run persistence:** repeated findings from multiple runs compound evidence.
+Use the `agentic_kg_memory` throughline Q-score update to track fingerprinted
+proposals across runs. Proposals above `q_score > 0.80` with `visit_count >= 2`
+surface as merge-ready.
+
+See `checklist/SKILL.md` for the full pattern spec, Pydantic schemas, prompt
+contract, and reference implementation (`gap_critic.py` in storywriter).
