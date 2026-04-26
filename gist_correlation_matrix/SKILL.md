@@ -49,27 +49,77 @@ This is what should be visualized, not ranked lists or retrieved candidates. Thi
 
 ---
 
-## Algorithm: Greedy Decorrelation Sort
+## Algorithm: Two Sorting Approaches
 
-The sorting makes the artifact legible:
+The sorting makes the artifact legible. Two complementary approaches reveal different structures:
+
+### Approach 1: ORTHOGONAL (True Decorrelation)
+
+**Goal:** Maximize information at each step by adding orthogonal items (like PCA).
 
 ```
-1. Find highest correlation pair (seed)
-2. Iteratively select next item that:
-   - Has high correlation with at least one selected item (connected)
-   - Has LOW average correlation with all selected items (decorrelated)
-3. Result: sorted sequence where "reading down" explores progressively more distant regions
+Phase 1: Seed with Strongest Pair
+  Find max(corr[i,j]) for all i < j (the single highest correlation anywhere)
+  Start sorted_indices = [i, j]
 
-Why this works:
-- Near-diagonal: tightly clustered (high correlation)
-- Mid-matrix: transition zones (medium correlation)
-- Far corners: outliers and dissimilar items (low/negative correlation)
+Phase 2: Greedy Orthogonal Expansion
+  Remaining = {all songs except i, j}
+  While Remaining is not empty:
+    For each candidate in Remaining:
+      score = mean(correlation to sorted songs)  [MINIMIZE this]
+      Pick candidate with LOWEST avg to sorted (most orthogonal)
+    
+  This adds songs that are:
+    - Least correlated to what's already sorted (orthogonal to sorted set)
+    - Like PCA: add maximally novel information at each step
 
-Interpretation:
-- Dense red square near top-left: core cluster
-- Bands of structure: sub-clusters and hierarchies
-- Sparse far corner: noise and outliers
+Result:
+- Near-diagonal: tight clusters (high correlation)
+- Rapid drop-off: sparse off-diagonal (orthogonal to sorted set)
+- Sharp boundaries: clear separation between ordered and unordered regions
+
+Use case: When you want information-theoretic maximization. Like PCA but with interpretable correlations.
 ```
+
+### Approach 2: COVERAGE/BOUNDARY (Diversity Exploration)
+
+**Goal:** Expand outward from seed, mapping boundaries and exploring diverse regions.
+
+```
+Phase 1: Seed with Strongest Pair
+  Same as Orthogonal: find strongest pair
+
+Phase 2: Greedy Coverage Expansion
+  Remaining = {all songs except i, j}
+  While Remaining is not empty:
+    For each candidate in Remaining:
+      score = max(correlation to sorted songs)
+              - 0.5 * mean(correlation to remaining songs)
+      Pick candidate with best score (high to sorted, low to remaining)
+    
+  This adds songs that are:
+    - Highly connected to at least one sorted song (local proximity)
+    - Poorly connected to unmapped songs (boundary finder)
+    - Like a topological frontier: growing outward from seed cluster
+
+Result:
+- Near-diagonal: dense core cluster (seed expands)
+- Mid-matrix: hierarchical bands (sub-clusters, transition zones)
+- Far corners: outliers and noise (poor coverage everywhere)
+
+Use case: When you want to see hierarchical structure and cluster hierarchies. Natural "layers" emerge.
+```
+
+### Comparison
+
+| Aspect | Orthogonal | Coverage |
+|--------|-----------|----------|
+| Information metric | Novelty (minimize corr to sorted) | Diversity (connection + boundary) |
+| Visual pattern | Sharp drop-off | Hierarchical bands |
+| Near-diagonal structure | Tight, dense | Gradually expanding |
+| Outlier placement | Scattered | Far corner cluster |
+| Multiple regression analogy | Adding orthogonal features | Adding boundary samples |
+| Best for | Dimensionality reduction view | Hierarchical topology view |
 
 ---
 
@@ -259,14 +309,16 @@ This metadata is fetched on hover, not pre-rendered (keeps file size manageable)
 
 ### Phase 1: Static Heatmap (Done)
 - Compute correlation matrix
-- Sort by decorrelation
+- Sort by decorrelation (coverage/boundary approach)
 - Render PNG at high DPI
 - **Output:** `correlation_matrix_sorted.png` (1,051 × 1,051 pixels)
 
-### Phase 2: Interactive Web Visualization (TODO)
-- Generate PlotlyJS interactive heatmap
-- Hover callbacks to fetch metadata
-- **Output:** `correlation_matrix_interactive.html` (self-contained, ~5 MB)
+### Phase 2: Interactive Web Visualization (Done)
+- Generate PlotlyJS interactive heatmap (both sorting approaches)
+- **Outputs:**
+  - `correlation_matrix_sorted.html` (coverage/boundary approach)
+  - `correlation_matrix_sorted_orthogonal.html` (true decorrelation/orthogonal approach)
+  - `correlation_matrix_interactive.html` (alternate unsorted with song names)
 
 ### Phase 3: Navigation & Annotation (TODO)
 - Zoom into sub-regions

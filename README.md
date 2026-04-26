@@ -39,7 +39,11 @@ skills/
 │   ├── hyper-parm_tuning            # methodology: what to tune, nested-CV framing
 │   ├── optuna-nested-cv             # search engine: inner tune / outer unbiased estimate
 │   ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
-│   └── representation-pipeline      # representation design: raw signal → embedding space
+│   ├── representation-pipeline      # representation design: raw signal → embedding space
+│   └── stratified-quota-sampling    # adaptive sampling: marginal variance targeting, quota design for bounded acquisition
+│
+├── artifacts/                       # masterpiece outputs and information design
+│   └── gist_correlation_matrix      # sorted correlation matrix as complete relational map; two sorting approaches (orthogonal vs coverage)
 │
 └── learning/                        # reinforcement learning and policy optimization
     └── deep-q-rl                    # DQN + Russian Doll MCTS for any scored discrete-action framework
@@ -57,6 +61,8 @@ skills/
 8. `agentic-harness` (waterfall → agile: topics → plans → specs → tasks) is the lifecycle template for skill authoring, not just software projects.
 9. `deep-q-rl` is the generalized RL framework for any scored discrete-action environment. Combines value-head Q-network, experience replay, target network, Russian Doll MCTS, AHA online mistake correction, and training-progress annealing. Derived from `thistleknot/chess-deep-q`.
 10. `checklist` is a subskill of `agentic-harness`. It is the Pydantic-schema LLM-as-judge pattern: structured findings with novelty proofs, non-fatal execution, `review_required` flag, and cross-run fingerprinting via throughline Q-scores. Reference implementation: `gap_critic.py` in storywriter.
+11. `gist_correlation_matrix` is the "true GIST output": sorted correlation matrix as complete relational map (N² cells, each encoding pairwise relationship). Two sorting strategies: **orthogonal** (information-theoretic maximization, sharp drop-off) and **coverage** (hierarchical boundary exploration, expanding bands). Outputs: interactive HTMLs with full zoom/pan/hover.
+12. `stratified-quota-sampling` is a pragmatic acquisition strategy for resource-constrained data collection. Marginal variance targeting: within strata (e.g., acoustic clusters), sample songs that maximize feature variance. Quota design: bound acquisition budget while maximizing representativeness. Bridges deterministic clustering with probabilistic sampling.
 
 ## Repository Layout
 
