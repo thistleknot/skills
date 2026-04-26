@@ -131,7 +131,82 @@ Polarity distinguishability is a property of the BM25 index, not a separate edge
 The full KG connection topology diagram shows all seven connection mechanisms: triplets, synsets,
 SpaCy entities, throughlines, BM25 vertical alignment, hypernym scaffolding, and polarity preservation.
 
-## Canonicalization Pipeline
+## Multi-Stage Synset Resolution with Hierarchical Hypernyms
+
+**New in this version:** Two-stage synset selection with word2vec + hypernym hierarchy.
+
+**Pipeline:**
+
+Stage 1: Extract triplet facts (no synsets)
+- LLM generates: `{ "subject": "dog", "predicate": "eats", "object": "meat" }`
+
+Stage 2: Augment and select synsets
+- For each word in each element:
+  - Pull top-5 word2vec neighbors
+  - Look up synset ID + first-level hypernym for each neighbor
+  - Format as hierarchical candidate list
+- Present to LLM with hypernym context
+- LLM responds with chosen synsets + hypernym tuples per word
+
+**Example augmentation for "dog":**
+```
+Word: "dog" → Options:
+  1. dog.n.01 → canine.n.01 (dog is-a canine)
+  2. canine.n.01 → carnivore.n.01 (canine is-a carnivore)
+  3. domestic_animal.n.01 → animal.n.01 (domestic_animal is-a animal)
+  4. hound.n.01 → dog.n.01 (hound is-a dog)
+  5. animal.n.01 → organism.n.01 (animal is-a organism)
+```
+
+LLM selects: `dog.n.01` with hypernym `canine.n.01`.
+
+**Per-word resolution:**
+- Multi-word subject "quick brown dog" → 3 synset choices (one per word)
+- Predicate "eats" → 1 synset choice
+- Object "meat" → 1 synset choice
+
+**Hypernym preservation:**
+- Store tuples: `(current_synset, hypernym_level_1)` for each word
+- Example: subject_hypernyms = `{"dog": ["dog.n.01", "canine.n.01"], "quick": ["quick.a.01", "adj.a.01"]}`
+- Used later for BM25 vertical alignment (inject both into index)
+
+**Canonical identities:**
+- Multi-word element synsets stored as sorted tuple
+- Subject "dog": canonical = `("dog.n.01",)`
+- Subject "quick brown dog": canonical = `("quick.a.01", "brown.a.01", "dog.n.01")`
+- Used as node IDs in visible graph
+
+**BM25 enrichment for vertical alignment:**
+- For each element, inject synsets + first-level hypernyms into index
+- Subject canonical ID "dog.n.01" + hypernym "canine.n.01" both indexed
+- Later queries for "animal" retrieve via shared ancestor in hypernym chain
+- No explicit cross-sentence edges; purely BM25 token-based
+
+**Fallback for weak word2vec matches:**
+- If all word2vec similarities < 0.6 (configurable), LLM can abstain
+- Fall back to lemma-level identity: `word_synset: null`
+- Record provenance: `fallback_reason: "low_similarity"` or `"ambiguous"`
+
+**Implementation modules:**
+
+- `synset_augmentation.py`: `TripletsToAugmentedCandidates` orchestrator
+  - Tokenize elements, filter stop words
+  - Pull word2vec neighbors (if model available)
+  - Look up synsets + hypernyms via NLTK
+  - Format hierarchical display for LLM
+
+- `synset_selection_schema.py`: Schemas and prompt builder
+  - `ElementSynsetChoices`: Word → synset + hypernym tuple
+  - `TripletWithChosenSynsets`: Final schema with all choices
+  - `SynsetSelectionPromptBuilder`: Format for LLM prompt
+
+- `triplet_enrichment.py`: Enrichment + canonicalization
+  - `EnrichedTriplet`: Merge facts + synsets + hypernyms
+  - `TripletEnricher`: Validate and enrich from LLM response
+  - `CanonicalityRules`: Generate canonical node IDs + triplet tuple
+  - `BackwardCompatibilityMigrator`: Handle legacy triplet schema
+
+
 
 Follow this order:
 
