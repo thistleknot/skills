@@ -152,7 +152,40 @@ triplets. That preprocessing step belongs to `agentic_kg_memory`.
 
 The high-level chain is:
 
-`source text -> Pydantic extraction -> normalized triplets -> ontology winner ids -> storage`
+`source text -> LLM extraction (with guidance-resolved synsets) -> normalized triplets -> ontology winner ids -> bm25_index column -> storage`
+
+### Synset/Hypernym Resolution via Guidance
+
+**Stage 1: Base triplet extraction**
+- LLM generates: `{ "subject": str, "predicate": str, "object": str, "polarity": "affirmed"|"negated", "inference_type": "observed"|"inferred" }`
+
+**Stage 2: Guidance-driven synset selection**
+- For each word in each element (subject, predicate, object):
+  - Retrieve top-5 word2vec neighbors
+  - Include the word itself as the 6th candidate
+  - Look up first-level hypernym for each synset via NLTK
+  - Format as candidate tuples: `[(synset_id, first_hypernym_id), ...]`
+- Present candidates to LLM with guidance constraints
+- LLM selects best synset + hypernym tuple per word (or abstains if confidence low)
+- Result: `subject_synset_hypernym_tuples`, `predicate_synset_hypernym_tuples`, `object_synset_hypernym_tuples` as lists of `[synset_id, hypernym_id]` pairs
+
+**Stage 3: BM25 index construction**
+- Extract lemmas from all selected synsets and hypernyms (strip `.pos.##` suffixes)
+- Flatten into space-separated text: `"subject_lemma subject_hypernym_lemma predicate_lemma ... object_lemma object_hypernym_lemma"`
+- Store as `bm25_index` column for layer 2 KG memory retrieval
+
+**Example:**
+```json
+{
+  "subject": "love",
+  "predicate": "be",
+  "object": "madness",
+  "subject_synset_hypernym_tuples": [["love.n.01", "feeling.n.01"]],
+  "predicate_synset_hypernym_tuples": [["be.v.01", "exist.v.01"]],
+  "object_synset_hypernym_tuples": [["madness.n.01", "state.n.01"]]
+}
+```
+→ `bm25_index: "love feeling be exist madness state"`
 
 ### Source-to-triplet extraction
 

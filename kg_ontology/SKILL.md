@@ -133,51 +133,57 @@ SpaCy entities, throughlines, BM25 vertical alignment, hypernym scaffolding, and
 
 ## Multi-Stage Synset Resolution with Hierarchical Hypernyms
 
-**New in this version:** Two-stage synset selection with word2vec + hypernym hierarchy.
+**New in this version:** Two-stage synset selection with word2vec + hypernym hierarchy via guidance.
 
 **Pipeline:**
 
-Stage 1: Extract triplet facts (no synsets)
+**Stage 1: Extract triplet facts (no synsets)**
 - LLM generates: `{ "subject": "dog", "predicate": "eats", "object": "meat" }`
 
-Stage 2: Augment and select synsets
+**Stage 2: Guidance-driven synset augmentation and selection**
 - For each word in each element:
-  - Pull top-5 word2vec neighbors
-  - Look up synset ID + first-level hypernym for each neighbor
-  - Format as hierarchical candidate list
-- Present to LLM with hypernym context
-- LLM responds with chosen synsets + hypernym tuples per word
+  - Generate candidate set: top-5 word2vec neighbors **+ the word itself** (6 candidates total)
+  - Look up synset ID + first-level hypernym for each candidate via NLTK
+  - Format as hierarchical tuples: `[(synset_id, hypernym_id), ...]`
+  - Pass to LLM with guidance constraints
+  - LLM selects best synset + hypernym tuple for this word (or abstains if low confidence)
+- Result: `subject_synset_hypernym_tuples`, `predicate_synset_hypernym_tuples`, `object_synset_hypernym_tuples`
 
 **Example augmentation for "dog":**
 ```
-Word: "dog" → Options:
-  1. dog.n.01 → canine.n.01 (dog is-a canine)
-  2. canine.n.01 → carnivore.n.01 (canine is-a carnivore)
-  3. domestic_animal.n.01 → animal.n.01 (domestic_animal is-a animal)
-  4. hound.n.01 → dog.n.01 (hound is-a dog)
-  5. animal.n.01 → organism.n.01 (animal is-a organism)
+Word: "dog" (current) + top-5 neighbors → 6 candidates:
+  1. dog.n.01 → canine.n.01 (current word, first synset)
+  2. canine.n.01 → carnivore.n.01 (neighbor #1)
+  3. domestic_animal.n.01 → animal.n.01 (neighbor #2)
+  4. hound.n.01 → dog.n.01 (neighbor #3)
+  5. animal.n.01 → organism.n.01 (neighbor #4)
+  6. pup.n.01 → canine.n.01 (neighbor #5)
+
+LLM selects: [dog.n.01, canine.n.01]
 ```
 
-LLM selects: `dog.n.01` with hypernym `canine.n.01`.
-
 **Per-word resolution:**
-- Multi-word subject "quick brown dog" → 3 synset choices (one per word)
-- Predicate "eats" → 1 synset choice
-- Object "meat" → 1 synset choice
+- Multi-word subject "quick brown dog" → 3 synset+hypernym pairs (one per word)
+- Predicate "eats" → 1 synset+hypernym pair
+- Object "meat" → 1 synset+hypernym pair
 
 **Hypernym preservation:**
-- Store tuples: `(current_synset, hypernym_level_1)` for each word
-- Example: subject_hypernyms = `{"dog": ["dog.n.01", "canine.n.01"], "quick": ["quick.a.01", "adj.a.01"]}`
-- Used later for BM25 vertical alignment (inject both into index)
+- Store as tuples: `[synset_id, first_level_hypernym_id]` for each word
+- Example: `subject_synset_hypernym_tuples = [["quick.a.01", "adj.a.01"], ["brown.a.01", "adj.a.01"], ["dog.n.01", "canine.n.01"]]`
+- Lemmas extracted (strip `.pos.##`): `["quick", "adj", "brown", "adj", "dog", "canine"]`
+- Flattened into `bm25_index` for KG memory layer 2 retrieval
 
 **Canonical identities:**
 - Multi-word element synsets stored as sorted tuple
 - Subject "dog": canonical = `("dog.n.01",)`
 - Subject "quick brown dog": canonical = `("quick.a.01", "brown.a.01", "dog.n.01")`
-- Used as node IDs in visible graph
+- Used as node IDs in visible graph (hypernyms are ontology scaffolding, hidden by default)
 
 **BM25 enrichment for vertical alignment:**
-- For each element, inject synsets + first-level hypernyms into index
+- For each element, extract lemmas from synsets + first-level hypernyms (strip `.pos.##`)
+- Store space-separated in `bm25_index` column
+- Example: `bm25_index: "quick adj brown adj dog canine eats exist meat food"`
+- Enables layer 2 KG memory retrieval on both surface terms and ontological neighbors
 - Subject canonical ID "dog.n.01" + hypernym "canine.n.01" both indexed
 - Later queries for "animal" retrieve via shared ancestor in hypernym chain
 - No explicit cross-sentence edges; purely BM25 token-based
