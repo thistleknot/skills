@@ -124,9 +124,12 @@ Polarity distinguishability is a property of the BM25 index, not a separate edge
 
 ### Diagram
 
-See [diagram.md](./diagram.md) for the full KG connection topology diagram showing all seven
-connection mechanisms: triplets, synsets, SpaCy entities, throughlines, BM25 vertical alignment,
-hypernym scaffolding, and polarity preservation.
+**Visual renderings:**
+- [diagram.md](./diagram.md) — mermaid source, editable
+- [diagram.svg](./diagram.svg) — rendered graph, interactive zoom/pan
+
+The full KG connection topology diagram shows all seven connection mechanisms: triplets, synsets,
+SpaCy entities, throughlines, BM25 vertical alignment, hypernym scaffolding, and polarity preservation.
 
 ## Canonicalization Pipeline
 
