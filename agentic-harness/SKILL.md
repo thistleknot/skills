@@ -107,6 +107,28 @@ agentic-harness
 Do not collapse them into one skill unless you find repeated evidence that the
 outer delivery loop and the inner harness-repair loop cannot be maintained independently.
 
+## Repo Mirror Guidance
+
+When this skill is mirrored into a project repository, keep the repo copy
+compact and separate:
+
+- `prompts/skills/agentic-harness/agentic-harness.md` for the full local mirror
+- `prompts/skills/agentic-harness/agentic-harness.llm.md` for selector injection
+- keep the agent-only routing policy explicit unless you intentionally change it
+
+## Exportable Generalization
+
+The source of truth is this global skill. Keep it general enough that a repo copy
+can be exported without rethinking the contract.
+
+- restate the task as objective, wedge, failure modes, and completion artifact
+- keep a visible review ladder: office-hours → CEO review → eng review → design review → QA → ship → retro
+- preserve the scope boundary before any side effect
+- fix mechanisms, not one-off outputs
+- require artifact-backed completion, not log-shaped optimism
+- keep autonomy inspectable from orchestration code
+- use the repo mirror only as a downstream export target
+
 ## No Band-Aid Repair Rule
 
 This skill is explicitly **anti ad-hoc repair**.
