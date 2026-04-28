@@ -374,12 +374,36 @@ The split is:
 If needed, the memory bank can reference page IDs, throughline IDs, or corpus
 artifacts, but it should not become the graph itself.
 
+## Boundary Against Compiled Wiki Memory
+
+Do not confuse `memory-bank` with a compiled domain wiki.
+
+- `memory-bank` stores **project operating state**:
+  - what changed
+  - what matters next
+  - why a decision was made
+  - where a future session should resume
+- a compiled wiki / corpus memory stores **domain knowledge**:
+  - source-derived pages
+  - entity and concept summaries
+  - cross-source comparisons
+  - contradiction tracking inside the knowledge surface itself
+  - content indexes and ingest/query/lint journals
+
+If the artifact is trying to answer **what does this corpus mean together?**, it
+belongs in `agentic_kg_memory` or a wiki-like knowledge surface derived from it,
+not in `memory-bank`.
+
+If the artifact is trying to answer **what is happening in this project and where
+do we resume?**, it belongs in `memory-bank`.
+
 ## Anti-Patterns
 
 Avoid:
 - storing corpus triplets in the memory bank
 - using progress.md as a retrieval index
 - mixing project-state notes with evidence-level conclusions
+- treating the memory bank as a domain wiki or compiled knowledge base
 - rewriting history instead of appending milestone context
 - keeping only chat-local context when a stable file belongs in memory-bank
 

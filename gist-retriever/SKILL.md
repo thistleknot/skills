@@ -49,6 +49,40 @@ The abstract part that remains useful is:
 - late interaction reranking
 - subclass-specific reconstruction and final selection
 
+## Retrieval Progression for Compiled Wikis
+
+In an **LLM Wiki** style system, retrieval usually matures in stages instead of
+starting with the heaviest stack on day one.
+
+Recommended progression:
+
+1. **Markdown/index-first lookup** for small-to-medium corpora
+   - use a maintained `index.md` to find candidate pages quickly
+   - follow explicit page links and metadata
+   - use direct markdown search when the corpus is still human-navigable
+2. **Local markdown search engine** when the wiki grows beyond comfortable manual navigation
+   - a `qmd`-style local engine is a good fit here
+   - hybrid BM25/vector search over markdown pages is acceptable as a lightweight access path
+   - this is still page-oriented retrieval, not the full graph-memory contract
+3. **Full hybrid retrieval pipeline** once the corpus or page layer is large enough to justify it
+   - BM25 seeds
+   - dense/GIST seeds
+   - RRF fusion
+   - L2 expansion
+   - ColBERT reranking
+
+This skill owns the **access path** into compiled pages and evidence bundles. It
+does not own the page-maintenance loop itself.
+
+The backend can vary:
+
+- direct markdown lookup over canonical page files
+- local markdown search over those same files
+- a compiled index such as Postgres/pgvector built from the canonical page layer
+
+The important rule is that the retrieval surface is **rebuildable from the maintained
+knowledge artifacts**. Retrieval serves the compiled wiki; it is not the source of truth.
+
 ## Base Pipeline
 
 Per query:
@@ -120,6 +154,12 @@ In the broader memory stack:
 - `kg_ontology` ensures canonical ids are used
 - `agentic_kg_memory` updates pages, throughlines, and final evidence-backed conclusions
 
+In LLM Wiki terms:
+
+- `agentic_kg_memory` maintains the compiled wiki/page layer
+- `gist-retriever` is the retrieval path into that maintained layer
+- lightweight markdown/index-first lookup is the shallow end of the same retrieval job
+
 The default dense store for this skill is:
 
 - ordered `[SEP]` triplet sequences
@@ -178,6 +218,7 @@ When applying this skill, report:
 - the reconstruction unit
 - whether ColBERT reranking ran
 - the final selection rule
+- whether retrieval used the markdown/index-first path, a local markdown search layer, or the full hybrid pipeline
 - whether retrieval is using Chroma or degraded cosine fallback
 
 ## Anti-Patterns

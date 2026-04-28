@@ -95,6 +95,94 @@ The page is not a summary blob. It is a durable memory surface that links:
 
 `intent -> objective -> supporting premises -> throughlines`
 
+## Compiled Wiki Pattern
+
+`agentic_kg_memory` is the closest thing in this repo to the **LLM Wiki** pattern:
+it compiles source material into a persistent intermediate layer rather than
+re-reading raw prose from scratch on every query.
+
+The practical split is:
+
+1. **Raw sources** — immutable source documents, quotes, spans, or notes
+2. **Pages / wiki entries** — durable synthesized memory surfaces updated as new
+   evidence arrives
+3. **Throughlines** — the current best abductive or deductive conclusions over
+   those pages
+
+KnowledgeWeaver is a useful concretization of this pattern:
+
+- the canonical artifact stays readable on disk
+- the compiled index is secondary and rebuildable
+- typed units of knowledge are allowed instead of one undifferentiated summary blob
+
+The typed-unit idea is valuable here. A page layer may contain distinct memory forms
+such as:
+
+- `concept`
+- `fact`
+- `experience`
+- `narrative`
+- `opinion`
+- `known_unknown`
+
+This means the memory layer should accumulate:
+
+- prior synthesis
+- cross-page links
+- contradictions that remain unresolved
+- revised conclusions when new evidence changes the best fit
+
+The store is not just a retrieval cache. It is a **maintained knowledge surface**
+that compounds over time.
+
+## Canonical Artifact Rule
+
+The human-readable page layer is the canonical artifact.
+
+- markdown pages, typed wiki entries, or equivalent readable files are the source
+  of truth for the compiled memory layer
+- SQLite / Chroma / Postgres / pgvector indexes are compiled access structures
+- those compiled indexes should be safe to delete and rebuild from the canonical
+  page layer without manual knowledge repair
+
+This keeps the memory inspectable, diffable, and versionable while still allowing
+heavier retrieval backends.
+
+## Maintenance Loop
+
+The default operating loop is:
+
+1. **Ingest**
+   - read new source material
+   - extract and normalize triplets
+   - update the relevant pages rather than only appending new isolated facts
+   - revise throughlines when the new evidence changes the best explanation
+   - preserve contradiction and uncertainty explicitly
+2. **Query**
+   - retrieve the relevant pages and supporting facts
+   - synthesize an answer from evidence
+   - if the answer creates a durable new comparison, summary, or connection,
+     file it back into the page / throughline layer instead of letting it die in chat history
+3. **Lint**
+   - scan for stale claims superseded by newer evidence
+   - detect orphan pages with weak linkage
+   - detect missing cross-references or missing entity/concept pages
+   - flag unresolved conflicts and known unknowns
+
+This is the behavioral difference between a one-shot retriever and a living memory system.
+
+## Human-Readable Operating Surfaces
+
+For small-to-medium corpora, keep two markdown-level navigation aids alongside the
+structured storage:
+
+- `index.md` — content-oriented catalog of pages, grouped by type with one-line summaries
+- `log.md` — chronological ingest/query/lint journal for recent system activity
+
+These files are not the memory identity themselves. They are **operator and agent
+surfaces** that make the page/throughline layer inspectable and navigable before
+heavier retrieval machinery is required.
+
 ## Why These Papers Matter
 
 ### MemRL
@@ -702,6 +790,10 @@ Follow this order:
 The organizing chain is:
 
 `query -> intent -> HyDE query -> cluster -> sparse+dense retrieval -> triplets -> sources+facts -> NLI/judge -> throughline update`
+
+If the query produces a durable synthesis rather than a transient answer, promote
+that synthesis back into the page / throughline layer as a new or revised memory
+artifact. Querying is allowed to improve the wiki, not just read from it.
 
 ### HyDE query translation
 
