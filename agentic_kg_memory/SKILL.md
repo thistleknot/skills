@@ -135,6 +135,42 @@ This means the memory layer should accumulate:
 The store is not just a retrieval cache. It is a **maintained knowledge surface**
 that compounds over time.
 
+## Consolidation Tiers
+
+Information should not stay at its entry tier forever. Promote it upward as
+evidence accumulates and confidence grows.
+
+| Tier | Label | What lives here | Lifetime |
+|---|---|---|---|
+| 0 | **Working memory** | Raw observations from the current session: unprocessed spans, scratch notes, transient context | Ephemeral; compressed at session end |
+| 1 | **Episodic memory** | Session summaries compressed from working memory; what happened in a bounded interaction | Medium; decays if not reinforced |
+| 2 | **Semantic memory** | Cross-session facts consolidated from episodes; stable claims about the domain | Long; updated but not easily erased |
+| 3 | **Procedural memory** | Workflows, patterns, and decision rules extracted from repeated semantics | Longest; changes only when patterns break |
+
+Each tier is more compressed, more confident, and longer-lived than the one below it.
+
+### Promotion rules
+
+Promote a memory entry one tier when:
+- **Working → Episodic**: the session ends and the observation survived compression
+- **Episodic → Semantic**: the same claim appears across multiple episodes with consistent support
+- **Semantic → Procedural**: a cluster of semantic facts resolves to a reusable workflow or decision rule
+
+Demotion is also valid: if a semantic claim is repeatedly contradicted, demote it back to episodic status pending re-evaluation.
+
+### Mapping onto the existing three-tier stack
+
+The three-tier confidence stack in this skill maps naturally:
+
+| This skill | Consolidation tier |
+|---|---|
+| Triplet | Episodic (one source's grounded observations) |
+| Page / wiki entry | Semantic (cross-source, cross-session compiled fact cluster) |
+| Throughline | Procedural / high-confidence semantic (stable best-fit conclusion) |
+
+Working memory (tier 0) lives in the current session context — `continuity-log` or
+equivalent scratchpad — before it is compressed into triplets at session end.
+
 ## Canonical Artifact Rule
 
 The human-readable page layer is the canonical artifact.
@@ -168,8 +204,34 @@ The default operating loop is:
    - detect orphan pages with weak linkage
    - detect missing cross-references or missing entity/concept pages
    - flag unresolved conflicts and known unknowns
+   - **Supersession**: when a newer claim contradicts or replaces an older one, do not just flag it — link the two claims explicitly, timestamp the supersession event, and mark the older claim stale. The old version is preserved in history but deprioritized in retrieval. This keeps the wiki self-correcting rather than just accumulating notes about contradictions.
 
 This is the behavioral difference between a one-shot retriever and a living memory system.
+
+## Automation Hooks
+
+Manual ingest/query/lint loops work at small scale but should be automated.
+The goal is near-zero maintenance burden for the human once the initial schema is established.
+
+Recommended event hooks:
+
+| Event | Action |
+|---|---|
+| **on_new_source** | auto-ingest, extract triplets, update graph, update index.md |
+| **on_session_start** | load relevant context pages based on recent activity and current task |
+| **on_session_end** | compress session observations into episodic entries, file insights back to pages |
+| **on_query** | check whether the answer is worth filing back (quality score > threshold) |
+| **on_memory_write** | check for contradictions with existing knowledge, trigger supersession if warranted |
+| **on_schedule** | periodic lint, consolidation pass, temporal retention decay |
+
+The human stays in the loop for curation and direction. Bookkeeping — the part that
+causes people to abandon wikis — should be fully automated.
+
+Hook fidelity scales with implementation maturity:
+
+- **Minimal**: manual trigger, agent-assisted each step
+- **Partial**: session-boundary hooks automated (start/end compression)
+- **Full**: all hooks wired; the wiki tends toward health on its own
 
 ## Human-Readable Operating Surfaces
 
@@ -698,6 +760,65 @@ Each tier answers a different question:
 - **Page**: is this memory entry a good semantic match for the current task?
 - **Throughline**: has this conclusion held up under repeated use?
 
+## Forgetting and Temporal Decay
+
+Evidence-based scoring (reinforce/weaken) handles contradictions. Time-based
+decay handles **stale-but-uncontradicted** claims — the slow rot that makes wikis
+become noise over time.
+
+Apply an Ebbinghaus-style retention model:
+
+```text
+retention(t) = e^(−t / stability)
+```
+
+Where:
+- `t` is time since last access or confirmation
+- `stability` increases with each reinforcement (reset and lengthened by each access)
+
+Practical implementation over the Q-score:
+
+```text
+effective_q = q_score * retention(time_since_last_access)
+```
+
+This does not erase the stored `q_score`. It downweights the **effective retrieval
+priority** at query time without destructively modifying the record.
+
+### Decay rate by memory type
+
+Decay rates should reflect how fast content becomes stale:
+
+| Memory type | Decay rate |
+|---|---|
+| Transient bug / incident observation | Fast (days → weeks) |
+| Project decision | Medium (weeks → months) |
+| Architecture pattern | Slow (months → years) |
+| Procedural workflow | Very slow |
+
+### Retention reset
+
+Every confirmed access or reinforcement resets the clock:
+
+```text
+stability_new = stability_old * growth_factor  # e.g. growth_factor = 1.5
+last_accessed = now()
+```
+
+Over multiple confirmed retrievals the same claim becomes progressively harder to
+forget, which mirrors how important knowledge should compound.
+
+### Forgetting vs. deletion
+
+Do not delete decayed memories. Instead:
+
+- drop `effective_q` below the retrieval threshold
+- mark as `status = dormant` when effective_q drops below a floor
+- promote back to active if later evidence re-confirms the claim
+
+This is the semantic equivalent of moving something to a bottom drawer: deprioritized
+but recoverable.
+
 ## Triplet Layer
 
 The atom is still the semantic triplet `(S, P, O)` with provenance.
@@ -795,6 +916,50 @@ If the query produces a durable synthesis rather than a transient answer, promot
 that synthesis back into the page / throughline layer as a new or revised memory
 artifact. Querying is allowed to improve the wiki, not just read from it.
 
+## Graph Traversal for Discovery
+
+Standard retrieval answers "what evidence matches this query?" Graph traversal
+answers "what does changing X affect?" — impact analysis and lateral discovery.
+
+When a query concerns downstream effects, dependencies, or structural impact, use
+the typed edge layer rather than (or in addition to) semantic similarity:
+
+```text
+query: "what is the impact of upgrading Redis?"
+
+1. Locate the Redis entity node
+2. Walk outward along typed edges:
+   - "depends_on" → find all entities that depend on Redis
+   - "uses" → find all contexts where Redis is used
+   - "caused" / "fixed" → find incident or resolution nodes
+3. Collect the reached nodes as candidate pages
+4. Score by traversal depth + edge weight + q_score of reached pages
+5. Return as a ranked evidence bundle
+```
+
+This finds connections that semantic similarity misses — things that are structurally
+related but lexically distant.
+
+### Traversal rules
+
+- prefer typed edges over generic "relates to" edges for precision
+- apply a hop budget (default: 2–3 hops) to prevent unbounded expansion
+- weight outgoing edges by their confidence scores
+- merge traversal candidates with semantic retrieval candidates before ranking (RRF)
+- traversal is a supplement to hybrid search, not a replacement
+
+### When to use traversal
+
+Use graph traversal when:
+- the query asks about impact, dependencies, or downstream effects
+- the query asks about the history of a specific entity or decision
+- keyword/semantic search returns low-quality results for a structural question
+- the corpus has dense typed-relationship coverage
+
+Use standard hybrid retrieval when:
+- the query is open-ended semantic exploration
+- the corpus does not have explicit typed edges yet
+
 ### HyDE query translation
 
 The dense query should not always be the raw user string.
@@ -851,6 +1016,57 @@ retrieved evidence rather than treated as a source in isolation.
 - facts remain the normalized evidence layer
 - the throughline/conclusion is the current synthesis over that evidence
 - score updates and merges happen on the throughline record, not on the cited sources
+
+## Crystallization
+
+Crystallization is the process of taking a completed chain of work — a research
+thread, a debugging session, a multi-step analysis — and automatically distilling
+it into a structured digest that becomes a first-class wiki artifact.
+
+This is distinct from the query write-back pattern. Write-back files a single
+answer. Crystallization distills an **entire session or work chain** into its
+durable essence.
+
+### Crystallization contract
+
+A crystallization digest should capture:
+
+1. **Question** — what was the original intent or driving question?
+2. **Findings** — what did we learn? (as normalized triplets or semantic memory entries)
+3. **Entities involved** — which files, concepts, people, systems were relevant?
+4. **Lessons** — what decision rules or patterns emerged that should be reused?
+5. **Open questions** — what remains unresolved?
+
+### Output artifacts
+
+A crystallization pass produces two types of artifacts:
+
+- **Digest page** — a first-class wiki page with intent, objective, and the
+  structured findings above; ingested and indexed like any other page
+- **Standalone facts** — individual lessons and patterns extracted from the digest,
+  filed directly as triplets or semantic memory entries that reinforce or update
+  existing knowledge
+
+### When to crystallize
+
+Crystallize at the end of:
+- a completed research thread
+- a resolved debugging session
+- a completed analysis or comparison task
+- any multi-turn chain where the conclusions should outlive the session
+
+Explorations are a source, just like an article or a paper. The wiki should treat
+them that way: ingest the results, update the graph, strengthen or challenge existing claims.
+
+### Crystallization vs. session compression
+
+- **Session compression** (episodic tier) — compress raw observations from the
+  current session into episodic entries; runs at session end automatically
+- **Crystallization** — distill a purposeful work chain into a structured, high-quality
+  digest; requires intent and judgment; produces a named, referenceable wiki artifact
+
+Use crystallization for work chains that have a clear question and answer.
+Use session compression for general activity logs.
 
 ## Ranking Surface
 

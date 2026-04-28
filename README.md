@@ -82,9 +82,10 @@ skills/
 - `integrate\\` is an input folder, not a branch in the live skill graph.
 - Concepts staged there can inform one or more skills later, but they are not treated as first-class skills until promoted.
 - The `llm-wiki` concept has been absorbed by **existing** live skills rather than promoted as its own branch:
-  - `agentic_kg_memory` inherited the compiled-wiki maintenance loop, typed readable knowledge units, and canonical-artifact / rebuildable-index rule
-  - `gist-retriever` inherited the staged retrieval/access-path progression across markdown lookup, local markdown search, and compiled retrieval indexes
-  - `memory-bank` inherited the sharper boundary against corpus/wiki memory
+  - `agentic_kg_memory` inherited the compiled-wiki maintenance loop, typed readable knowledge units, and canonical-artifact / rebuildable-index rule *(first pass)*
+  - `gist-retriever` inherited the staged retrieval/access-path progression across markdown lookup, local markdown search, and compiled retrieval indexes *(first pass)*
+  - `memory-bank` inherited the sharper boundary against corpus/wiki memory *(first pass)*
+  - `agentic_kg_memory` also inherited *(second pass)*: four-tier consolidation model (working/episodic/semantic/procedural), temporal decay / Ebbinghaus forgetting, supersession as an explicit named operation, event-driven automation hooks, graph traversal for impact/discovery queries, and crystallization as a first-class wiki operation
 
 ## Design Principles
 
@@ -100,4 +101,5 @@ skills/
 - Reframed `agentic-harness` as the multi-framework stationmaster.
 - Added `continuity-log` to preserve compact-safe reasoning products between long turns and compactions.
 - Absorbed `integrate\\llm-wiki` into existing live skills instead of promoting it as a standalone branch: compiled memory behavior now lives in `agentic_kg_memory`, staged retrieval behavior in `gist-retriever`, and the project-vs-corpus boundary in `memory-bank`.
+- Second-pass absorption of `integrate\\llm-wiki`: added consolidation tiers (working/episodic/semantic/procedural), temporal decay, supersession, automation hooks, graph traversal for discovery, and crystallization to `agentic_kg_memory`.
 - Added `deep-q-rl` under new `learning/` section: DQN + Russian Doll MCTS pattern generalized from chess-deep-q; applies to any scored discrete-action environment.
