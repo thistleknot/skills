@@ -1,0 +1,21 @@
+# Reference clones in integrate/ — large nested git repos, not part of skill library
+integrate/awesome-copilot/
+integrate/gstack/
+
+# Pattern store / vector store artifacts
+*.db
+*.sqlite
+*.sqlite3
+learnings.jsonl
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# OS artifacts
+.DS_Store
+Thumbs.db

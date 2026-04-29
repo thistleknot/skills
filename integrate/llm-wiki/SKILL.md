@@ -68,9 +68,25 @@ In practice, you want hooks. Events that fire automatically:
 
 The human should still be in the loop for curation and direction. But the bookkeeping, the part that makes people abandon wikis, should be fully automated.
 
+**Hybrid authorship.** Not all ingest paths are equal. Single-source, agent-driven incremental ingest (`wiki ingest`) is the default — conversational, fast, and citation-aware. For whole-domain imports (50+ sources where citation fidelity matters more than convenience), use code-driven batch ingest (`wiki batch-ingest --legacy-import`). Both paths must write through the same gateway and validator — the difference is throughput and operator, not trust level. Bypassing the validator in batch mode is how citation debt accumulates at scale.
+
+## Citation integrity
+
+Every claim in the wiki must be traceable to a real ingested source — enforced at write time, not lint time.
+
+**Write-time validator.** When a page is written, the validator checks that every `[[sources/foo]]` link resolves to a file that already exists in `raw/`. A confabulated citation fails the write immediately; nothing lands in the vault. This catches hallucinations at the moment of creation, not after a batch lint run.
+
+**Span anchors.** Citations should point to the exact location in the source, not just the file. Use anchors like `#1820` (timestamp for video/audio), `#p7` (page for PDFs), `#para3` (paragraph for prose). Vague citations are second-class; span-anchored citations are the standard.
+
+**Bidirectional backlink integrity.** Citing a source from a wiki page must update that source file's `wiki_pages:` frontmatter. Lint checks both directions — a wiki page citing a source that doesn't list the page back is a broken link in both senses. Neither direction is optional.
+
+**Draft/finalize workflow.** Write with `--draft` to downgrade validation errors to warnings. Use this for exploratory work or partial ingestion. `wiki finalize` re-runs the full validator and promotes the page to canonical. Draft pages are visible and usable; they just carry an explicit trust signal that they haven't been fully validated.
+
 ## Quality and self-correction
 
 Not all LLM-generated content is good. Without quality controls, the wiki accumulates noise.
+
+**Editorial filter (ingest gate).** Put a semantic filter between raw ingest and the wiki. Sources score against a per-domain editorial policy stored as a YAML file plus an example bank of accepted/rejected items. Sources below threshold stay in `raw/` with a rationale note and never reach the wiki. Two details matter: (1) LLMs can bootstrap the initial YAML policy from a detailed research prompt — the agent writes its own editorial criteria at project start. (2) User corrections pin to the example bank, so the filter sharpens with every correction rather than requiring manual recalibration.
 
 **Score everything.** Every piece of content the LLM writes should get a quality score. Is it well-structured? Does it cite sources? Is it consistent with the rest of the wiki? You can have the LLM self-evaluate, or use a second pass with a different prompt. Content below a threshold gets flagged for review or rewritten.
 
@@ -81,6 +97,8 @@ Not all LLM-generated content is good. Without quality controls, the wiki accumu
 ## Multi-agent and collaboration
 
 The original is single-user, single-agent. Many real use cases involve multiple agents or multiple people contributing to the same knowledge base.
+
+**MCP gateway for cross-project sharing.** The biggest practical gap in single-project wikis is that knowledge siloes per project. A single Python gateway can back both the wiki CLI and an MCP server, exposing `wiki_ingest`, `wiki_query`, `wiki_lint`, and related operations as native tools in any agent session on the machine — same backend, same validator, the operation behaves identically through either surface. When a wiki is shared via MCP, it stops being a per-project silo and becomes institutional memory.
 
 **Mesh sync.** If multiple agents are working in parallel (different coding sessions, different research threads), their observations need to merge into a shared wiki. Last-write-wins works for most cases. For conflicts, timestamp-based resolution with manual override.
 
@@ -106,7 +124,7 @@ The original mentions that "good answers can be filed back into the wiki as new 
 
 Your explorations are a source, just like an article or a paper. The wiki should treat them that way. Ingest the results, update the graph, strengthen or challenge existing claims.
 
-## Output formats beyond markdown
+## Output formats and visualization
 
 The original mentions Marp for slide decks and matplotlib for charts. The wiki's output shouldn't be limited to markdown pages. Depending on the query, the right output might be:
 
@@ -116,6 +134,10 @@ The original mentions Marp for slide decks and matplotlib for charts. The wiki's
 - A slide deck for presenting findings
 - A structured data export (JSON, CSV) for further analysis
 - A brief for someone else on your team
+
+**Obsidian as the graph layer.** If the wiki uses Obsidian's native `[[wikilink]]` syntax throughout (entity pages, concept pages, source pages, synthesis pages), opening the vault in Obsidian gives you a navigable knowledge graph with no additional tooling. The graph is a byproduct of correct citation practice, not a separate build step.
+
+**Heavy-corpus artifact synthesis.** For large-corpus artifacts (slide decks, audio briefings, multi-source syntheses) that are too large for an LLM context window, delegate to a dedicated synthesis tool (e.g. NotebookLM). The key discipline: artifacts produced externally must be filed back to the vault as first-class wiki pages with bidirectional links to the sources they synthesized, and raw calls to the synthesis tool must not appear in committed wiki content (enforce with a pre-commit grep). The wiki stays canonical; the external tool stays scoped to heavy synthesis. Without this guard, the wiki becomes a thin wrapper around an external system it doesn't control.
 
 The wiki is the knowledge store. The output format depends on the audience and the question.
 
@@ -145,9 +167,9 @@ All of this is modular. You don't need everything on day one.
 
 **Add automation**: hooks for auto-ingest, auto-lint, context injection. This is where the maintenance burden drops to near zero.
 
-**Add scale**: hybrid search, consolidation tiers, quality scoring. This is what you need when the wiki grows past a few hundred pages.
+**Add scale**: hybrid search, consolidation tiers, quality scoring, editorial filter with domain YAML policy. This is what you need when the wiki grows past a few hundred pages or spans multiple source types (YouTube, arXiv, PubMed).
 
-**Add collaboration**: mesh sync, shared/private scoping, work coordination. This is for teams or multi-agent setups.
+**Add collaboration**: mesh sync, shared/private scoping, work coordination, MCP gateway for cross-project sharing.
 
 Pick your entry point based on your needs. The pattern works at every level.
 

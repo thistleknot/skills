@@ -1,8 +1,31 @@
 ---
 name: code
-description: Code standards and implementation protocol. Use for any code generation, modification, or review task. Covers structure, naming, docstrings, stack defaults, data sources, contracts, checkpoints, error handling, and refactor sequence.
+description: Code standards and implementation protocol. Use for any code generation, modification, or review task. Covers codebase exploration (RRS/PRRS multi-lens analysis), structure, naming, docstrings, stack defaults, data sources, contracts, checkpoints, error handling, and refactor sequence.
+status: active
+last_validated: 2026-04-28
+supersedes: []
+validation_method: session
 ---
 # Code Standards
+
+## ETHOS: Boil the Lake
+
+AI makes completeness cheap. The marginal cost of doing something completely — all edge cases, all error paths, all tests — is near zero compared to the cost of revisiting half-finished work later. Always choose the complete implementation.
+
+- Complete the error paths, not just the happy path.
+- Write the tests, not just the feature.
+- Handle the edge cases; don't leave them as TODOs.
+- Flag oceans (multi-quarter rewrites) explicitly; never silently scope down a lake to a puddle.
+
+## ETHOS: Search Before Building
+
+Before writing new code, traverse three knowledge layers:
+
+1. **Tried-and-true** — does this already exist in the codebase? Same function, same pattern, different file?
+2. **New-and-popular** — is there a well-adopted library that covers this? Search before implementing from scratch.
+3. **First-principles** — if nothing fits, build from the simplest composable primitives.
+
+Only reach the first-principles layer when layers 1 and 2 are empty. Re-implementing a solved problem is waste.
 
 ## Structure (Data-Centric Order)
 ```

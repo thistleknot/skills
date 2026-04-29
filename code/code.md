@@ -1,5 +1,52 @@
 # Code Standards
 
+## Explore Before Writing
+
+LLMs default to junior-developer behavior: they write code locally correct but globally wrong — duplicating abstractions, missing patterns, creating ripple effects. Counteract by building a hierarchical mental model of the codebase *before* generating any code.
+
+**Senior vs. Junior mental model**
+
+| Junior | Senior |
+|---|---|
+| Focuses on "what" and "how" — implementation details | Focuses on "why" and "what if" — system-level consequences |
+| Duplicates functionality; misses reuse opportunities | Recognizes patterns; extends existing abstractions |
+| Operates by trial and error | Distinguishes incidental code from foundational logic |
+
+**Ranked Recursive Summarization (RRS)**
+
+Treat the codebase as a tree, not flat files. Build understanding bottom-up — files first, then directories, then the root:
+
+```python
+def rrs(node, context=""):
+    if is_file(node):
+        chunks = split_into_chunks(read_file(node))
+        return summarize(rank_by_importance(chunks, context))
+    return summarize([rrs(child, context) for child in node.children])
+```
+
+Rank leaf chunks by importance before summarizing. Each parent summary is built from already-compressed children.
+
+**Prismatic RRS (PRRS) — multi-lens analysis**
+
+A single importance ranking is context-dependent. Run RRS through multiple lenses:
+
+```python
+LENSES = ["architecture", "data_flow", "security", "patterns", "dependencies"]
+
+def prrs(root):
+    return {lens: rrs(root, context=f"Analyze importance from {lens} perspective")
+            for lens in LENSES}
+```
+
+Each lens surfaces different load-bearing code: `architecture` → structure; `data_flow` → coupling; `security` → trust boundaries; `patterns` → reuse opportunities; `dependencies` → blast radius of changes.
+
+**Without tooling**
+
+1. Write a summary for each top-level directory describing its role and key abstractions.
+2. Generate a lens-specific doc for each concern (e.g. `ARCHITECTURE.md`, `DATA_FLOW.md`).
+3. Include the relevant lens doc in context before generating code for that concern.
+4. Improve manual summaries with an LLM — iterate until the summary would catch pattern violations.
+
 ## Structure (Data-Centric Order)
 ```
 imports        # sorted by use-case category; deduplicated

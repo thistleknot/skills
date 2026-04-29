@@ -24,7 +24,8 @@ skills/
 │   │   ├── checklist                # LLM-as-judge validation pattern; structured findings with novelty proof
 │   │   ├── continuity-log           # compact-safe session memory; distilled decisions, resume points
 │   │   └── deep-research            # multi-source web evidence pipeline; LangGraph planner→researcher→synthesizer
-│   └── timeout-guard                # runaway-task policy; interrupt and recovery rules
+│   ├── timeout-guard                # runaway-task policy; interrupt and recovery rules
+│   └── skill-wiki                   # living skill library lifecycle; intake → staged → active → superseded governance
 │
 ├── memory/                          # persist knowledge across sessions and tasks
 │   ├── memory-bank                  # durable project memory (brief, context, patterns, progress)
@@ -68,6 +69,7 @@ skills/
 14. `gist_correlation_matrix` is the "true GIST output": sorted correlation matrix as complete relational map (N^2 cells, each encoding pairwise relationship). Two sorting strategies: **orthogonal** (information-theoretic maximization, sharp drop-off) and **coverage** (hierarchical boundary exploration, expanding bands). Outputs: interactive HTMLs with full zoom/pan/hover.
 15. `spiral-radial-clustering-display` is the multi-dimensional hierarchical clustering visualization skill. Maps four layers (macro GMM + micro HDBSCAN + decorrelated ordering + hubness) into 3D feature space, projects via UMAP to 2D, encodes layers via Gestalt (position = spiral topology, color = macro, opacity = micro, size = centrality). Preserves topological structure and produces interactive Plotly HTML with full zoom/pan/hover metadata.
 16. `stratified-quota-sampling` is a pragmatic acquisition strategy for resource-constrained data collection. Marginal variance targeting: within strata (e.g., acoustic clusters), sample songs that maximize feature variance. Quota design: bound acquisition budget while maximizing representativeness. Bridges deterministic clustering with probabilistic sampling.
+17. `skill-wiki` is the meta-skill governing the living skill library lifecycle. It owns the intake pipeline, promotion gates, crystallization protocol, supersession rules, sidecar conventions (EVIDENCE.md, HISTORY.md), and the periodic sweep that keeps skills consistent over time. It is NOT memory storage (→ `agentic_kg_memory`) and NOT project state (→ `memory-bank`).
 
 ## Repository Layout
 
@@ -94,6 +96,47 @@ skills/
 - Root-cause fixes beat band-aids.
 - Artifacts, evidence, and decisions should be persisted explicitly.
 - Between compactions, preserve distilled continuity packets rather than re-deriving the same conclusions.
+- AI makes completeness cheap: always choose the complete implementation over the shortcut.
+
+## Living Skill Library
+
+Skills compound over time. Each skill accumulates evidence (EVIDENCE.md) and changelog history (HISTORY.md) alongside its behavioral contract (SKILL.md). The governance lifecycle is:
+
+```
+integrate/          ← raw intake (awesome-copilot, gstack, llm-wiki, etc.)
+integrate/staged/   ← validated concepts awaiting promotion
+<skill>/SKILL.md    ← active behavioral contract (status: active)
+<superseded>        ← retired skills (status: superseded, superseded_by: <name>)
+```
+
+Promotion gate: one Tier-1/2 evidence item + one local validation, OR two independent Tier-1–3 items from distinct source types. See `skill-wiki/SKILL.md` for the full governance contract.
+
+SKILL.md frontmatter fields:
+```yaml
+status: active          # raw | staged | active | superseded
+last_validated: YYYY-MM-DD
+supersedes: []
+superseded_by: null
+validation_method: benchmark | production | community | session | theoretical
+```
+
+## Automated Software Development Pipeline
+
+This library is optimized for automated software development. Skill-to-pipeline stage mapping:
+
+| Stage | Skill(s) |
+|---|---|
+| Understand intent, decompose | `reasoning`, `architecture` |
+| Execute multi-step task autonomously | `react_agent` |
+| Generate / modify code | `code` |
+| Isolate and fix bugs | `debugging` |
+| Verify behavior, write tests | `validation` |
+| Orchestrate multi-stage pipeline | `agentic-harness` |
+| Hyperparameter search / training | `optuna-nested-cv`, `mlflow` |
+| Semantic knowledge retrieval | `agentic_kg_memory`, `gist-retriever` |
+| Project state and continuity | `memory-bank`, `continuity-log` |
+| Web research and grounding | `deep-research` |
+| Skill library governance | `skill-wiki` |
 
 ## Recent Direction
 
@@ -103,3 +146,10 @@ skills/
 - Absorbed `integrate\\llm-wiki` into existing live skills instead of promoting it as a standalone branch: compiled memory behavior now lives in `agentic_kg_memory`, staged retrieval behavior in `gist-retriever`, and the project-vs-corpus boundary in `memory-bank`.
 - Second-pass absorption of `integrate\\llm-wiki`: added consolidation tiers (working/episodic/semantic/procedural), temporal decay, supersession, automation hooks, graph traversal for discovery, and crystallization to `agentic_kg_memory`.
 - Added `deep-q-rl` under new `learning/` section: DQN + Russian Doll MCTS pattern generalized from chess-deep-q; applies to any scored discrete-action environment.
+- Added `skill-wiki` to orchestration branch: living library lifecycle governance (intake → staged → active → superseded), evidence tiers, promotion gates, sidecar conventions.
+- Absorbed `integrate/gstack` ETHOS: "Boil the Lake" (completeness is cheap with AI) into `code/SKILL.md`; "Search Before Building" (3-layer knowledge taxonomy) into `code/SKILL.md`.
+- Absorbed `integrate/gstack/investigate` Iron Law (no fix without root cause) and 5-phase debugging protocol into `debugging/SKILL.md`.
+- Added Skill Routing section to `copilot-instructions.md` mapping request types to skills (pattern from gstack CLAUDE.md).
+- Added `## Applicability Envelope` to `agentic-harness/SKILL.md` and `debugging/SKILL.md` as template for all live skills.
+- Living Skill Library infrastructure: `integrate/README.md`, `integrate/staged/README.md`, `agentic-harness/EVIDENCE.md`, `agentic-harness/HISTORY.md`.
+- Added "Living Skill Library" lifecycle documentation and "Automated Software Development Pipeline" mapping to `README.md`.
