@@ -1,6 +1,9 @@
 # integrate/ is a volatile concept-intake folder, not part of the live skill graph
 integrate/
 
+# .react_agent/ is ephemeral session workspace state, not versioned
+.react_agent/
+
 # Pattern store / vector store artifacts
 *.db
 *.sqlite
