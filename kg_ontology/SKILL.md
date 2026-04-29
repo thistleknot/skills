@@ -1,11 +1,40 @@
 ---
 name: kg_ontology
-description: Ontology protocol for choosing canonical graph identities from extracted spans, separating evidence from ontology, and keeping hypernym/debug structure out of the default user-facing graph and KG memory surfaces.
-status: superseded
-superseded_by: agentic_kg_memory
+description: >
+  DKG entity-identity layer for the Meta Context Graph. Resolves canonical
+  node identities from extracted spans via synset/hypernym BM25 injection —
+  enabling cross-entity matching without explicit graph topology traversal.
+  Separates evidence from ontology; keeps hypernym/debug structure out of the
+  user-facing graph surface. This is the entity-resolution sub-layer that
+  agentic_kg_memory's CG retrieval depends on.
+status: active
 last_validated: 2026-04-28
 ---
 # KG Ontology Protocol
+
+## MCG Role — DKG Entity Identity Layer
+
+In the **Meta Context Graph (MCG)** architecture (Tekiner, 2025), the full memory system
+comprises two graphs:
+
+- **Domain KG (DKG)**: what exists — entities and relationships extracted from documents
+- **Context Graph (CG)**: how and why it was built — decisions, patterns, tribal knowledge
+
+This skill owns the **DKG entity-identity layer**: the mechanism that ensures different
+surface forms of the same concept (`"SOW"`, `"Statement of Work"`, `"sow"`) collapse to
+a single canonical node. Without this layer, the DKG accumulates duplicate nodes and
+resolution errors that compound across every document processed.
+
+**Why BM25 + synset/hypernym instead of graph topology traversal?**
+Graph topology traversal (shortest-path, community detection) requires a fully materialised
+graph and is O(V+E) per query. The approach here injects hypernym chains directly into the
+`bm25_text` index token stream at node creation time. Cross-entity alignment then occurs
+via standard BM25 at query time — sub-100ms, no graph traversal required, scales to
+millions of nodes.
+
+`agentic_kg_memory` handles the CG side (patterns, tribal knowledge, episodic retrieval).
+This skill handles the DKG entity-identity side. They are complementary layers, not
+alternatives.
 
 ## Scope Boundary
 

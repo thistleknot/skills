@@ -111,6 +111,19 @@ The pattern store is a **vector store buffer** that sits between raw session obs
 and the `integrate/staged/` draft pipeline. Its job is to vet patterns by replication
 before they touch any skill file.
 
+**MCG alignment (Tekiner, 2025):** The pattern store implements the CG `patterns` table
+and `tk_candidates` lifecycle from the Meta Context Graph architecture. In MCG terms:
+- **Pattern store entries** = CG `patterns` nodes (token-level / semantic memory)
+- **Pending entries with < 3 applications** = `tk_candidates` (status: pending)
+- **Entries passing the promotion gate** = `tribal_knowledge` (status: active)
+- **Promoted skills** = procedural memory compilation (CoALA procedural tier)
+- **Decay mechanism** = schema evolution / staleness detection (Tekiner §"Handling schema evolution")
+
+This is also an implementation of the **ACE evolving-playbook loop** (arXiv:2510.04618,
+ICLR 2026): generation (observation) → reflection (application_count + failure_count
+tracking) → curation (promotion gate or prune). ACE reports +10.6% on agent benchmarks
+for systems that apply this loop to operational context.
+
 **The invariant:** a pattern that has only been useful once is an anecdote. Three
 independent applications in different contexts is the minimum signal for a behavioral claim.
 

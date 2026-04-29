@@ -31,7 +31,8 @@ skills/
 │   ├── memory-bank                  # durable project memory (brief, context, patterns, progress)
 │   │   # meta: DESCRIPTION/ARCHITECTURE/HISTORY pattern — applies to any skill folder
 │   ├── todo                         # sqlite-backed task tracking with FastMCP bridge
-│   ├── agentic_kg_memory            # semantic memory policy; graph update contract; KG ontology sub-skill
+│   ├── agentic_kg_memory            # MCG Context Graph side: semantic memory policy, retrieval, patterns, tribal knowledge
+│   │   ├── kg_ontology              # MCG DKG entity-identity layer: synset/hypernym BM25 canonicalization
 │   │   └── gist-retriever           # layered sparse+dense retrieval engine (BM25 + Chroma)
 │   └── request-intent-resolution    # request-thread routing, retrieval evaluation
 │
@@ -56,7 +57,7 @@ skills/
 3. `continuity-log` is a child of `agentic-harness`. It holds the compact-safe distilled state that lets the harness resume without re-deriving decisions.
 4. `deep-research` is a child of `agentic-harness`. It decomposes a question into parallel subquestions, gathers web evidence via a 3-tier fetch pipeline (httpx → retry → Selenium), and synthesizes a claim-backed report seeding the harness TaskSpec.
 5. `optuna-nested-cv` is now self-contained: the Methodology Primer (what to optimize, preconditions, layerwise decomp, structured search, sampler policy) was absorbed from `hyper-parm_tuning` (now superseded). `mlflow` records every run with lineage.
-6. `agentic_kg_memory` owns graph-backed semantic memory policy. The KG Ontology sub-skill (canonicalization, synset narrowing, connection type map, layer separation) was absorbed from `kg_ontology` (now superseded). It also carries the compiled-wiki maintenance pattern.
+6. `agentic_kg_memory` is the **CG (Context Graph) side** of the MCG architecture: semantic memory policy, patterns, tribal knowledge, retrieval. `kg_ontology` is the **DKG entity-identity layer**: synset/hypernym BM25 canonicalization that prevents duplicate nodes without graph topology traversal. They are complementary layers, not alternatives — do not merge them again.
 7. `gist-retriever` is the retrieval sub-skill for that memory layer. It spans the access-path progression from markdown/index-first lookup through local markdown search and into the full hybrid BM25+dense pipeline.
 8. `memory-bank` remains project operating memory, not compiled corpus memory. It stores project continuity while `agentic_kg_memory` stores evolving domain knowledge.
 9. The supplementary comparison boundary is now explicit in the repo: **RAG/retriever** behavior belongs in `gist-retriever`, **LLM Wiki/compiler** behavior belongs in `agentic_kg_memory`, and **GBrain/operator / fat-skills orchestration** belongs on the execution/orchestration side, not in the memory branch.
@@ -68,6 +69,38 @@ skills/
 15. `spiral-radial-clustering-display` is the multi-dimensional hierarchical clustering visualization skill. Maps four layers (macro GMM + micro HDBSCAN + decorrelated ordering + hubness) into 3D feature space, projects via UMAP to 2D, encodes layers via Gestalt (position = spiral topology, color = macro, opacity = micro, size = centrality). Preserves topological structure and produces interactive Plotly HTML with full zoom/pan/hover metadata.
 16. `stratified-quota-sampling` is a pragmatic acquisition strategy for resource-constrained data collection. Marginal variance targeting: within strata (e.g., acoustic clusters), sample songs that maximize feature variance. Quota design: bound acquisition budget while maximizing representativeness. Bridges deterministic clustering with probabilistic sampling.
 17. `skill-wiki` is the meta-skill governing the living skill library lifecycle. It owns the intake pipeline, promotion gates, crystallization protocol, supersession rules, sidecar conventions (EVIDENCE.md, HISTORY.md), and the periodic sweep that keeps skills consistent over time. It is NOT memory storage (→ `agentic_kg_memory`) and NOT project state (→ `memory-bank`).
+
+## MCG Foundation — The Conceptual Backbone
+
+The skill library is an implementation of the **Meta Context Graph (MCG)** architecture
+(Tekiner, 2025; Hu et al. arXiv:2512.13564) applied to automated software development.
+MCG is the glue that ties gstack (fat operational patterns) to llm-wiki (compiled living
+knowledge): both are instantiated here as the skills themselves (procedural memory) and
+the Pattern Store vetting pipeline (tribal knowledge lifecycle).
+
+The full MCG system comprises two complementary graphs:
+
+| MCG Component | Software Dev Equivalent | Skill |
+|---|---|---|
+| Domain KG — entities & relationships | Codebase / domain model | `agentic_kg_memory` + `kg_ontology` |
+| DKG entity identity layer | Symbol/module canonicalization | `kg_ontology` |
+| Context Graph — decision traces (episodic) | learnings.jsonl, per-task rationale | `agentic-harness` |
+| CG patterns (semantic) | Pattern Store pending → tenure | `skill-wiki` |
+| CG tribal knowledge (semantic) | Pattern Store promoted entries | `skill-wiki` → skill files |
+| CG procedural schemas | **The SKILL.md files themselves** | This whole library |
+| L4 Runtime state | Session / active context | `continuity-log`, `memory-bank` |
+| L3 Organisation conventions | Team / project norms | `memory-bank` project brief |
+| L2 Industry / domain | Domain KG per project | `agentic_kg_memory` |
+| L1 Universal best practices | Base skill library | This repo |
+
+**The skills are procedural memory** (CoALA taxonomy, arXiv:2309.02427). They cannot be
+summarized into a prompt and RAG-retrieved with equal effect — they must be invoked. This
+is the distinction between a great chef's accumulated technique and a recipe book. The
+Pattern Store vetting pipeline (3 applications → promote) implements the tribal knowledge
+lifecycle from MCG: `tk_candidates` → reviewed → `tribal_knowledge` (active rule) →
+compiled into a skill.
+
+For the full architecture, see `agentic_kg_memory/SKILL.md § MCG Foundation`.
 
 ## Repository Layout
 
@@ -138,18 +171,19 @@ This library is optimized for automated software development. Skill-to-pipeline 
 
 ## Recent Direction
 
+- **MCG grounding pass**: Grounded the full skill library in the Meta Context Graph (MCG) architecture (Tekiner 2025, Hu et al. arXiv:2512.13564, CoALA arXiv:2309.02427, ACE arXiv:2510.04618). Added MCG Foundation section to README, MCG Architecture section to `agentic_kg_memory/SKILL.md`, and MCG terminology alignment to `skill-wiki` Pattern Store.
+- **Restored `kg_ontology` to `status: active`**: The prior merge into `agentic_kg_memory` was architecturally wrong. `kg_ontology` owns the DKG entity-identity layer (synset/hypernym BM25 canonicalization); `agentic_kg_memory` owns the CG retrieval side. Two distinct MCG concerns.
 - Added `deep-research` as a child of `agentic-harness`: LangGraph research graph with Selenium fallback fetch pipeline.
 - Reframed `agentic-harness` as the multi-framework stationmaster.
 - Added `continuity-log` to preserve compact-safe reasoning products between long turns and compactions.
 - Absorbed `integrate\\llm-wiki` into existing live skills instead of promoting it as a standalone branch: compiled memory behavior now lives in `agentic_kg_memory`, staged retrieval behavior in `gist-retriever`, and the project-vs-corpus boundary in `memory-bank`.
 - Second-pass absorption of `integrate\\llm-wiki`: added consolidation tiers (working/episodic/semantic/procedural), temporal decay, supersession, automation hooks, graph traversal for discovery, and crystallization to `agentic_kg_memory`.
 - Added `deep-q-rl` under new `learning/` section: DQN + Russian Doll MCTS pattern generalized from chess-deep-q; applies to any scored discrete-action environment.
-- Merged `kg_ontology` → `agentic_kg_memory`: KG Ontology sub-skill section (connection type map, canonicalization rules, layer separation, candidate narrowing, anti-patterns). `kg_ontology` is now `status: superseded`.
 - Merged `hyper-parm_tuning` → `optuna-nested-cv`: Methodology Primer section (preconditions checklist, layerwise decomposition, structured search protocol, sampler policy for LLM judges, search space type guide). `hyper-parm_tuning` is now `status: superseded`.
 - Fattened `agentic-harness` with gstack-derived patterns: Learnings Compounding (learnings.jsonl schema, 4 persistence layers), Automated Dev Pipeline (Autoship state machine), Review Army (7 specialists + adaptive ceremony), Context Compaction During Long Runs.
 - Fattened `deep-research` with research epistemology: Perspective Diversity (STORM), Source Quality Hierarchy (5-tier), Per-Role Model Strategy, Citation Chain Integrity, Research Anti-Patterns.
 - Added Pattern Store vetting mechanism to `skill-wiki/SKILL.md`: vector store as pre-skill staging, 3-application tenure threshold, confidence decay formula (`e^(-0.1 × months)`), prune gate, promotion pipeline → `integrate/staged/`.
-- All 26 SKILL.md files now have `status:` governance frontmatter. 24 active, 2 superseded (`kg_ontology`, `hyper-parm_tuning`).
+- All 26 SKILL.md files now have `status:` governance frontmatter. 25 active, 1 superseded (`hyper-parm_tuning`).
 - Absorbed `integrate/gstack` ETHOS: "Boil the Lake" (completeness is cheap with AI) into `code/SKILL.md`; "Search Before Building" (3-layer knowledge taxonomy) into `code/SKILL.md`.
 - Absorbed `integrate/gstack/investigate` Iron Law (no fix without root cause) and 5-phase debugging protocol into `debugging/SKILL.md`.
 - Added Skill Routing section to `copilot-instructions.md` mapping request types to skills (pattern from gstack CLAUDE.md).

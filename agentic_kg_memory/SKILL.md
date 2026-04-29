@@ -1070,6 +1070,115 @@ them that way: ingest the results, update the graph, strengthen or challenge exi
 Use crystallization for work chains that have a clear question and answer.
 Use session compression for general activity logs.
 
+---
+
+## MCG Foundation — Meta Context Graph Architecture
+
+The skill library, `agentic_kg_memory`, and `kg_ontology` collectively implement the
+**Meta Context Graph (MCG)** architecture (Tekiner, 2025) applied to automated software
+development instead of knowledge graph construction. Understanding this framing prevents
+architectural confusion about what belongs where.
+
+### The Dual-Graph Model
+
+```
+Domain KG (DKG)                   Context Graph (CG)
+────────────────────               ─────────────────────────────────────
+What exists in the world           How and why it was built
+Entities + Relationships           Decisions + Patterns + Tribal Knowledge
+
+kg_nodes, kg_edges                 decisions, patterns, tribal_knowledge
+                                   tk_candidates, dialogue_turns
+
+Owned by: kg_ontology +            Owned by: agentic_kg_memory (this skill)
+          agentic_kg_memory
+```
+
+For software development, the DKG is the codebase + domain model (entities: modules,
+functions, data types, APIs). The CG is everything about how the codebase was built and
+how decisions were made: implementation rationale, correction patterns, architectural
+choices, and the accumulated tribal knowledge about what works.
+
+### 4-Layer Context Hierarchy (L4 → L1 precedence)
+
+Agents apply the **most specific applicable rule first**, falling back toward universal.
+
+| Layer | Scope | Software Dev Examples |
+|---|---|---|
+| **L4 Project/Runtime** | Immediate session | "This PR uses the legacy auth module naming from 2019" |
+| **L3 Organisation/Team** | Team conventions | "We use trunk-based dev; feature flags over branches" |
+| **L2 Industry/Domain** | Domain-specific rules | "OAuth2 PKCE required for public clients in fintech" |
+| **L1 Universal/Base** | Best practices | "Dates in ISO 8601; functions under 50 lines" |
+
+Query resolution: start at L4, fall back to L1. A new project automatically inherits
+both L3 team conventions and L2 domain standards without manual configuration.
+The `context_layer` field on every Decision, Pattern, and TribalKnowledge node
+encodes which layer a rule belongs to.
+
+### Three Memory Types (Tekiner → CoALA → Hu et al.)
+
+| MCG term | CoALA type | Hu et al. form/function | Skill library component |
+|---|---|---|---|
+| Decision Traces | Episodic | Token-level / experiential | `agentic-harness` learnings.jsonl |
+| Patterns + Tribal Knowledge | Semantic | Token-level / factual | `agentic_kg_memory` (this skill) + `skill-wiki` Pattern Store |
+| Proven schemas / resolution strategies | Procedural | Token-level / experiential | The SKILL.md files themselves |
+| Session state | Working | Latent / working | `continuity-log`, `memory-bank` active context |
+
+**The key insight from cognitive science (Tulving, 1972; CoALA, arXiv:2309.02427):**
+procedural memory cannot be stated as facts — it is embodied in the ability to perform
+the task. The skills are procedural memory: they cannot be summarised into a prompt;
+they must be invoked to have effect. RAG-retrieving skill text is a degenerate case.
+
+**ACE (arXiv:2510.04618, ICLR 2026)** proves the quantitative case: contexts treated as
+"evolving playbooks" that accumulate via generation→reflection→curation loops yield
++10.6% on agent benchmarks vs static context baselines. The Pattern Store vetting pipeline
+(generate → apply 3× → reflect → curate into skill) is an implementation of this loop.
+
+### 6-Agent Kitchen Brigade (Adapted for Software Dev)
+
+Tekiner's original brigade is for KG construction. For software development:
+
+| Role | MCG Original | Software Dev Equivalent |
+|---|---|---|
+| Document Agent | Classifies documents, finds similar projects | `react-agent` — scopes task, finds prior art |
+| Schema Agent | Designs entity/relationship types | `architecture` — module boundaries, contracts |
+| Extraction Agent | Pulls entities from text | `code` — implementation |
+| Resolution Agent | Merges duplicates, captures overrides | `code-review` — dedup, canonicalize |
+| Validation Agent | Checks quality against rules | `validation` — tests, lint, harness gate |
+| Feedback Agent | Captures corrections → context graph | `agentic-harness` learnings.jsonl + Pattern Store |
+
+The CG is the **shared memory** layer: what the Feedback Agent captures becomes the
+Extraction Agent's starting point on the next task. One agent's correction is another
+agent's precedent.
+
+### Entity Identity Sub-Layer (kg_ontology)
+
+The DKG requires entity resolution: `"SOW"`, `"Statement of Work"`, and `"sow"` must
+collapse to a single canonical node. `kg_ontology` handles this via:
+
+- **Synset expansion**: `"provider"` → WordNet synset → canonical form
+- **Hypernym injection**: inject `provider → organization → legal_entity` chain into `bm25_text`
+- **Cross-entity BM25**: entity alignment occurs via BM25 at query time — no graph traversal
+
+This approach scales to millions of nodes at sub-100ms query latency. Without it, the
+DKG accumulates duplicate nodes and resolution errors that compound across every document.
+
+`agentic_kg_memory` (this skill) handles CG retrieval and semantic memory policy.
+`kg_ontology` handles DKG entity identity. They are complementary layers, not alternatives.
+
+### Academic Foundation
+
+| Source | Key contribution |
+|---|---|
+| Tekiner (2025), "Meta Knowledge Graphs (Context Graphs)" | Dual-graph architecture; 4-layer hierarchy; kitchen brigade; tribal knowledge lifecycle |
+| Hu et al. (2025), arXiv:2512.13564 | Forms (token-level / parametric / latent), functions (factual / experiential / working), dynamics taxonomy |
+| Shinn et al. (2023), Reflexion | Episodic memory via verbal self-reflection; short-term trajectory vs long-term feedback memory |
+| Packer et al. (2023), MemGPT arXiv:2310.08560 | Hierarchical memory management; L4→L1 paging metaphor |
+| Zhao et al. (2024), ExpeL | Cross-task experiential learning from past episode pools |
+| Yao et al. (2023), CoALA arXiv:2309.02427 | Cognitive architecture: modular working/episodic/semantic/procedural memory |
+| Zhang et al. (2026), ACE arXiv:2510.04618 | Evolving playbooks: generation→reflection→curation; +10.6% agents, +8.6% finance |
+
+
 ## Ranking Surface
 
 The retrieval surface is deliberately layered.
