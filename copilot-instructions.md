@@ -170,13 +170,17 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Bug present, error reproducing, fix confirmed broken | `debugging` |
 | Autonomous fix-run-retry without human input | `debugging` (self-repair section) |
 | Code generation, modification, or review | `code` |
+| Structuring context, files, prompts for LLM effectiveness | `code` (context-engineering section) |
 | Test-driven implementation (Red→Green→Refactor) | `tdd-agent` |
+| Autonomous hill-climbing on a measurable objective | `autoresearch` |
 | Test design, validation, or pipeline output verification | `validation` |
 | Iterative output quality improvement (generate→critique→regenerate) | `evaluator-optimizer` |
+| Offline batch eval, golden dataset, CI-gated quality gate | `checklist` (eval-pipeline section) |
 | Multi-stage automated pipeline, harness routing, coherence gate | `agentic-harness` |
 | Hierarchical task decomposition, parallel sub-task dispatch | `agentic-harness` (HTP section) |
 | Coordinating multiple specialised agents in parallel | `multi-agent-coordination` |
 | Agent safety rails, tool-access policy, audit trail | `agent-governance` |
+| AI quality checks as CI status gates (merge-blocking) | `agent-governance` (agent-as-ci-gate section) |
 | Security scanning, threat modeling, OWASP/STRIDE | `security-review` |
 | Context window approaching limit, compaction needed | `context-compaction` |
 | MCP tool registration, discovery, or ACI design | `mcp-tool-registry` |
@@ -188,6 +192,7 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Web evidence, multi-source corroboration, claim-backed report | `deep-research` |
 | Hyperparameter search, Optuna tuning, nested CV | `optuna-nested-cv` |
 | Representation learning, embedding pipeline, retrieval stack | `representation-pipeline` |
+| RL from code execution feedback, best-of-N code selection | `deep-q-rl` (code-rl section) |
 | Session near compaction, distilling decisions for resume | `continuity-log` |
 | Deferred work capture, task tracking | `todo` |
 | Skill library maintenance, lifecycle promotion, evidence review | `skill-wiki` |

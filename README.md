@@ -19,6 +19,7 @@ skills/
 │   ├── validation                   # test design, verification protocol, behavior contracts
 │   ├── architecture                 # system design, abstract-class planning, domain → code mapping
 │   └── tdd-agent                    # Red→Green→Refactor as distinct agentic phases; test-first design contract
+│   └── autoresearch                 # autonomous iterative hill-climbing: scorer + proposer + git/sqlite checkpoint loop
 │
 ├── orchestration/                   # route work, enforce policy, manage cross-session state
 │   ├── agentic-harness              # dark-task control plane; backbone = OpenClaw/Claude Code/OpenCode/Copilot CLI; HTP
@@ -54,7 +55,7 @@ skills/
 │   └── spiral-radial-clustering-display  # multi-dimensional spiral visualization; GMM+HDBSCAN+ordering→UMAP 2D with Gestalt encoding
 │
 └── learning/                        # reinforcement learning and policy optimization
-    └── deep-q-rl                    # DQN + Russian Doll MCTS for any scored discrete-action framework
+    └── deep-q-rl                    # DQN + Russian Doll MCTS for any scored discrete-action framework; code-rl extension
 ```
 
 ## Key Relationships
@@ -172,22 +173,27 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | Autonomous fix-run-retry loop | `debugging` (self-repair section) |
 | Verify behavior, write tests | `validation` |
 | Iterative output quality improvement | `evaluator-optimizer` |
+| Autonomous hill-climbing on a metric | `autoresearch` |
 | Orchestrate multi-stage pipeline | `agentic-harness` |
 | Hierarchical task decomposition | `agentic-harness` (HTP section) |
 | Coordinate multiple agents | `multi-agent-coordination` |
 | Agent safety rails and policy | `agent-governance` |
+| AI checks as CI merge gates | `agent-governance` (agent-as-ci-gate section) |
 | Security scanning and threat modeling | `security-review` |
 | Context window management and compaction | `context-compaction` |
 | MCP tool registration and routing | `mcp-tool-registry` |
+| Offline batch eval, regression detection | `checklist` (eval-pipeline section) |
 | Hyperparameter search / training | `optuna-nested-cv`, `mlflow` |
 | Semantic knowledge retrieval | `agentic_kg_memory`, `gist-retriever` |
 | Cross-session episodic recall | `agentic_kg_memory` (episodic section) |
+| RL from code execution feedback | `deep-q-rl` (code-rl section) |
 | Project state and continuity | `memory-bank`, `continuity-log` |
 | Web research and grounding | `deep-research` |
 | Skill library governance | `skill-wiki` |
 
 ## Recent Direction
 
+- **Wave 3 Pareto additions** (Tier 3, scores 6–9): `autoresearch` (new skill); `context-engineering` section → `code`; `eval-pipeline` section → `checklist`; `agent-as-ci-gate` full protocol → `agent-governance`; `code-rl` section → `deep-q-rl`. All 15 Pareto candidates now implemented.
 - **Wave 2 Pareto additions** (Tier 2, scores 12–16): `context-compaction`, `security-review`, `mcp-tool-registry` (new skills); `self-repair` section → `debugging`; `hierarchical-task-planning` section → `agentic-harness`; `episodic-memory` section → `agentic_kg_memory`.
 - **Wave 1 Pareto additions** (Tier 1, all score ≥ 20): `evaluator-optimizer`, `multi-agent-coordination`, `tdd-agent`, `agent-governance`. Fills the largest gaps: iterative generation loop, team topology, test-first lifecycle, and safety rails.
 - **MCG grounding pass**: Grounded the full skill library in the Meta Context Graph (MCG) architecture (Tekiner 2025, Hu et al. arXiv:2512.13564, CoALA arXiv:2309.02427, ACE arXiv:2510.04618). Added MCG Foundation section to README, MCG Architecture section to `agentic_kg_memory/SKILL.md`, and MCG terminology alignment to `skill-wiki` Pattern Store.

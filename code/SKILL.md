@@ -150,3 +150,98 @@ exist but are not load-bearing — a richer epistemics signal than entailed-only
 ### Pre-processing order matters
 For quotes / natural language input: `emojibake.fix(text)` **before** `nltk.sent_tokenize`.
 Encoding artifacts produce malformed sentence boundaries if tokenization runs first.
+
+---
+
+## Context Engineering
+
+Structuring code, files, prompts, and open tabs to maximise LLM context effectiveness.
+The quality of the context window is as important as the quality of the model.
+
+### AGENTS.md / copilot-instructions.md Authorship
+
+The primary context injection mechanism. Write these files as if briefing a skilled
+developer who has never seen this codebase before, not as internal notes.
+
+**Required sections:**
+```markdown
+# Project Context
+One paragraph: what the repo does, what problem it solves.
+
+# Architecture
+Key components, how they connect. One sentence per component.
+
+# Conventions
+Stack defaults, naming rules, patterns this codebase uses.
+
+# Do Not Touch
+Files / patterns that must not be modified without explicit discussion.
+
+# Quick Start
+How to build, test, lint. The three commands someone runs first.
+```
+
+**Anti-patterns:**
+- Writing AGENTS.md in bullet points only — prose forces you to reason about coherence
+- Omitting "Do Not Touch" — agents will helpfully refactor files you need stable
+- Stale AGENTS.md — update it whenever the architecture changes or a new convention is established
+
+### Strategic Code Comments
+
+Comments exist to narrow the interpretation space for the LLM, not to explain obvious code.
+
+| Comment type | When to write | Example |
+|---|---|---|
+| **Intent comment** | Non-obvious algorithmic choice | `# BM25 not cosine here: need term-frequency weighting for short queries` |
+| **Invariant comment** | State that must hold across a block | `# Entries are append-only after this point — do not sort or deduplicate` |
+| **Anti-pattern comment** | Pattern that was tried and removed | `# Tried batching here: caused OOM on 32k sequences. Keep sequential.` |
+| **Context comment** | Links to external spec or decision | `# See ADR-007: why we use ULID not UUID` |
+
+Do NOT write boilerplate (`# increment counter`), redundant paraphrase (`# return the result`),
+or placeholder TODO comments that will never be resolved.
+
+### Tab / Open-File Context Management
+
+The LLM sees what is open in the editor. Use this deliberately:
+
+- **Before generating a component:** open the interface it must satisfy AND one
+  representative sibling implementation — the LLM will infer the pattern
+- **Before generating tests:** open the implementation file AND the test file for
+  a similar component — sets the testing style without a prompt
+- **Before a refactor:** open only the files in scope — avoid open files that
+  contaminate context with irrelevant patterns
+
+### File Structure as Context
+
+The directory layout communicates architecture implicitly. Structure it to match
+the mental model you want the LLM to have.
+
+```
+src/
+  domain/          ← pure domain logic; no I/O, no framework imports
+  adapters/        ← all external integrations (DB, API, filesystem)
+  application/     ← use-case orchestration; wires domain + adapters
+  entrypoints/     ← HTTP handlers, CLI commands; thin layer only
+```
+
+A flat `src/` with no structure forces the LLM to guess the architecture.
+An explicit layer structure makes it obvious what can depend on what.
+
+### Prompt Window Prioritisation
+
+When the context window is finite, prioritise in this order:
+
+1. **Active task specification** — what is being done right now
+2. **Interface contracts** — the API / schema the code must satisfy
+3. **Constraints** — what must not change (AGENTS.md "Do Not Touch")
+4. **Examples** — one or two representative prior implementations
+5. **Background** — architecture overview, project brief
+
+Cut from the bottom if context is tight. Never cut the active task specification.
+
+### Evidence
+
+- awesome-copilot: `context-engineering` instructions file, `copilot-instructions-template` skill
+- Anthropic Claude Code documentation: CLAUDE.md authorship guidelines (2025)
+- ACE arXiv:2510.04618 — context as evolving playbook; context quality predicts agent quality
+- Copilot CLI: `copilot-instructions.md` as primary context injection point

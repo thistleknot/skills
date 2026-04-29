@@ -309,3 +309,150 @@ different ownership semantics.
 
 The throughline persistence layer (fingerprinting + Q-score) is not yet implemented
 in `gap_critic.py` — it is the next planned enhancement (todo #25).
+
+---
+
+## 8. Eval Pipeline (Offline Batch Evaluation)
+
+The checklist pattern (above) is **online** — it judges one artifact per run.
+The eval pipeline is **offline** — it runs a batch of test cases through the system
+under evaluation and returns aggregate metrics. Use when you need CI-gated quality gates
+or regression detection across versions.
+
+### Distinction from Related Skills
+
+| This section | `evaluator-optimizer` | `autoresearch` |
+|---|---|---|
+| Offline batch eval of existing system | Online generate→critique→regenerate loop | Hill-climbing on a mutable artifact |
+| Golden dataset required | No golden dataset needed | Scorer required, not a golden dataset |
+| CI integration, pass/fail per run | Conversational, per-output | Git checkpoint per accepted change |
+| Measures regression | Improves output quality | Improves artifact quality |
+
+### Eval Pipeline Schema
+
+```python
+class EvalCase(BaseModel):
+    case_id: str
+    input: Any                  # prompt, code snippet, request — domain-specific
+    expected: Any               # golden reference: correct output, target label, etc.
+    tags: list[str] = []        # for slice analysis: e.g., ["edge_case", "regression"]
+
+class EvalResult(BaseModel):
+    case_id: str
+    actual: Any
+    score: float                # 0.0–1.0; 1.0 = perfect match or max judge score
+    passed: bool                # True if score >= pass_threshold
+    judge_reasoning: str = ""   # LLM judge rationale when score is not binary
+
+class EvalReport(BaseModel):
+    run_id: str
+    model_version: str
+    pass_rate: float            # passed / total
+    mean_score: float
+    results: list[EvalResult]
+    slice_stats: dict[str, float]   # tag → pass rate for each tag
+    regression_flags: list[str]     # case_ids that passed previously but failed now
+```
+
+### Scorer Types
+
+```python
+# 1. Exact match (deterministic outputs)
+def exact_match(actual: str, expected: str) -> float:
+    return 1.0 if actual.strip() == expected.strip() else 0.0
+
+# 2. LLM judge (open-ended outputs)
+def llm_judge(
+    input: str, actual: str, expected: str, criteria: str, llm_fn: Callable
+) -> tuple[float, str]:
+    """
+    Require: criteria is a precise rubric (not "is it good?").
+    Guarantee: returns (score in [0,1], reasoning string).
+    """
+    prompt = f"""
+Criteria: {criteria}
+
+Input: {input}
+
+Reference (expected): {expected}
+
+Actual output: {actual}
+
+Score the actual output against the criteria on a scale of 0.0 to 1.0.
+Return JSON: {{"score": 0.0, "reasoning": "..."}}
+"""
+    return llm_fn(prompt)
+
+# 3. Code execution (test pass rate)
+def execution_score(code: str, test_suite: str) -> float:
+    """Run generated code against test suite; return fraction of tests passing."""
+    ...
+```
+
+### Regression Detection
+
+The eval pipeline must detect when previously passing cases now fail.
+
+```python
+def detect_regressions(
+    current: EvalReport,
+    baseline_db: Path,
+) -> list[str]:
+    """
+    Compare current results against the last baseline run stored in sqlite.
+    Returns list of case_ids that regressed (passed in baseline, failed now).
+    """
+    with sqlite3.connect(baseline_db) as conn:
+        baseline_passed = {
+            row[0] for row in conn.execute(
+                "SELECT case_id FROM eval_results WHERE run_id = (SELECT MAX(run_id) FROM eval_runs) AND passed = 1"
+            )
+        }
+    now_failed = {r.case_id for r in current.results if not r.passed}
+    return sorted(baseline_passed & now_failed)
+```
+
+### CI Integration
+
+Define eval checks as source-controlled markdown, enforced as CI status checks.
+
+```yaml
+# .github/workflows/eval.yml
+name: Eval Pipeline
+on: [pull_request]
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -r requirements.txt
+      - run: python eval/run_eval.py --golden eval/cases.jsonl --threshold 0.85
+      - name: Check pass rate
+        run: |
+          PASS_RATE=$(python -c "import json; r=json.load(open('eval_report.json')); print(r['pass_rate'])")
+          python -c "assert float('$PASS_RATE') >= 0.85, f'Eval failed: pass_rate={$PASS_RATE} < 0.85'"
+```
+
+**CI gate rules:**
+- `pass_rate >= threshold` required to merge (default threshold: 0.85)
+- Any regression (case that passed before now fails) blocks merge regardless of pass_rate
+- Eval report artifact uploaded for every run — required for baseline comparison
+
+### Golden Dataset Governance
+
+```
+eval/
+  cases.jsonl           # golden test cases (version-controlled)
+  baselines/            # one JSON per eval run, named by commit SHA
+  run_eval.py           # evaluation harness
+  README.md             # how to add cases, how to update baseline
+```
+
+**Adding cases:**
+- Add one case per observed failure mode — never add hypothetical cases
+- Every case must have a tag (`regression`, `edge_case`, `happy_path`, etc.)
+- After adding 3+ cases for the same pattern, consider a `checklist` judge rule instead
+
+**Updating baseline:**
+- Only update after a deliberate quality improvement (not after fixing a regression)
+- Baseline update requires explicit commit message: `eval: update baseline (pass_rate: X → Y)`

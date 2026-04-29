@@ -404,3 +404,121 @@ The canonical implementation is at `thistleknot/chess-deep-q`:
 State encoding: 12 channels (6 piece types × 2 colors), each an 8×8 binary plane.
 Terminal values: checkmate = ±1.0 (loser's side), stalemate/repetition = 0.0.
 AHA threshold: -1.5 heuristic units; budget resets to 3 at game start.
+
+---
+
+## Code-RL: RL from Code Execution Feedback
+
+Extends the deep-q-rl framework to the code-generation domain, where the
+"score" is test pass rate and the "action space" is code edits or generation choices.
+Sources: SWE-RL (arXiv:2502.18449, 41% SWE-bench Verified), MBR+DPO (arXiv:2410.02902,
+ICLR 2025 spotlight).
+
+### When to Use Code-RL
+
+Use code-rl when:
+- You have a **test suite** that can score code correctness as a scalar (pass rate)
+- You want to improve code quality beyond a single-shot LLM generation
+- You can afford multiple rollouts per code task (best-of-N or iterative)
+
+Distinct from `self-repair` in `debugging` (single fix-run-retry loop) — code-rl
+uses a policy gradient signal over many attempts, not just local repair.
+
+### Environment Mapping
+
+Apply the `ScoredEnvironment` interface to code:
+
+| Abstract interface | Code-RL instantiation |
+|---|---|
+| `encode_state(s)` | Tokenise the current code file; use mean-pool embedding as state vector |
+| `evaluate(s)` | Run test suite; return fraction of tests passing (0.0–1.0) |
+| `legal_actions(s)` | LLM-generated candidate patches / completions |
+| `apply(s, a)` | Apply patch to code file → new code file |
+| `is_terminal(s)` | `evaluate(s) == 1.0` (all tests pass) OR `max_attempts` reached |
+
+### Reward Signal Design
+
+```python
+def code_reward(before_pass_rate: float, after_pass_rate: float, attempt: int) -> float:
+    """
+    Dense reward: improvement in pass rate, penalised for attempt count.
+    Require: both pass rates in [0.0, 1.0]; attempt >= 1.
+    Guarantee: positive reward only when pass rate improves.
+    """
+    delta = after_pass_rate - before_pass_rate
+    attempt_penalty = 0.01 * attempt       # small penalty per attempt to prefer early fixes
+    return max(0.0, delta - attempt_penalty)
+```
+
+**Rule-based rewards (SWE-RL pattern):**
+- `+1.0` on first full pass (all tests pass)
+- `+delta` on partial improvement (more tests pass than before)
+- `-0.1` on no change (discourage no-op patches)
+- `-0.5` on syntax error (code does not even parse)
+
+Rule-based rewards avoid the reward-hacking failure modes of LLM-judge rewards
+for code tasks — execution is the ground truth.
+
+### Best-of-N Selection (MBR Pattern)
+
+When running multiple rollouts, select the best rather than the first success.
+
+```python
+def select_best_of_n(
+    candidates: list[str],
+    test_runner: Callable[[str], float],
+    n: int = 8,
+) -> tuple[str, float]:
+    """
+    Minimum Bayes Risk selection: evaluate all N candidates; return highest pass rate.
+    Require: len(candidates) == n; test_runner is deterministic.
+    Guarantee: returned code achieves max(pass_rates) across candidates.
+    """
+    scored = [(c, test_runner(c)) for c in candidates]
+    return max(scored, key=lambda x: x[1])
+```
+
+MBR+DPO (arXiv:2410.02902): generate N samples → score all → use best as positive,
+worst as negative → fine-tune with DPO. This converts best-of-N selection into a
+training signal for the policy model.
+
+### SWE-RL Pattern
+
+SWE-RL (arXiv:2502.18449) trains on real GitHub issues with execution feedback:
+
+1. **Issue → repository context** — load repo at commit before fix; read issue description
+2. **Generate patch** — LLM proposes a code change
+3. **Execute tests** — run the repo's existing test suite against the patch
+4. **GRPO update** — reward = test pass rate delta; update policy weights
+5. **Repeat at scale** — 50k+ GitHub issues as training distribution
+
+Key results: 41% SWE-bench Verified (up from ~12% base). The reward signal is
+entirely rule-based (test execution), not LLM-judged.
+
+### Integration with Deep-Q-RL Components
+
+| Deep-Q-RL component | Code-RL adaptation |
+|---|---|
+| Value-head Q-network | Code embedding → pass-rate predictor (regressor not classifier) |
+| Experience replay | (code_state, patch, reward, new_code_state, done) tuples |
+| Russian Doll MCTS | Action = candidate patch; evaluate = run test suite (expensive — use shallow funnel) |
+| AHA learning | Trigger on `delta < -0.1` (patch degraded pass rate); replay with negative target |
+| Action categorisation | Patch categories: bug_fix, refactor, test_addition, import_fix, logic_change |
+
+**Shallow funnel for expensive evaluation:**
+Test execution is slow (seconds per run). Use a 2–3 level funnel with small samples
+rather than the default 7-level funnel. Budget: max 10–20 test runs per decision.
+
+```python
+code_rl_samples_per_level = [5, 3, 1]   # vs default [21,13,8,5,3,2,1]
+```
+
+### Anti-Patterns Specific to Code-RL
+
+| Anti-pattern | Fix |
+|---|---|
+| LLM judge as reward instead of test execution | Execution is ground truth; judge rewards introduce hacking |
+| Running full test suite on every MCTS node | Pre-filter with fast linting / syntax check; only run full suite on finalists |
+| Ignoring partial credit | Pass rate delta is a richer signal than binary pass/fail; use it |
+| Not checkpointing best patch | Always git-stash or checkpoint the highest-scoring patch before continuing |
+| Unbounded rollouts | Set `max_attempts` (e.g., 10); return best seen if not fully solved |
