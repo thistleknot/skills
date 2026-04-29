@@ -169,8 +169,12 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Architecture, greenfield design, abstract class planning | `architecture` |
 | Bug present, error reproducing, fix confirmed broken | `debugging` |
 | Code generation, modification, or review | `code` |
+| Test-driven implementation (Red→Green→Refactor) | `tdd-agent` |
 | Test design, validation, or pipeline output verification | `validation` |
+| Iterative output quality improvement (generate→critique→regenerate) | `evaluator-optimizer` |
 | Multi-stage automated pipeline, harness routing, coherence gate | `agentic-harness` |
+| Coordinating multiple specialised agents in parallel | `multi-agent-coordination` |
+| Agent safety rails, tool-access policy, audit trail | `agent-governance` |
 | Open-ended problem, design decision, analysis, decomposition | `reasoning` |
 | Autonomous multi-step task execution (build, migrate, refactor) | `react_agent` |
 | Semantic memory query, KG evidence, triplet extraction | `agentic_kg_memory` |
