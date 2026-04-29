@@ -364,3 +364,117 @@ the `/completion` endpoint pattern (triplet-abductive pipeline) which uses an em
 **Control plane** = everything about runs. Lifecycle, budget, policy, events, scheduling, eval triggers. FastAPI + sqlite.
 
 Never mix them. Agents read/write state only. Lifecycle management is control plane only.
+
+---
+
+## Perspective Diversity Pattern (STORM)
+
+Single-thread research misses blind spots. Before dispatching subquestions, generate
+**perspectives** — who would approach this question from a different angle?
+
+```
+question
+  │
+  ▼
+perspective_generator
+  ├── domain expert (e.g., "ML researcher")
+  ├── practitioner (e.g., "engineer deploying this in prod")
+  ├── critic (e.g., "someone who would challenge the consensus")
+  └── adjacent domain (e.g., "economist looking at incentives")
+  │
+  ▼
+planner (assigns subquestions to perspectives)
+  │
+  ├── perspective A → subquestions A1, A2
+  ├── perspective B → subquestions B1, B2
+  └── perspective C → subquestions C1
+```
+
+Each researcher carries its perspective in the system prompt. This produces
+genuinely diverse evidence rather than n variants of the same search.
+
+**When to activate:** questions with contested answers, recent rapid-change areas,
+or any task where "what does the consensus say" is insufficient. Skip for narrow
+factual lookups — perspectives add overhead without value there.
+
+---
+
+## Source Quality Hierarchy
+
+Not all evidence is equal. Weight claims by source tier:
+
+| Tier | Type | Weight |
+|---|---|---|
+| 1 | Peer-reviewed paper, official specification, primary source data | Highest |
+| 2 | Official documentation, white paper, technical report from org involved | High |
+| 3 | Reputable secondary coverage (major tech publication, known author) | Medium |
+| 4 | Blog post, Stack Overflow, forum discussion | Low |
+| 5 | Unverified claim, AI-generated content | Discard or flag |
+
+**Corroboration rule:** a claim backed by two Tier-1 sources is near-certain.
+A claim backed only by Tier-4 sources requires explicit flagging in the report.
+
+**Recency matters:** for fast-moving fields (LLM, infra, security), a 2-year-old
+Tier-1 paper may carry less weight than a recent Tier-3 source. Tag
+`extracted_at` on every triplet and note staleness in the report when relevant.
+
+**Conflict resolution:** when sources disagree, preserve both positions and note
+the disagreement explicitly. Do not silently resolve toward the first source found.
+
+---
+
+## Per-Role Model Strategy
+
+Each node has different performance requirements. Route accordingly:
+
+| Node | Priority | Rationale |
+|---|---|---|
+| `planner` | Speed > quality | Decomposing into subquestions is a routing decision; a small model is fine |
+| `researcher` | Quality + tool access | Triplet extraction from arbitrary web text needs strong instruction-following |
+| `reflector` | Speed | Binary saturation verdict; a small model checking thresholds is sufficient |
+| `synthesizer` | Quality | Final report generation; use best available model |
+
+**Local vs cloud routing:** for homelab setups, researcher and synthesizer benefit
+most from a capable local model (Qwen3 70B or similar). Planner and reflector can
+run on a fast/small model. Per-role `BASE_URL` config makes this explicit.
+
+**Thinking mode:** disable chain-of-thought/reasoning mode for researcher and
+reflector (`enable_thinking: false` in `chat_template_kwargs` for Qwen3). The
+structured output requirement means stray reasoning tokens pollute JSON parsing.
+Synthesizer benefits from reasoning mode for complex multi-source synthesis.
+
+---
+
+## Citation Chain Integrity
+
+Every claim in the report must be traceable back to a real fetch. The chain is:
+
+```
+Report claim
+  └── Claim.triplet_ids[*]
+        └── Triplet.source_id
+              └── sources table row (minted by web_fetch ONLY)
+```
+
+**Invariant:** no Triplet may exist with a `source_id` not present in the `sources`
+table. `pgvector_upsert` enforces this at the database layer. There is no workaround.
+
+**Never mint source_ids manually.** The only valid source_id comes from `web_fetch`.
+If a URL cannot be fetched (walled, timeout, CAPTCHA), do not create a triplet for it.
+Log the skip; do not hallucinate evidence.
+
+**Report quality signal:** count `domain_count` on the top claims. A report where
+all claims come from a single domain has a corroboration failure — the reflector
+should have requested more diverse sources. Check this at synthesis time.
+
+---
+
+## Research Anti-Patterns
+
+| Anti-pattern | Symptom | Fix |
+|---|---|---|
+| Search-to-confirm | All evidence agrees with the initial hypothesis | Add a critic perspective; search for counterarguments explicitly |
+| Depth-first tunnel | All evidence from one domain | Check `domain_count` at reflector; route back to planner for adjacent domains |
+| Recency blindness | Synthesis relies on old sources for fast-moving topic | Filter by `extracted_at`; flag stale sources in synthesis prompt |
+| Citation laundering | Claim cites a blog that cites a paper — blog is the `source_id` | Upgrade: fetch the original paper; use it as source_id instead |
+| Saturation fraud | Reflector claims saturation with < 3 independent domains | `COVERAGE_MIN_DOMAINS=3` is a hard floor; override only with explicit justification |

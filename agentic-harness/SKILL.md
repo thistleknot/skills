@@ -11,6 +11,10 @@ description: >
   LLM truncation bugs, test-generation failures, or violation-count divergence. The
   core contract: set a coherence=False todo at task start and iterate until you can
   flip it to True.
+status: active
+last_validated: 2026-04-28
+supersedes: []
+validation_method: session
 ---
 
 # Agentic Harness Skill
@@ -1043,3 +1047,196 @@ surface as merge-ready.
 
 See `checklist/SKILL.md` for the full pattern spec, Pydantic schemas, prompt
 contract, and reference implementation (`gap_critic.py` in storywriter).
+
+---
+
+## Learnings Compounding Pattern
+
+The harness learns nothing between sessions by default. Fix this with per-project
+append-only JSONL that every skill reads at start and writes at end.
+
+**Storage:** `~/.gstack/projects/${SLUG}/learnings.jsonl` (or equivalent path scoped
+to the project slug). Append-only. Duplicates resolved at read time ("latest winner"
+per key+type). No write-time mutation, no race conditions.
+
+**Schema:**
+```json
+{
+  "ts": "2026-04-28T12:00:00Z",
+  "skill": "agentic-harness",
+  "type": "pitfall",
+  "key": "gate-timeout-file-check",
+  "insight": "Guard pip install behind file-existence check; unguarded installs timeout on missing pyproject.toml",
+  "confidence": 9,
+  "source": "observed",
+  "branch": "feature-x",
+  "files": ["gates/runner.py"]
+}
+```
+
+**Types:** `pattern` | `pitfall` | `preference` | `architecture` | `tool`  
+**Sources:** `observed` | `user-stated` | `inferred` | `cross-model`  
+**Confidence:** 1-10. Observed + verified in code = 8-9. Inferred = 4-5. User-stated = 10.  
+**Decay:** 1pt per 30 days. Stale learnings surface as lower-confidence suggestions, not deletions.
+
+**At skill START:** search top-3 relevant learnings for the current task. Display as
+`"Prior learning applied: [key] (confidence N/10)"` — makes compounding visible.  
+**At skill END:** log any non-obvious patterns, pitfalls, or architectural insights discovered.
+Don't log obvious facts or one-time transient errors.
+
+**Four persistence layers** (non-overlapping answers to different questions):
+
+| Layer | File | Question answered |
+|---|---|---|
+| Learnings | `learnings.jsonl` | What do we know? (institutional knowledge) |
+| Timeline | `timeline.jsonl` | What happened? (event history: skill start/complete/outcome) |
+| Checkpoints | `checkpoints/*.md` | Where are we? (working state snapshot: decisions, remaining, files) |
+| Health | `health-history.jsonl` | How good is the code? (quality scores: tsc, lint, tests, composite) |
+
+---
+
+## Automated Dev Pipeline (Autoship)
+
+The full automated software development pipeline is a resumable state machine, not
+a linear script. Review and QA can send work back to build. Compaction can interrupt
+any phase. The system must recover gracefully.
+
+```
+START
+  │
+  ▼
+office-hours        ← product/scope clarification
+  │
+  ▼
+autoplan            ← CEO + design + eng + DX review, auto-decisions, single approval gate
+  │
+  ▼
+BUILD               ← /checkpoint auto-save before each phase
+  │
+  ▼
+health-gate         ← composite code quality score ≥ 7.0 (tsc, biome, lint, tests)
+  │ fail → back to BUILD
+  ▼
+review              ← 7 parallel specialist subagents (see Review Army)
+  │ ASK items → back to BUILD
+  ▼
+QA                  ← behavior testing; bugs found → back to BUILD
+  │
+  ▼
+ship                ← WIP squash → PR → merge → deploy
+  │
+  ▼
+checkpoint archive  ← preserve, don't destroy; recovery state for debugging failed runs
+```
+
+Each phase writes to `timeline.jsonl`. Checkpoints auto-save before each phase.  
+Compaction recovery: read checkpoint + timeline, resume at the last completed phase.
+
+**Gate logic:**
+- health-gate: fail if composite score < 7.0 OR any tool exits non-zero
+- review gate: fail if any CRITICAL finding unresolved
+- QA gate: fail if any test regression or confirmed bug
+- ship gate: requires DONE status on all above
+
+---
+
+## Review Army Pattern
+
+Run parallel specialist subagents on every diff. JSON-structured findings with
+confidence scores + fingerprint dedup across agents.
+
+**Always-on specialists** (run on every PR):
+- `testing` — coverage gaps, missing edge cases, test quality
+- `maintainability` — coupling, complexity, naming, dead code
+
+**Conditional specialists** (triggered by diff content):
+- `security` — OWASP top-10, injection points, auth/authz, secrets
+- `performance` — N+1 queries, blocking I/O, memory hotspots
+- `data-migration` — schema safety, backward compatibility, rollback path
+- `api-contract` — breaking changes, versioning, client impact
+- `design` — UX/DX coherence, consistency with existing patterns
+
+**Red team** (triggered on large diffs or critical findings):
+- adversarial review — assume malicious input; find exploitable assumptions
+
+**Finding structure:**
+```json
+{
+  "category": "security",
+  "severity": "CRITICAL | HIGH | MEDIUM | LOW",
+  "confidence": 8,
+  "fingerprint": "<hash of file+line+category>",
+  "finding": "...",
+  "fix": "..."
+}
+```
+
+Fingerprint dedup across specialists: if two specialists flag the same location with
+the same category, boost confidence rather than duplicate. Confirmed multi-specialist
+findings are surfaced first.
+
+**Adaptive ceremony levels:**
+
+| Level | When | Specialists |
+|---|---|---|
+| FULL | Large diffs, new features, migrations, auth changes, infra | All 7 + red team |
+| STANDARD | Medium diffs, typical feature work | Always-on + adversarial |
+| FAST | Small, well-tested changes on trusted projects | Always-on only |
+
+**Trust never fast-tracks:** migrations, auth/permission changes, new API endpoints,
+infrastructure changes. These always get FULL ceremony regardless of history.
+
+---
+
+## Context Compaction During Long Runs
+
+Tool output is the primary context-window pollutant in long harness runs. Deterministic
+JSON rules shrink noisy test runners, build logs, and git diffs before they reach
+the agent's context window.
+
+**PostToolUse hook approach** (deterministic + LLM safety net):
+
+```
+Tool output received
+    │
+    ▼
+Deterministic rules (regex/JSON, per-tool, <50ms budget each)
+    │ reduction >50% AND exit≠0 (failure compaction risk)
+    ▼
+Claude Haiku verifier (did we strip critical stack frame?)
+    │ over-compaction detected → restore original
+    ▼
+Reduced output sent to agent context
+```
+
+**Built-in tool output bloat patterns to trim:**
+- `npm install` / `pip install` — installed N packages lines → keep only errors
+- `pytest` / `jest` output — pass lines → keep only failures + summary
+- `git diff` — context lines → keep ±3 around changes, not full file
+- `tsc` / `biome` — info/warn → keep only errors
+
+**Failure compaction guard:** if exit code ≠ 0 AND reduction > 50%, run Haiku
+verifier to confirm no critical stack frame was stripped. Default ON — this is the
+highest-risk case.
+
+**Industry convergence:** Anthropic Compaction API, OpenAI compaction guide, Google
+ADK context compression, sst/opencode built-in compaction all use the same
+deterministic + LLM hybrid pattern. This is settled consensus, not an experiment.
+
+## Applicability Envelope
+
+**Works well when:**
+- Building or operating multi-stage automated pipelines (code generation, test generation, harness runs)
+- A task requires framework-agnostic routing across Claude Code, OpenClaw, OpenCode, or Copilot CLI
+- You need coherence enforcement across a long or resumable run (coherence sentinel pattern)
+- A pipeline is producing incoherent output and the fix must go into the mechanism, not the artifact
+
+**Fails or degrades when:**
+- The task is a single-shot, human-supervised interaction (overhead exceeds benefit)
+- The target framework doesn't support the harness's gating/hook model
+- Coherence cannot be verified programmatically (no ground-truth output to check against)
+
+**Environment assumptions:**
+- At least one of: Claude Code, OpenClaw, OpenCode, or GitHub Copilot CLI is the execution backbone
+- A persistent task store (sqlite or equivalent) is available for branch/story/coherence state
+- The pipeline produces artifacts that can be inspected for gate-passing criteria
