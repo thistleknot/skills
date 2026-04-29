@@ -1,3 +1,12 @@
+---
+name: siamese_from_correlation_matrix
+description: >
+  Train siamese / metric-learning models by deriving training signals directly from
+  embedding space structure (correlation matrix) rather than external labels. Use when
+  generating contrastive or triplet pairs from a pre-computed correlation matrix.
+status: active
+last_validated: 2026-04-29
+---
 # Skill: Siamese Network Training from Correlation Matrix
 
 **Status:** Emerging pattern worth formalizing  

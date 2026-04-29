@@ -1,3 +1,12 @@
+---
+name: gist_correlation_matrix
+description: >
+  Treat the sorted correlation matrix as a complete relational information artifact.
+  Use when deriving the GIST output layer, computing greedy decorrelation sort over
+  embeddings, or producing structured similarity landscapes from (N, D) embedding matrices.
+status: active
+last_validated: 2026-04-29
+---
 # GIST: The Correlation Matrix as Information Artifact
 
 **Status:** Working theory on the true GIST output layer  
