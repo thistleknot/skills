@@ -1,6 +1,5 @@
-# Reference clones in integrate/ — large nested git repos, not part of skill library
-integrate/awesome-copilot/
-integrate/gstack/
+# integrate/ is a volatile concept-intake folder, not part of the live skill graph
+integrate/
 
 # Pattern store / vector store artifacts
 *.db
