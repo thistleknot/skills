@@ -15,19 +15,20 @@ skills/
 │   ├── react-agent                  # outer execution OS; drives all other skills
 │   ├── reasoning                    # open-ended problem decomposition + multi-perspective analysis
 │   ├── code                         # implementation standards, naming, refactor sequence
-│   ├── debugging                    # error isolation, salience tiers, diagnostic strategy
+│   ├── debugging                    # error isolation, salience tiers, diagnostic strategy, self-repair loop
 │   ├── validation                   # test design, verification protocol, behavior contracts
 │   ├── architecture                 # system design, abstract-class planning, domain → code mapping
 │   └── tdd-agent                    # Red→Green→Refactor as distinct agentic phases; test-first design contract
 │
 ├── orchestration/                   # route work, enforce policy, manage cross-session state
-│   ├── agentic-harness              # dark-task control plane; backbone = OpenClaw/Claude Code/OpenCode/Copilot CLI
+│   ├── agentic-harness              # dark-task control plane; backbone = OpenClaw/Claude Code/OpenCode/Copilot CLI; HTP
 │   │   ├── checklist                # LLM-as-judge validation pattern; structured findings with novelty proof
 │   │   ├── continuity-log           # compact-safe session memory; distilled decisions, resume points
 │   │   └── deep-research            # multi-source web evidence pipeline; LangGraph planner→researcher→synthesizer
 │   ├── evaluator-optimizer          # LLM-generates→LLM-critiques→LLM-regenerates loop; MBR selection; stopping criteria
 │   ├── multi-agent-coordination     # peer messaging, plan-approval gates, task ownership, dynamic spawning
 │   ├── agent-governance             # safety rails, tool-access policy, audit trail, trust tiers, secrets scan
+│   ├── security-review              # STRIDE-A, OWASP Top 10, data-flow tracing, secret/CVE detection
 │   ├── timeout-guard                # runaway-task policy; interrupt and recovery rules
 │   └── skill-wiki                   # living skill library lifecycle; intake → staged → active → superseded governance
 │
@@ -35,9 +36,11 @@ skills/
 │   ├── memory-bank                  # durable project memory (brief, context, patterns, progress)
 │   │   # meta: DESCRIPTION/ARCHITECTURE/HISTORY pattern — applies to any skill folder
 │   ├── todo                         # sqlite-backed task tracking with FastMCP bridge
-│   ├── agentic_kg_memory            # MCG Context Graph side: semantic memory policy, retrieval, patterns, tribal knowledge
+│   ├── agentic_kg_memory            # MCG Context Graph side: semantic memory policy, retrieval, patterns, tribal knowledge, episodic memory
 │   │   ├── kg_ontology              # MCG DKG entity-identity layer: synset/hypernym BM25 canonicalization
 │   │   └── gist-retriever           # layered sparse+dense retrieval engine (BM25 + Chroma)
+│   ├── context-compaction           # active context-window management: tiered eviction, pre/post-compaction hooks
+│   ├── mcp-tool-registry            # MCP tool registration, discovery, routing, ACI design
 │   └── request-intent-resolution    # request-thread routing, retrieval evaluation
 │
 ├── tuning/                          # measure, optimize, record
@@ -166,19 +169,26 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | Generate / modify code | `code` |
 | Test-driven implementation | `tdd-agent` |
 | Isolate and fix bugs | `debugging` |
+| Autonomous fix-run-retry loop | `debugging` (self-repair section) |
 | Verify behavior, write tests | `validation` |
 | Iterative output quality improvement | `evaluator-optimizer` |
 | Orchestrate multi-stage pipeline | `agentic-harness` |
+| Hierarchical task decomposition | `agentic-harness` (HTP section) |
 | Coordinate multiple agents | `multi-agent-coordination` |
-| Safety rails and policy enforcement | `agent-governance` |
+| Agent safety rails and policy | `agent-governance` |
+| Security scanning and threat modeling | `security-review` |
+| Context window management and compaction | `context-compaction` |
+| MCP tool registration and routing | `mcp-tool-registry` |
 | Hyperparameter search / training | `optuna-nested-cv`, `mlflow` |
 | Semantic knowledge retrieval | `agentic_kg_memory`, `gist-retriever` |
+| Cross-session episodic recall | `agentic_kg_memory` (episodic section) |
 | Project state and continuity | `memory-bank`, `continuity-log` |
 | Web research and grounding | `deep-research` |
 | Skill library governance | `skill-wiki` |
 
 ## Recent Direction
 
+- **Wave 2 Pareto additions** (Tier 2, scores 12–16): `context-compaction`, `security-review`, `mcp-tool-registry` (new skills); `self-repair` section → `debugging`; `hierarchical-task-planning` section → `agentic-harness`; `episodic-memory` section → `agentic_kg_memory`.
 - **Wave 1 Pareto additions** (Tier 1, all score ≥ 20): `evaluator-optimizer`, `multi-agent-coordination`, `tdd-agent`, `agent-governance`. Fills the largest gaps: iterative generation loop, team topology, test-first lifecycle, and safety rails.
 - **MCG grounding pass**: Grounded the full skill library in the Meta Context Graph (MCG) architecture (Tekiner 2025, Hu et al. arXiv:2512.13564, CoALA arXiv:2309.02427, ACE arXiv:2510.04618). Added MCG Foundation section to README, MCG Architecture section to `agentic_kg_memory/SKILL.md`, and MCG terminology alignment to `skill-wiki` Pattern Store.
 - **Restored `kg_ontology` to `status: active`**: The prior merge into `agentic_kg_memory` was architecturally wrong. `kg_ontology` owns the DKG entity-identity layer (synset/hypernym BM25 canonicalization); `agentic_kg_memory` owns the CG retrieval side. Two distinct MCG concerns.

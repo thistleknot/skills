@@ -1151,6 +1151,91 @@ The CG is the **shared memory** layer: what the Feedback Agent captures becomes 
 Extraction Agent's starting point on the next task. One agent's correction is another
 agent's precedent.
 
+---
+
+## Episodic Memory — Time-Indexed Cross-Session Recall
+
+Episodic memory stores **what happened, when, and why** — the decision traces and
+interaction records that enable an agent to learn from past sessions without re-deriving
+the same conclusions.
+
+In the MCG architecture, episodic memory is the **source material** for semantic memory:
+raw episodes age and compress into patterns; patterns with sufficient reuse become
+tribal knowledge; tribal knowledge is compiled into skills (procedural memory).
+
+```
+Episode (raw)  →[decay/compress]→  Pattern (semantic)  →[tenure]→  TribalKnowledge  →[compile]→  Skill
+```
+
+### Episode Schema
+
+```python
+class Episode(BaseModel):
+    episode_id: str             # ULID
+    session_id: str
+    task_id: str | None
+    timestamp: datetime
+    event_type: str             # "decision", "tool_call", "correction", "reflection"
+    summary: str                # ≤ 3 sentences: what happened and why
+    outcome: Literal["success", "failure", "partial", "unknown"]
+    entities_involved: list[str]   # canonical entity names (via kg_ontology)
+    tags: list[str]
+    raw_ref: str | None         # pointer to full turn transcript (cold storage)
+```
+
+### Storage and Retrieval
+
+Episodes are stored in the `agentic_kg_memory` sqlite backend under the `episodes`
+namespace. Retrieval uses BM25 + time-decay weighting:
+
+```python
+def retrieve_episodes(
+    query: str,
+    entity_filter: list[str] = None,
+    since: datetime = None,
+    top_k: int = 10,
+) -> list[Episode]:
+    """
+    Retrieves episodes matching the query.
+    Time-decay weight: w = score * exp(-lambda * days_since_episode)
+    Default lambda = 0.05 (half-life ~14 days for raw episodes).
+    """
+```
+
+The `since` filter enables session-scoped recall (e.g., "what did we try in this session
+on this task?") while the full index enables cross-session learning.
+
+### Episode → Pattern Compression
+
+A pattern is a compressed generalisation extracted from multiple episodes with the same
+outcome. The compression trigger is the Pattern Store vetting pipeline (see `skill-wiki`):
+
+1. An episode with `outcome=failure` is tagged as a `tk_candidate`
+2. After 3 similar episodes share the same entity set and failure mode, they are
+   compressed into a `Pattern` node in the CG
+3. The pattern's `bm25_text` includes the entity names, tags, and a compressed summary
+
+### Relationship to continuity-log
+
+`continuity-log` is a **session-scoped** distillation (the compact-safe packet for a
+single turn sequence). Episodic memory is **cross-session** and time-indexed. They feed
+the same downstream pipeline:
+
+```
+continuity-log (session distillation)
+    │
+    └──► episodes table (cross-session index)
+              │
+              └──► pattern compression → tk_candidates → tribal_knowledge → skills
+```
+
+### Evidence
+
+- CoALA arXiv:2309.02427: episodic memory as the dedicated store for past experiences;
+  distinct from semantic (generalised facts) and procedural (how-to)
+- MemGPT arXiv:2310.08560: paging semantics — episodes in slow storage, retrieved on demand
+- ExpeL (2024): cross-task experience extraction from episode logs → generalised skills
+
 ### Entity Identity Sub-Layer (kg_ontology)
 
 The DKG requires entity resolution: `"SOW"`, `"Statement of Work"`, and `"sow"` must

@@ -168,16 +168,22 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 |---|---|
 | Architecture, greenfield design, abstract class planning | `architecture` |
 | Bug present, error reproducing, fix confirmed broken | `debugging` |
+| Autonomous fix-run-retry without human input | `debugging` (self-repair section) |
 | Code generation, modification, or review | `code` |
 | Test-driven implementation (Red→Green→Refactor) | `tdd-agent` |
 | Test design, validation, or pipeline output verification | `validation` |
 | Iterative output quality improvement (generate→critique→regenerate) | `evaluator-optimizer` |
 | Multi-stage automated pipeline, harness routing, coherence gate | `agentic-harness` |
+| Hierarchical task decomposition, parallel sub-task dispatch | `agentic-harness` (HTP section) |
 | Coordinating multiple specialised agents in parallel | `multi-agent-coordination` |
 | Agent safety rails, tool-access policy, audit trail | `agent-governance` |
+| Security scanning, threat modeling, OWASP/STRIDE | `security-review` |
+| Context window approaching limit, compaction needed | `context-compaction` |
+| MCP tool registration, discovery, or ACI design | `mcp-tool-registry` |
 | Open-ended problem, design decision, analysis, decomposition | `reasoning` |
 | Autonomous multi-step task execution (build, migrate, refactor) | `react_agent` |
 | Semantic memory query, KG evidence, triplet extraction | `agentic_kg_memory` |
+| Cross-session episode recall, decision trace lookup | `agentic_kg_memory` (episodic section) |
 | Project state, active context, what changed / what's next | `memory-bank` |
 | Web evidence, multi-source corroboration, claim-backed report | `deep-research` |
 | Hyperparameter search, Optuna tuning, nested CV | `optuna-nested-cv` |

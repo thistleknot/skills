@@ -921,6 +921,72 @@ Minimum artifacts:
 - logs
 - critic reports
 - generated repo or output bundle
+
+---
+
+## Hierarchical Task Planning (HTP)
+
+HTP decomposes a task into a dependency graph of sub-tasks, where each parent task cannot
+complete until all its children are done. This is the structured alternative to flat
+task lists, and it is what enables parallel execution of independent sub-tasks.
+
+**When to use HTP inside the harness:** the work item is large enough that sequential
+execution would bottleneck the pipeline, and sub-problems are clearly separable.
+
+### Task Graph Model
+
+```python
+class HTPTask(BaseModel):
+    task_id: str                        # ULID
+    title: str
+    description: str
+    parent_id: str | None               # None = root task
+    depends_on: list[str]              # task_ids that must be DONE first
+    assigned_to: str | None            # agent name
+    status: TaskStatus                 # pending | claimed | in_flight | blocked | done | failed
+    result_ref: str | None             # artifact path or URL
+    depth: int                         # 0 = root; max recommended depth = 3
+
+class HTPGraph:
+    """
+    Require: no cycles in depends_on graph.
+    Guarantee: tasks are returned in topological order; parallel tasks at same depth are returned together.
+    Maintain: a task is only claimable when all its depends_on tasks are DONE.
+    """
+    def ready_tasks(self) -> list[HTPTask]: ...    # tasks with all deps satisfied
+    def topological_order(self) -> list[list[HTPTask]]: ...  # layers for parallel dispatch
+    def mark_done(self, task_id: str, result_ref: str) -> None: ...
+    def mark_failed(self, task_id: str, reason: str) -> None: ...
+```
+
+### Decomposition Protocol
+
+1. **Root task**: one sentence — the win condition. No sub-tasks yet.
+2. **Level 1** (≤ 5 children): major phases (e.g., Design, Implement, Test, Document)
+3. **Level 2** (≤ 5 per parent): concrete work items within each phase
+4. **Level 3** (if needed): atomic units that a single agent can complete in one turn
+
+Do not decompose beyond Level 3. Excessive depth creates coordination overhead that
+exceeds the parallelism benefit.
+
+### Parallel Dispatch
+
+At each level, dispatch all `ready_tasks()` simultaneously via `Send()` (LangGraph) or
+task-queue fan-out. The parent node waits for all children before proceeding.
+
+```python
+# LangGraph-style parallel dispatch
+def dispatch_ready_tasks(state: HarnessState, graph: HTPGraph) -> list[Send]:
+    ready = graph.ready_tasks()
+    return [Send("worker_node", {"task": t, "context": state["shared_context"]})
+            for t in ready]
+```
+
+### Evidence
+
+- Data Interpreter arXiv:2402.18679: +25% InfiAgent-DABench with hierarchical task graphs
+- Microsoft A2A: task-graph execution as the canonical multi-agent work unit
+- `multi-agent-coordination` skill: task registry with ownership is the runtime complement to HTP planning
 - evidence packet
 
 This keeps Claude Code, OpenCode, GitHub Copilot CLI, and future worker lines

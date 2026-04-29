@@ -108,7 +108,79 @@ Once root cause is confirmed:
 ### Phase 5 — Verification & Report
 Reproduce the original bug scenario and confirm it's fixed. This is not optional.
 
+---
+
+## Self-Repair (Autonomous Fix-Run-Retry)
+
+Self-repair is the execution-feedback loop that closes the debugging cycle without human
+input. It is Phase 4 + Phase 5 run in a tight retry loop.
+
+**When to use:** the failure mode is deterministic (same input → same error), the error
+is machine-readable, and the fix space is bounded (syntax/logic errors, test failures,
+import errors). Do NOT use self-repair for architectural issues or ambiguous requirements.
+
+### Contract
+
 ```
+Require: a reproducible failure (test output, exception, lint error)
+Guarantee: either the failure is resolved OR max_attempts is reached and the failure
+           is surfaced with a structured diagnostic
+Maintain: each attempt produces a strictly different fix (no repeating patches)
+Assert: run the full test suite after each fix attempt; track attempt_count
+```
+
+### Loop Protocol
+
+```python
+class RepairAttempt(BaseModel):
+    attempt_num: int
+    error_class: str          # e.g. "ImportError", "AssertionError", "SyntaxError"
+    error_message: str
+    hypothesis: str           # what the fix targets
+    patch_summary: str        # what changed
+    result: Literal["pass", "fail", "new_error"]
+    new_error_class: str | None
+
+def self_repair_loop(run_fn, fix_fn, max_attempts: int = 5) -> RepairReport:
+    """
+    run_fn: callable that runs the task and returns (success, error_output)
+    fix_fn: callable(error_output, history) -> patch; applies fix and returns summary
+    """
+    history: list[RepairAttempt] = []
+    for i in range(max_attempts):
+        success, error_output = run_fn()
+        if success:
+            return RepairReport(resolved=True, attempts=history)
+
+        patch_summary = fix_fn(error_output, history)
+        history.append(RepairAttempt(
+            attempt_num=i,
+            error_class=classify_error(error_output),
+            error_message=error_output[:500],
+            hypothesis=derive_hypothesis(error_output, history),
+            patch_summary=patch_summary,
+            result="unknown",
+        ))
+
+        # Pivot rule: same error class 3 times -> stop, escalate
+        recent_classes = [a.error_class for a in history[-3:]]
+        if len(set(recent_classes)) == 1 and len(recent_classes) == 3:
+            return RepairReport(resolved=False, reason="plateau", attempts=history)
+
+    return RepairReport(resolved=False, reason="max_attempts", attempts=history)
+```
+
+### Pivot Rule in Self-Repair
+
+If the **same error class** appears 3 consecutive times, the patch strategy is wrong.
+Stop the loop and escalate to a human or invoke `reasoning` for a deeper decomposition.
+Never exceed `max_attempts` without surfacing the structured `RepairReport`.
+
+### Evidence
+
+- Self-debugging arXiv:2304.05128: execution-feedback loop +12% on TransCoder/MBPP
+- Devin (Cognition, 2025): run→observe→patch→rerun is the core SWE-agent loop
+- Claude Code: autonomous tool-call retry on error is native; this formalizes the contract
 DEBUG REPORT
 ════════════
 Symptom:         [what the user observed]
