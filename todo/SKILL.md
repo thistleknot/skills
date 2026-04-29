@@ -4,6 +4,8 @@ description: >
   SQLite-backed todo MCP setup and usage protocol. Use when installing or operating
   a persistent todo tool for Copilot CLI, especially when the user says `todo setup`
   or asks to capture, list, update, complete, or remove deferred work.
+status: active
+last_validated: 2026-04-28
 ---
 
 # Todo MCP Skill

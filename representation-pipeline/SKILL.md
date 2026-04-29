@@ -8,6 +8,8 @@ description: >
   transformed space. Covers the transformation progression pattern,
   bootstrap loops, GIST as a canonical layered architecture example,
   and how to construct tunable hyperparameter layers from each stage.
+status: active
+last_validated: 2026-04-28
 ---
 
 # Transform Architecture

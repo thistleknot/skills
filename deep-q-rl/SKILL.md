@@ -1,6 +1,8 @@
 ---
 name: deep-q-rl
 description: Deep Q-learning with Russian Doll MCTS for any scored discrete-action environment. Use when you have a state space you can encode as a tensor, a score/evaluation function, and a discrete action set. Covers value-head Q-network, experience replay, target network, progressive-narrowing MCTS, AHA learning (mistake correction), and training-progress annealing.
+status: active
+last_validated: 2026-04-28
 ---
 # Deep-Q RL for Scored Frameworks
 

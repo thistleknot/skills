@@ -9,6 +9,8 @@ description: >
   "process", or any instruction implying a sequence of changes with validation.
   Also trigger when the user explicitly asks for agentic, autonomous, or ReAct-style
   execution. Do NOT trigger for single-shot questions, explanations, or trivial edits.
+status: active
+last_validated: 2026-04-28
 ---
 
 # ReAct Agent Skill

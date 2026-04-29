@@ -7,9 +7,86 @@ description: >
   generalization estimate is required. Covers nested CV, composite scoring,
   study namespacing, and seeded domain examples (ANN training, silhouette-guided
   clustering).
+status: active
+last_validated: 2026-04-28
 ---
 
 # Optuna Tuning Protocol
+
+## Methodology Primer
+
+This section absorbs the methodology contract from `hyper-parm_tuning` so this skill
+is self-contained. `hyper-parm_tuning` is now superseded by this section.
+
+### Preconditions
+
+Before running any search, all six of these must be true:
+
+1. A fixed pipeline shape or model workflow (Optuna tunes values, not structure)
+2. A baseline configuration that runs end to end
+3. A bounded search space for each factor
+4. A single scalar objective (composite is fine; ambiguous is not)
+5. A `tune` split and a separate `holdout` split — never the same bank
+6. A persistence path for trial artifacts (`sqlite:///optuna_runs.db` minimum)
+
+If any one is missing, fix that first. Do not start the search.
+
+### Layerwise Decomposition
+
+Tune one layer at a time. Only use joint tuning after a stable layerwise baseline exists
+and evidence shows interaction effects are load-bearing.
+
+Default order:
+1. Tune stage 1 with everything downstream disabled or fixed
+2. Freeze stage 1 best params
+3. Tune stage 2 with stage 1 fixed
+4. Continue until the full stack is configured
+
+### Search Space Types
+
+| Type | Use when | Examples |
+|---|---|---|
+| Log | Multiplicative or order-of-magnitude behavior | LR, regularization, decay factors, temperature scales |
+| Linear | Narrow bounded ranges, additive behavior | Thresholds in small interval, bonuses near zero, top-k over modest range |
+| Categorical | Discrete strategy choices | Ranking mode, distance metric, affinity rule |
+
+`trial.suggest_float("lr", 1e-4, 1e-2, log=True)` vs `trial.suggest_float("threshold", 0.3, 0.9)` vs `trial.suggest_categorical("algo", ["kmeans", "hdbscan"])`.
+
+### Structured Search (Alternative to TPE)
+
+Use when evaluations are expensive and you need interpretability over breadth.
+
+```text
+1. Start from a center configuration
+2. For each factor, probe center+σ and center-σ
+3. Score each probe on the tune bank
+4. Record the winning direction per factor
+5. Build a joint candidate from all winning directions
+6. Run r local refinement samples around the current best
+7. Accept only if the new config beats the incumbent
+
+Total budget: baseline + 2N probes + 1 joint + r refinements = 2N + r + 2
+```
+
+Benefits over TPE: fixed budget, explicit directional signal per factor, easier interpretation. Tradeoff: less exploration of factor interactions.
+
+### Sampler Policy for LLM Judges
+
+When the evaluator is an LLM judge, score each query with three named sampler takes:
+
+| Take | Purpose |
+|---|---|
+| `conservative` | Checks evidence under low-variance judging |
+| `balanced` | Middle estimate |
+| `creative` | Stress-tests coverage under looser reading |
+
+Use the same three takes consistently across all trials so parameter changes are compared under the same judge-variance surface. Per-query score = mean across these three takes before rolling up to the corpus scalar.
+
+### Noise Handling
+
+Never score a trial from one stochastic take. Use multiple sampler settings, repeated seeds, or median-of-k when the scorer has occasional outliers. The rule: do not let evaluator variance masquerade as parameter signal.
+
+---
 
 ## Scope Boundary
 

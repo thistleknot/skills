@@ -1,6 +1,9 @@
 ---
 name: hyper-parm_tuning
 description: Hyperparameter optimization protocol for expensive systems. Use when tuning retrieval stacks, model pipelines, rankers, thresholds, or any workflow where evaluations are costly and overfitting risk is real.
+status: superseded
+superseded_by: optuna-nested-cv
+last_validated: 2026-04-28
 ---
 # Hyperparameter Tuning Protocol
 

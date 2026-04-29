@@ -1,6 +1,9 @@
 ---
 name: kg_ontology
 description: Ontology protocol for choosing canonical graph identities from extracted spans, separating evidence from ontology, and keeping hypernym/debug structure out of the default user-facing graph and KG memory surfaces.
+status: superseded
+superseded_by: agentic_kg_memory
+last_validated: 2026-04-28
 ---
 # KG Ontology Protocol
 

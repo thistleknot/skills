@@ -1,5 +1,7 @@
 ---
 name: architecture
+status: active
+last_validated: 2026-04-28
 description: Architecture and system design protocol. Use for greenfield design, abstract class planning, novel system structure, or when mapping domain concepts to code. Covers FOL reasoning, abstract class bridge, dev perspectives, Gang of Four patterns, and Pragmatic Programmer principles.
 ---
 # Architecture

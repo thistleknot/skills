@@ -7,6 +7,8 @@ description: >
   architecture, MCP tool suite, state flow, config, and integration
   with the dark_factory TaskSpec pipeline.
 parent_skill: agentic-harness
+status: active
+last_validated: 2026-04-28
 ---
 
 # Deep Research Framework

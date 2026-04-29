@@ -7,6 +7,8 @@ description: >
   decomposed action fields, non-fatal execution contract, review_required flag, and
   cross-run fingerprinting via the agentic_kg_memory throughline model. Subskill of
   agentic-harness. Not a todo tracker — no status lifecycle, no prioritization.
+status: active
+last_validated: 2026-04-28
 ---
 
 # Checklist Skill

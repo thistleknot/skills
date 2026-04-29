@@ -1,5 +1,7 @@
 ---
 name: validation
+status: active
+last_validated: 2026-04-28
 description: Validation and testing protocol. Use when confirming a working implementation, writing tests, or verifying pipeline outputs.
 ---
 # Validation

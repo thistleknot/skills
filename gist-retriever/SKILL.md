@@ -5,6 +5,8 @@ description: >
   running or designing hybrid BM25+dense retrieval, RRF fusion, L2 neighborhood
   expansion, ColBERT reranking, and final candidate selection before syllogistic
   reasoning or answer synthesis.
+status: active
+last_validated: 2026-04-28
 ---
 
 # GIST Retriever

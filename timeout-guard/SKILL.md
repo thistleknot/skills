@@ -1,5 +1,7 @@
 ---
 name: timeout-guard
+status: active
+last_validated: 2026-04-28
 description: Use for hung or slow local LLM generations, retry policy design, timeout tuning, or documenting latency-outlier handling. Covers hard per-attempt timeout caps, completion-inclusive baselines (kills/cancels excluded), log-space MAD thresholds with silence-based kill, and restart policy for stale runs.
 ---
 # Timeout Guard

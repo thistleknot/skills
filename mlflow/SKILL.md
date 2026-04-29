@@ -4,6 +4,8 @@ description: >
   MLflow experiment tracking protocol. Use when running Optuna searches, comparing
   model or pipeline variants, or operating agentic harnesses where params, metrics,
   artifacts, and run lineage must be persisted and queryable across runs.
+status: active
+last_validated: 2026-04-28
 ---
 
 # MLflow Tracking Protocol

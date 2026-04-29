@@ -5,6 +5,8 @@ description: >
   persist distilled decisions, rejected approaches, blockers, and resume points
   to disk so future turns or post-compaction resumes do not repeat the same
   analysis. This is not a raw chain-of-thought capture skill.
+status: active
+last_validated: 2026-04-28
 ---
 
 # Continuity Log Protocol

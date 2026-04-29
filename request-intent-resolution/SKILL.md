@@ -9,6 +9,8 @@ description: >
   projection for slot elicitation, or evaluating retrieval quality with
   LLM-as-judge. Trigger on any mention of request threads, intent classification,
   thread routing, support ticket similarity, resolution matching, or retrieval eval.
+status: active
+last_validated: 2026-04-28
 ---
 
 # Request Intent Resolution Pipeline

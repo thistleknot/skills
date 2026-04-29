@@ -1,5 +1,7 @@
 ---
 name: reasoning
+status: active
+last_validated: 2026-04-28
 description: Reasoning, orientation, and problem-solving protocol. Use when tackling an open-ended problem, design decision, analysis task, architecture question, or any task where the conclusion is non-obvious. Trigger on planning, decomposition, hypothesis evaluation, or multi-perspective analysis.
 ---
 # Reasoning & Orientation

@@ -6,6 +6,8 @@ description: >
   topological structure. Produces interactive Gestalt-encoded visualizations with position
   (spiral), color (macro-cluster), opacity (micro-cluster agreement), and size (hub centrality).
 parent_skill: representation-pipeline
+status: active
+last_validated: 2026-04-28
 ---
 
 # Spiral-Radial Clustering Display

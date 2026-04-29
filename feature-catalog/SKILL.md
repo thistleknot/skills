@@ -4,6 +4,8 @@ description: >
   Project-local SQLite3 feature catalog. Use when registering, querying, or
   updating this project's implemented features, file mappings, and architectural
   decisions. Local file only — no server, no MCP.
+status: active
+last_validated: 2026-04-28
 ---
 
 # Feature Catalog

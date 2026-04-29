@@ -4,6 +4,8 @@ description: >
   Operational project memory for long-running work. Use when reading or updating
   project brief, product context, active context, system patterns, tech context,
   and progress so work survives session resets and resumes cleanly.
+status: active
+last_validated: 2026-04-28
 ---
 
 # Memory Bank
