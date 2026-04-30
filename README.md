@@ -58,6 +58,8 @@ skills/
 │   └── representation-pipeline      # representation design: raw signal → embedding space
 │
 ├── artifacts/                       # masterpiece outputs and information design
+│   ├── documentation                # choose canonical doc vs changelog vs timestamped fixes-applied artifact
+│   ├── response-style               # voice preservation, anti-cliche prose, user-facing coherence
 │   ├── gist_correlation_matrix      # sorted correlation matrix as complete relational map; two sorting approaches (orthogonal vs coverage)
 │   └── spiral-radial-clustering-display  # multi-dimensional spiral visualization; GMM+HDBSCAN+ordering→UMAP 2D with Gestalt encoding
 │
@@ -89,6 +91,8 @@ skills/
 19. `feature-catalog` is the local implementation ledger: a SQLite feature catalog for tracking what the project already ships and where it lives.
 20. `siamese_from_correlation_matrix` is the metric-learning companion to the embedding-analysis branch: it turns correlation structure into contrastive supervision.
 21. `skill-wiki` is the meta-skill governing the living skill library lifecycle. It owns the intake pipeline, promotion gates, crystallization protocol, supersession rules, sidecar conventions (EVIDENCE.md, HISTORY.md), and the periodic sweep that keeps skills consistent over time. It is NOT memory storage (→ `agentic_kg_memory`) and NOT project state (→ `memory-bank`).
+22. `documentation` decides which durable doc artifact to update: canonical README/spec, cumulative changelog, or a timestamped fixes-applied note.
+23. `response-style` governs user-facing prose: voice preservation, anti-cliche writing, and answer coherence. Harness-state coherence remains with `agentic-harness`.
 
 ## MCG Foundation — The Conceptual Backbone
 
@@ -184,6 +188,7 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | Isolate and fix bugs | `debugging` |
 | Autonomous fix-run-retry loop | `debugging` (self-repair section) |
 | Verify behavior, write tests | `validation` |
+| Produce README / changelog / fixes-applied docs | `documentation` |
 | Iterative output quality improvement | `evaluator-optimizer` |
 | Autonomous hill-climbing on a metric | `autoresearch` |
 | Orchestrate multi-stage pipeline | `agentic-harness` |
@@ -202,10 +207,12 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | Project state and continuity | `memory-bank`, `continuity-log` |
 | Web research and grounding | `deep-research` |
 | Skill library governance | `skill-wiki` |
+| Rewrite or polish user-facing prose / tone | `response-style` |
 
 ## Recent Direction
 
 - **Wave 3 Pareto additions** (Tier 3, scores 6–9): `autoresearch` (new skill); `context-engineering` section → `code`; `eval-pipeline` section → `checklist`; `agent-as-ci-gate` full protocol → `agent-governance`; `code-rl` section → `deep-q-rl`. All 15 Pareto candidates now implemented.
+- **Super System Prompt extraction finished**: added `documentation` (timestamped-vs-cumulative doc strategy) and `response-style` (voice preservation, anti-cliche prose, user-facing coherence).
 - **Wave 2 Pareto additions** (Tier 2, scores 12–16): `context-compaction`, `security-review`, `mcp-tool-registry` (new skills); `self-repair` section → `debugging`; `hierarchical-task-planning` section → `agentic-harness`; `episodic-memory` section → `agentic_kg_memory`.
 - **Wave 1 Pareto additions** (Tier 1, all score ≥ 20): `evaluator-optimizer`, `multi-agent-coordination`, `tdd-agent`, `agent-governance`. Fills the largest gaps: iterative generation loop, team topology, test-first lifecycle, and safety rails.
 - **MCG grounding pass**: Grounded the full skill library in the Meta Context Graph (MCG) architecture (Tekiner 2025, Hu et al. arXiv:2512.13564, CoALA arXiv:2309.02427, ACE arXiv:2510.04618). Added MCG Foundation section to README, MCG Architecture section to `agentic_kg_memory/SKILL.md`, and MCG terminology alignment to `skill-wiki` Pattern Store.

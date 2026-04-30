@@ -177,6 +177,7 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Autonomous fix-run-retry without human input | `debugging` (self-repair section) |
 | Code generation, modification, or review | `code` |
 | Structuring context, files, prompts for LLM effectiveness | `code` (context-engineering section) |
+| README / changelog / release-note / fixes-applied updates | `documentation` |
 | Test-driven implementation (Red→Green→Refactor) | `tdd-agent` |
 | Autonomous hill-climbing on a measurable objective | `autoresearch` |
 | Test design, validation, or pipeline output verification | `validation` |
@@ -194,6 +195,7 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Autonomous multi-step task execution (build, migrate, refactor) | `react_agent` |
 | Semantic memory query, KG evidence, triplet extraction | `agentic_kg_memory` |
 | Cross-session episode recall, decision trace lookup | `agentic_kg_memory` (episodic section) |
+| Rewrite or polish user-facing prose, tone, or voice | `response-style` |
 | Project state, active context, what changed / what's next | `memory-bank` |
 | Web evidence, multi-source corroboration, claim-backed report | `deep-research` |
 | Hyperparameter search, Optuna tuning, nested CV | `optuna-nested-cv` |
