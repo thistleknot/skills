@@ -28,6 +28,14 @@ validation_method: session
 - prefer first-party contracts and replaceable adapters over adopting an external runtime as the project identity
 - when evidence is indirect, mark it provisional instead of smuggling it in as fact
 
+## Integration Rule
+- Do not stop at a comparison matrix. A backend stack only counts as integrated when the harness resolves it into a run-visible contract.
+- The harness should record at least two lanes per run:
+  - **orchestrator lane** — default current recommendation: `opencode`
+  - **leaf-agent lane** — default current recommendation: `aider`
+- Each lane should bind through the model registry to a concrete endpoint/model pair, then serialize that binding into state, logs, or CLI output so the active stack is inspectable.
+- Runtime choice remains configurable, but the default split should be explicit rather than implied.
+
 ## Default Recommendation
 - Use `opencode` / `claw-code` when you need orchestration
 - Use `aider` when a manager needs a leaf code executor

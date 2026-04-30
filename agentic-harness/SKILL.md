@@ -119,6 +119,31 @@ Treat external tools as substrates, not as the harness itself.
 - `aider` is a leaf code executor that a manager can drive as an API-like one-shot with its own model and prompt.
 - skills decide when to use a substrate; adapters decide how it is invoked.
 
+## Integrated Runtime Stack
+
+Do not leave the runtime boundary as dead code or test-only scaffolding.
+
+When the harness claims to support multiple substrates, each run should resolve and
+record an explicit backend stack:
+
+- **orchestrator** — the backbone runtime for planning / interactive control
+- **leaf agent** — the narrow code executor for manager-issued one-shot work
+
+Minimum integration standard:
+
+1. resolve the selected runtime adapter from configuration
+2. bind it to a concrete model-registry endpoint
+3. render an invocation or provider patch through the adapter layer
+4. serialize the resolved stack into run state, logs, or CLI output
+
+Current working default:
+
+- `opencode` for the orchestrator lane
+- `aider` for the leaf-agent lane
+
+This keeps the stack inspectable and prevents "backend support" from meaning
+"a helper module exists somewhere with unit tests."
+
 ## Repo Mirror Guidance
 
 When this skill is mirrored into a project repository, keep the repo copy
