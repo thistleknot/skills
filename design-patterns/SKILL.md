@@ -1,6 +1,11 @@
 ---
 name: design-patterns
-description: Pattern-selection protocol for code and architecture work. Use when choosing or refactoring around GoF patterns, programming contracts, or Pragmatic Programmer tradeoffs. Treat this as a code sub-skill: select the lightest pattern that fits the actual constraint, then encode Require/Guarantee/Maintain/Assert at the interface.
+description: >
+  Pattern-selection protocol for code and architecture work. Use when choosing
+  or refactoring around GoF patterns, programming contracts, or Pragmatic
+  Programmer tradeoffs. Treat this as a code sub-skill: select the lightest
+  pattern that fits the actual constraint, then encode
+  Require/Guarantee/Maintain/Assert at the interface.
 status: active
 last_validated: 2026-04-29
 supersedes: []

@@ -111,6 +111,14 @@ agentic-harness
 Do not collapse them into one skill unless you find repeated evidence that the
 outer delivery loop and the inner harness-repair loop cannot be maintained independently.
 
+## External Runtime Boundary
+
+Treat external tools as substrates, not as the harness itself.
+
+- `opencode` and `claw-code` are orchestration/runtime candidates.
+- `aider` is a leaf code executor that a manager can drive as an API-like one-shot with its own model and prompt.
+- skills decide when to use a substrate; adapters decide how it is invoked.
+
 ## Repo Mirror Guidance
 
 When this skill is mirrored into a project repository, keep the repo copy
