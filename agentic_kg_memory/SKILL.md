@@ -6,10 +6,32 @@ description: >
   memory entries from new evidence, or maintaining wiki-like throughlines that
   evolve as the graph learns.
 status: active
+tier: L1
 last_validated: 2026-04-28
 ---
 
 # Agentic KG Memory
+
+## Retrieval Tier: L1 (Vector / Semantic)
+
+This skill is **L1** in the three-tier knowledge retrieval cascade:
+
+| Tier | Skill | Role |
+|---|---|---|
+| L2 | `memory-bank` / skills markdown | Compiled durable knowledge — try first |
+| **L1** | **`agentic_kg_memory`** | **Atomic triplets and semantic pages — try if L2 misses** |
+| L0 | `deep-research` | Live web evidence — last resort |
+
+When L1 retrieval surfaces stable, reusable patterns, promote them to L2 (write or update a skill markdown file).
+
+## Memory Scope: Global vs Repo
+
+Each wiki page carries a `scope` field:
+
+- `global` — cross-project facts, patterns, procedures → stored in `C:\Users\user\memory-bank\`
+- `repo` — project-specific context, architecture decisions, code-level facts → stored in `[repo-root]\.memory-bank\`
+
+Not both. If a fact is genuinely reusable across all projects, it is global. If it is specific to one codebase, it is repo-scoped.
 
 ## Scope Boundary
 
@@ -44,12 +66,18 @@ retrieval installation request.
 Use these explicit paths on this machine:
 
 - `C:\Users\user\memory-bank\wiki_memory.sqlite3`
-- `C:\Users\user\.copilot\chroma\memory-bank\`
+- `C:\Users\user\memory-bank\chroma\`
 - `C:\Users\user\memory-bank\clusters.json`
 - `C:\Users\user\memory-bank\cluster_metrics.json`
 
 The SQLite file is the sparse/metadata surface.
 The Chroma directory is the dense embedding surface.
+
+> **Scope tags**: each wiki page should carry a `scope` field — `global` or `repo`.
+> Global pages belong in `C:\Users\user\memory-bank\`. Repo-specific pages belong
+> in `[repo-root]\.memory-bank\`. The SQLite and Chroma backends are partitioned
+> the same way: one global instance, one per active repo (started with `--memory-dir`
+> on the MCP server).
 
 ### Setup actions
 
@@ -61,7 +89,7 @@ When running setup, do all of the following:
    - `triplet_sequence_text`
    - `embedding_ref`
    - `cluster_id`
-3. Create `C:\Users\user\.copilot\chroma\memory-bank\` as the Chroma persist directory
+3. Create `C:\Users\user\memory-bank\chroma\` as the Chroma persist directory
 4. Build `triplet_sequence_text` from canonicalized extracted triplets in source order
 5. Embed `triplet_sequence_text` and store vectors in Chroma
 6. Cluster the normalized dense vectors

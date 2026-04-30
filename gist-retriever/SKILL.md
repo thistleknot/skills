@@ -11,6 +11,44 @@ last_validated: 2026-04-28
 
 # GIST Retriever
 
+## Retrieval Tier: L1 (Vector / Semantic)
+
+This skill operates at **L1** in the three-tier knowledge retrieval cascade.
+
+### Cascade routing
+
+```
+Query
+  │
+  ▼
+L2 — wiki / skills markdown (try first: fast, no server needed)
+  │   found? → return
+  │   not found?
+  ▼
+L1 — agentic_kg_memory / gist-retriever (try next: BM25 + dense vector)
+  │   found? → return
+  │   not found?
+  ▼
+L0 — deep-research (last resort: live web fetch, multi-source corroboration)
+       → upsert findings back to L1
+       → promote to L2 if findings are stable, reusable patterns
+```
+
+### What "not found" means at each tier
+
+- **L2 miss**: no matching skill, wiki page, or memory-bank entry with sufficient relevance
+- **L1 miss**: BM25 + dense retrieval returns no candidates above threshold, or coverage is below `saturation_theta`
+- **L0 triggered**: both above tiers exhausted — run `deep-research`, store results back to L1
+
+### Promotion rules (L1 → L2)
+
+Promote a memory entry from L1 to L2 when:
+- the same claim appears across multiple episodes with consistent support
+- the finding is a stable procedure, constraint, or protocol — not a one-off fact
+- the information is reusable across sessions and projects
+
+
+
 ## Scope Boundary
 
 This skill is the **retrieval implementation layer**.

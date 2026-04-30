@@ -7,15 +7,33 @@ description: >
   architecture, MCP tool suite, state flow, config, and integration
   with the dark_factory TaskSpec pipeline.
 parent_skill: agentic-harness
+tier: L0
 status: active
 last_validated: 2026-04-28
 ---
 
 # Deep Research Framework
 
-## When to use
+## Retrieval Tier: L0 (Web Evidence)
 
-Use this framework (not a one-shot LLM call) when:
+This skill is **L0** in the three-tier knowledge retrieval cascade:
+
+| Tier | Skill | When to use |
+|---|---|---|
+| L2 | `memory-bank` / skills markdown | Try first — fast, no server needed |
+| L1 | `agentic_kg_memory` / `gist-retriever` | Try if L2 misses |
+| **L0** | **`deep-research`** | **Try if L1 misses — expensive, web fetch** |
+
+Only trigger L0 when L2 and L1 have both failed to surface sufficient evidence.
+
+### Store-back contract
+
+After a successful L0 research run:
+1. All extracted `Triplet` objects **must** be upserted into L1 (via `pgvector_upsert`)
+2. If the findings are stable, reusable patterns (procedures, protocols, constraints) — promote to L2 by writing or updating a skill markdown file
+3. Do not discard L0 research results without persisting them to at least L1
+
+## When to use
 
 - You need **multi-source corroboration** — more than one independent domain must back a claim
 - You need a **structured evidence trail** — every claim must cite a `source_id` from a real fetch

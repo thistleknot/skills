@@ -5,10 +5,43 @@ description: >
   project brief, product context, active context, system patterns, tech context,
   and progress so work survives session resets and resumes cleanly.
 status: active
+tier: L2
 last_validated: 2026-04-28
 ---
 
 # Memory Bank
+
+## Retrieval Tier: L2 (Compiled Durable Knowledge)
+
+This skill is **L2** in the three-tier knowledge retrieval cascade:
+
+| Tier | Skill | Role |
+|---|---|---|
+| **L2** | **`memory-bank` / skills markdown** | **Try first — fast, no server needed** |
+| L1 | `agentic_kg_memory` / `gist-retriever` | Try if L2 misses |
+| L0 | `deep-research` | Last resort — live web fetch |
+
+## Memory Scope: Global vs Repo
+
+Memory is partitioned into two scopes:
+
+### Global memory — `C:\Users\user\memory-bank\`
+
+Cross-project facts, patterns, preferences, and procedures that apply regardless of which repo is active. This is the existing global store.
+
+### Repo-specific memory — `[repo-root]\.memory-bank\`
+
+Project-specific operating state: current focus, architecture decisions, code-level context, progress checkpoints. Lives at the root of the relevant repository.
+
+**Rule**: a fact is either global or repo-scoped — not both. If a pattern is reusable across all projects, it is global. If it only makes sense in one codebase, it is repo-scoped.
+
+#### Initializing repo-local memory
+
+Run `memory-bank setup --repo` from the repo root to:
+1. Create `.memory-bank\` at the repo root
+2. Create the six canonical markdown files scoped to this project
+3. Create `.memory-bank\AGENTS.md` pointing at repo memory + referencing global memory as supplementary
+4. Optionally start a repo-scoped MCP server: `python memory_mcp.py --memory-dir .\.memory-bank --port 9003`
 
 ## Scope Boundary
 
@@ -89,7 +122,16 @@ When running setup, do all of the following:
 9. Ensure `fastmcp` is importable in the active Python environment; install it if missing
 10. Ensure the semantic backend directories exist for KG search:
    - `C:\Users\user\memory-bank\wiki_memory.sqlite3`
-   - `C:\Users\user\.copilot\chroma\memory-bank\`
+   - `C:\Users\user\memory-bank\chroma\`
+
+### MCP startup script
+
+Before launching Copilot CLI or Codex, run `C:\Users\user\start_mcp.ps1` to:
+1. Detect venv Python via `where.exe python`
+2. Start memory-bank (port 9001) and todo (port 9002) as persistent HTTP background processes if not already running
+3. Update `mcp-config.json` `command` field with the resolved Python path
+
+Copilot CLI uses `mcp-config.json` in `"type": "local"` (stdio per-session). The startup script also serves the servers in HTTP mode for Codex and other MCP clients at `http://localhost:9001/mcp` and `http://localhost:9002/mcp`.
 
 ### MCP registration snippet
 
@@ -203,7 +245,20 @@ def _regenerate_agents_md() -> None:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Memory bank MCP server")
+    parser.add_argument("--port", type=int, default=None, help="Run as HTTP server on this port")
+    parser.add_argument("--memory-dir", type=str, default=None, help="Override memory bank directory (for repo-local memory)")
+    args = parser.parse_args()
+
+    if args.memory_dir:
+        MEMORY_DIR = Path(args.memory_dir)
+
+    if args.port:
+        mcp.run(transport="streamable-http", host="localhost", port=args.port)
+    else:
+        mcp.run()
 ```
 
 ### Chroma bootstrap scaffold
@@ -218,7 +273,7 @@ from pathlib import Path
 import chromadb
 
 SQLITE_PATH = Path(r"C:\Users\user\memory-bank\wiki_memory.sqlite3")
-CHROMA_DIR = Path(r"C:\Users\user\.copilot\chroma\memory-bank")
+CHROMA_DIR = Path(r"C:\Users\user\memory-bank\chroma")
 COLLECTION_NAME = "memory-bank-triplet-sequences"
 
 
@@ -268,7 +323,7 @@ When the user says **`memory-bank setup`**, the agent should:
 may provision the persistent stores required by `agentic_kg_memory`:
 
 - SQLite metadata store at `C:\Users\user\memory-bank\wiki_memory.sqlite3`
-- Chroma persist directory at `C:\Users\user\.copilot\chroma\memory-bank\`
+- Chroma persist directory at `C:\Users\user\memory-bank\chroma\`
 
 This lets the project-memory server and the KG-memory skill share a stable backend
 without collapsing their responsibilities into one skill.

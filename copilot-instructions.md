@@ -48,19 +48,25 @@ history. Keep entries factual and concise.
 
 ## Todo and Memory Autonomous Triggers
 
+### Workspace root
+Always determine the git root of the current working directory before calling
+any todo tool. On Windows with PowerShell: `git rev-parse --show-toplevel`.
+Pass that path as `workspace_root` on every todo call. If the session is not
+inside a git repo, omit `workspace_root` (falls back to global todos.db).
+
 At the start of every session:
-- Call list_todos to surface pending work before doing anything else
+- Call list_todos(workspace_root=<git_root>) to surface pending work before doing anything else
 
 During any task:
-- Call add_todo when a follow-up action is identified that won't be done immediately
-- Call complete_todo when a previously added todo is finished
-- Call update_todo when the scope or priority of a deferred task changes
-- Call remove_todo when a todo is no longer relevant
+- Call add_todo(workspace_root=<git_root>) when a follow-up action is identified that won't be done immediately
+- Call complete_todo(workspace_root=<git_root>) when a previously added todo is finished
+- Call update_todo(workspace_root=<git_root>) when the scope or priority of a deferred task changes
+- Call remove_todo(workspace_root=<git_root>) when a todo is no longer relevant
 
 After completing any significant task (architectural decision, completed feature,
 resolved blocker - not answering a question or writing a snippet):
 - Call update_memory on activeContext.md and progress.md to record what changed
-- Call add_todo for any deferred work identified during the task
+- Call add_todo(workspace_root=<git_root>) for any deferred work identified during the task
 
 # Operating Contract
 	
