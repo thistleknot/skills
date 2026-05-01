@@ -1,6 +1,8 @@
 ---
 name: stratified-quota-sampling
 description: Stratify a long-tailed dataset by normalizing raw counts via Box-Cox, bin into Fibonacci tiers at ±1σ, then sample within each tier using a relevance weight. Applies to any domain with imbalanced class frequency (text length distributions, image class imbalance, sparse entity coverage, hierarchical corpus building). Use when you need balanced representation without throwing away rare classes or flooding on frequent ones.
+status: active
+last_validated: 2026-04-30
 ---
 
 # Stratified Quota-Proportional Sampling

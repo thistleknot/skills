@@ -204,6 +204,7 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | RL from code execution feedback, best-of-N code selection | `deep-q-rl` (code-rl section) |
 | Session near compaction, distilling decisions for resume | `continuity-log` |
 | Deferred work capture, task tracking | `todo` |
+| Imbalanced dataset sampling, stratified quota allocation, long-tail balancing | `stratified-quota-sampling` |
 | Skill library maintenance, lifecycle promotion, evidence review | `skill-wiki` |
 | LLM-as-judge findings, structured artifact critique | `checklist` |
 

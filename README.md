@@ -56,7 +56,8 @@ skills/
 │   ├── hyper-parm_tuning            # superseded predecessor retained for history and migration context
 │   ├── agentic-hyperparm            # behavioral dial tuning for agents: retrieval depth, reranking, chunking, context budget, planning depth, verification passes, abstention policy, sampler settings
 │   ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
-│   └── representation-pipeline      # representation design: raw signal → embedding space
+│   ├── representation-pipeline      # representation design: raw signal → embedding space
+│   └── stratified-quota-sampling    # balance imbalanced datasets: Box-Cox normalization → Fibonacci-tiered quotas → relevance-weighted sampling within tiers
 │
 ├── artifacts/                       # masterpiece outputs and information design
 │   ├── documentation                # choose canonical doc vs changelog vs timestamped fixes-applied artifact
@@ -95,6 +96,7 @@ skills/
 22. `documentation` decides which durable doc artifact to update: canonical README/spec, cumulative changelog, or a timestamped fixes-applied note.
 23. `response-style` governs user-facing prose: voice preservation, anti-cliche writing, and answer coherence. Harness-state coherence remains with `agentic-harness`.
 24. `agentic-hyperparm` tunes the behavioral dial set of an agent (retrieval depth, reranking, chunking, context budget, planning depth, verification passes, abstention policy, sampler settings). Distinct from `optuna-nested-cv` (ML search engine) and `hyper-parm_tuning` (retrieval/ranking stack tuning) — this skill targets agent cognitive parameters, not model weights or pipeline architecture. Uses `optuna-nested-cv` as the search engine and `mlflow` for trial lineage.
+25. `stratified-quota-sampling` balances imbalanced datasets via Box-Cox normalization → Fibonacci-tiered quotas (5/8/13 at ±1σ) → relevance-weighted sampling within tiers. Use when naive top-N or uniform sampling fails due to long-tail class imbalance. Distinct from data augmentation — this is a selection/allocation protocol, not a generation one.
 
 ## MCG Foundation — The Conceptual Backbone
 
