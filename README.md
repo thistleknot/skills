@@ -54,6 +54,7 @@ skills/
 ├── tuning/                          # measure, optimize, record
 │   ├── optuna-nested-cv             # search engine + methodology primer: inner tune / outer unbiased estimate
 │   ├── hyper-parm_tuning            # superseded predecessor retained for history and migration context
+│   ├── agentic-hyperparm            # behavioral dial tuning for agents: retrieval depth, reranking, chunking, context budget, planning depth, verification passes, abstention policy, sampler settings
 │   ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
 │   └── representation-pipeline      # representation design: raw signal → embedding space
 │
@@ -93,6 +94,7 @@ skills/
 21. `skill-wiki` is the meta-skill governing the living skill library lifecycle. It owns the intake pipeline, promotion gates, crystallization protocol, supersession rules, sidecar conventions (EVIDENCE.md, HISTORY.md), and the periodic sweep that keeps skills consistent over time. It is NOT memory storage (→ `agentic_kg_memory`) and NOT project state (→ `memory-bank`).
 22. `documentation` decides which durable doc artifact to update: canonical README/spec, cumulative changelog, or a timestamped fixes-applied note.
 23. `response-style` governs user-facing prose: voice preservation, anti-cliche writing, and answer coherence. Harness-state coherence remains with `agentic-harness`.
+24. `agentic-hyperparm` tunes the behavioral dial set of an agent (retrieval depth, reranking, chunking, context budget, planning depth, verification passes, abstention policy, sampler settings). Distinct from `optuna-nested-cv` (ML search engine) and `hyper-parm_tuning` (retrieval/ranking stack tuning) — this skill targets agent cognitive parameters, not model weights or pipeline architecture. Uses `optuna-nested-cv` as the search engine and `mlflow` for trial lineage.
 
 ## MCG Foundation — The Conceptual Backbone
 

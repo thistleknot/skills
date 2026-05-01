@@ -199,6 +199,7 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Project state, active context, what changed / what's next | `memory-bank` |
 | Web evidence, multi-source corroboration, claim-backed report | `deep-research` |
 | Hyperparameter search, Optuna tuning, nested CV | `optuna-nested-cv` |
+| Agent behavioral dial tuning (retrieval depth, reranking, chunking, context budget, planning depth, verification passes, abstention policy, sampler settings) | `agentic-hyperparm` |
 | Representation learning, embedding pipeline, retrieval stack | `representation-pipeline` |
 | RL from code execution feedback, best-of-N code selection | `deep-q-rl` (code-rl section) |
 | Session near compaction, distilling decisions for resume | `continuity-log` |
