@@ -17,6 +17,8 @@ Grounding citations for behavioral contracts in `agentic-harness/SKILL.md`.
 | 4 | Session crystallization: multiple projects | coherence sentinel (False→True gate) is necessary; premature completion is the #1 harness failure mode across all tested projects | Coherence gate |
 | 4 | Session crystallization: agentic-harness used across OpenClaw and Copilot CLI | Multi-framework stationmaster framing holds; the harness contract is framework-agnostic | Programmatic train station thesis |
 | 5 | Anthropic Building Effective Agents (blog) | Orchestrator-workers is one of 5 canonical agentic patterns; the harness embodies this at the control-plane level | Programmatic train station thesis |
+| 3 | `stanfordnlp/dspy` optimizer + refine docs | Metric/reward-bound compile-refine loops with trace-aware optimization and explicit error budgets are reusable evaluation patterns for LM programs | Evaluation stack |
+| 3 | `zou-group/textgrad` README + evaluation docs | Natural-language loss functions, textual-gradient update loops, noisy-objective hygiene, and sandbox caution are reusable evaluation patterns for harness repair loops | Evaluation stack |
 
 ## Contradiction Count: 0
 

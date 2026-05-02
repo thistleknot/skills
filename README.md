@@ -17,6 +17,7 @@ skills/
 ├── execution/                       # plan, implement, verify
 │   ├── react-agent                  # outer execution OS; drives all other skills
 │   ├── reasoning                    # open-ended problem decomposition + multi-perspective analysis
+│   ├── codebase-knowledge-graph     # current-repo whole-system map; foundational vs incidental code; ripple analysis before edits
 │   ├── code                         # implementation standards, naming, refactor sequence
 │   │   └── design-patterns          # GoF / contract / relationship-shape companion to code
 │   ├── debugging                    # error isolation, salience tiers, diagnostic strategy, self-repair loop
@@ -42,6 +43,7 @@ skills/
 │   ├── multi-agent-coordination     # peer messaging, plan-approval gates, task ownership, dynamic spawning
 │   ├── agent-governance             # safety rails, tool-access policy, audit trail, trust tiers, secrets scan
 │   ├── security-review              # STRIDE-A, OWASP Top 10, data-flow tracing, secret/CVE detection
+│   ├── build-observability          # run-centric observability contract: runs/events/commands, collectors, dashboards, trace enrichment
 │   ├── timeout-guard                # runaway-task policy; interrupt and recovery rules
 │   └── skill-wiki                   # living skill library lifecycle; intake → staged → active → superseded governance
 │
@@ -108,6 +110,9 @@ skills/
 25. `pdf-extraction` is the end-to-end PDF→enriched-Markdown pipeline workflow: docling→base64 strip→VLM image description→reinsert→methods extraction (5 phases via `run_pipeline.bat`). Includes a table enhancement sub-pipeline: docling JSON bboxes→pymupdf crop→tabula+camelot extraction→VLM fusion→patched Markdown. The layout classifier uses `class-balancing` for training. Standalone workflow skill; not a child of `agentic-harness`.
 26. `openspec-workflow` is the spec-driven product/change lifecycle skill. Its companion action skills (`openspec-propose`, `openspec-explore`, `openspec-apply-change`, `openspec-archive-change`) are command-shaped entry points into the same OpenSpec operating model.
 27. `fabro-create-workflow` is the Fabro graph/run-config authoring companion. It can support `openspec-workflow` when a repo needs a new Fabro pipeline, but it is also usable as a standalone workflow-design skill.
+28. `agentic-harness` now has an explicit evaluation mix: `checklist` for structured audit artifacts, DSPy-derived metric/reward compile-refine patterns when scoring is explicit, and TextGrad-derived textual-loss loops when the critic must explain how to improve text/code/prompts. Optimizer scores inform repair; artifact-backed verification still decides completion.
+29. `codebase-knowledge-graph` is the current-repository relationship-mapping protocol. It builds the typed module/file/class/function graph and the foundational-vs-incidental distinction that should exist before `code`, `debugging`, or `validation` edits proceed.
+30. `build-observability` is the run-centric observability layer for agentic execution. `agentic-harness` owns control flow and retries; `build-observability` projects runtime exhaust into normalized `runs/events/commands` records and operator-facing dashboard views.
 
 ## MCG Foundation — The Conceptual Backbone
 
@@ -158,6 +163,28 @@ For the full architecture, see `agentic_kg_memory/SKILL.md § MCG Foundation`.
   - `gist-retriever` inherited the staged retrieval/access-path progression across markdown lookup, local markdown search, and compiled retrieval indexes *(first pass)*
   - `memory-bank` inherited the sharper boundary against corpus/wiki memory *(first pass)*
   - `agentic_kg_memory` also inherited *(second pass)*: four-tier consolidation model (working/episodic/semantic/procedural), temporal decay / Ebbinghaus forgetting, supersession as an explicit named operation, event-driven automation hooks, graph traversal for impact/discovery queries, and crystallization as a first-class wiki operation
+- The `fat-skills` concept is **explicitly closed by absorption**, not left partial and not promoted as a standalone skill:
+  - `skill-wiki` owns the library-level lifecycle that a monolithic "fat skills" wrapper would otherwise have covered: intake, staged vetting, promotion, supersession, and periodic consistency sweeps
+  - `agentic-harness` owns the execution-side orchestration layer: train-station routing, hierarchical task planning, critic / optimizer loops, and multi-framework runtime reconciliation
+  - Repo-wide routing guidance lives at the library surface (`README.md` + `copilot-instructions.md`), so invocation policy is documented across the graph rather than hidden inside one umbrella node
+  - Memory and policy concerns stay split across their live homes: `memory-bank` / `continuity-log` for project and runtime continuity, `agentic_kg_memory` for compiled semantic memory, and `agent-governance` for policy / audit / trust rails
+- The `dev-pipeline` concept is **explicitly closed by absorption**, not left partial and not promoted as a standalone skill:
+  - `react-agent` owns the outer autonomous execute / observe / verify loop
+  - `openspec-workflow` and its action skills own the spec-driven change lifecycle
+  - `code`, `tdd-agent`, `debugging`, and `validation` own implementation, test-first change, bug isolation, and verification
+  - `agentic-harness` owns multi-stage pipeline orchestration, HTP, evaluation / repair loops, and the absorbed autoship-style control-plane behavior
+  - `documentation`, `agent-governance`, `security-review`, `mcp-tool-registry`, and `fabro-create-workflow` cover the supporting release / safety / tooling lanes that would otherwise be bundled into a generic "dev pipeline" skill
+
+### North-Star Disposition Audit
+
+Use this README as the live-skill audit source of truth for the concepts that were still unresolved in `integrate/compiled.md`. They are now fully dispositioned through promotion into the live graph or explicit absorption into existing skills.
+
+| `integrate/compiled.md` concept | Live disposition |
+|---|---|
+| `build-observability` | **live skill** → `build-observability` |
+| `codebase-knowledge-graph` | **live skill** → `codebase-knowledge-graph` |
+| `fat-skills` | **closed by absorption** → `skill-wiki` + `agentic-harness` + repo routing guidance + memory / governance split |
+| `dev-pipeline` | **closed by absorption** → `react-agent` + `openspec-workflow` + execution skills + `agentic-harness` + supporting release / safety lanes |
 
 ## Design Principles
 
@@ -200,6 +227,7 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | Explore requirements before formalizing a change | `openspec-explore`, `reasoning` |
 | Draft OpenSpec artifacts for a new change | `openspec-propose`, `openspec-workflow` |
 | Execute multi-step task autonomously | `react_agent` |
+| Map an existing repo as a whole system before editing | `codebase-knowledge-graph` |
 | Generate / modify code | `code` |
 | Test-driven implementation | `tdd-agent` |
 | Isolate and fix bugs | `debugging` |
@@ -212,6 +240,8 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | Iterative output quality improvement | `evaluator-optimizer` |
 | Autonomous hill-climbing on a metric | `autoresearch` |
 | Orchestrate multi-stage pipeline | `agentic-harness` |
+| Make live run/build state queryable | `build-observability` |
+| Optimizer-style evaluation and refinement | `agentic-harness` (DSPy/TextGrad evaluation stack), `checklist` |
 | Hierarchical task decomposition | `agentic-harness` (HTP section) |
 | Coordinate multiple agents | `multi-agent-coordination` |
 | Agent safety rails and policy | `agent-governance` |
@@ -233,6 +263,9 @@ This library is optimized for automated software development. Skill-to-pipeline 
 
 ## Recent Direction
 
+- **2026-05-02**: Promoted `build-observability` and `codebase-knowledge-graph` from unresolved `integrate/compiled.md` concepts into live skills. `build-observability` now owns the normalized `runs/events/commands` observability contract and projection/dashboard pattern; `codebase-knowledge-graph` now owns current-repo whole-system mapping, foundational-vs-incidental classification, and ripple analysis before edits.
+- **2026-05-02**: Explicitly closed the `fat-skills` and `dev-pipeline` umbrella concepts by absorption rather than promotion. `fat-skills` is now documented as split across `skill-wiki`, `agentic-harness`, repo-level routing guidance, and the existing memory / governance surfaces; `dev-pipeline` is documented as split across `react-agent`, `openspec-workflow`, the execution skills, and `agentic-harness`.
+- **2026-05-02**: Grounded the `agentic-harness` evaluation lane in `DSPy` and `TextGrad`. Added `integrate/dspy.md` and `integrate/textgrad.md`, extended `integrate/compiled.md` with `optimizer-driven-evaluation`, and updated the live `agentic-harness` skill to distinguish structured audit (`checklist`) from metric/reward compile-refine loops (DSPy) and textual-loss refinement loops (TextGrad).
 - **2026-05-02**: Added `class-balancing` (log inverse freq → Box-Cox → ratio weights for imbalanced classifiers) and `pdf-extraction` (full docling pipeline + table enhancement via tabula+camelot+VLM fusion). `hyper-parm_tuning` now frames Weighted Stage Allocation as the canonical cross-skill pattern; `agentic-hyperparm` is the agent-specific instantiation. `arxiv-bridge` was updated with CLI flags and a sequential-only warning.
 - Imported the portable OpenSpec/Fabro skill family as live agent skills: `openspec-workflow`, `openspec-propose`, `openspec-explore`, `openspec-apply-change`, `openspec-archive-change`, and `fabro-create-workflow`. Current rollout is agent-only first; any dark-factory pipeline promotion remains a separate second pass.
 - **Wave 3 Pareto additions** (Tier 3, scores 6–9): `autoresearch` (new skill); `context-engineering` section → `code`; `eval-pipeline` section → `checklist`; `agent-as-ci-gate` full protocol → `agent-governance`; `code-rl` section → `deep-q-rl`. All 15 Pareto candidates now implemented.

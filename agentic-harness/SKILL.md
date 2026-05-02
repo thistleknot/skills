@@ -363,6 +363,49 @@ Mapping to harness work:
 - orchestrator-workers -> PM / implement / verify split
 - evaluator-optimizer -> reconcile / critic / fix loop
 
+### Evaluation stack: checklist + DSPy + TextGrad
+
+Treat harness evaluation as a **stack of complementary patterns**, not one generic
+"judge" blob.
+
+- **`checklist`** — schema-bound artifact audit. Best when you need structured
+  findings, novelty proof, and a reviewable JSON artifact.
+- **DSPy-style evaluation** — metric / reward-first optimization. Best when you
+  can score a module, pipeline step, or candidate program explicitly and want
+  trace-aware compile / refine loops.
+- **TextGrad-style evaluation** — natural-language loss and textual-gradient
+  optimization. Best when the evaluator must explain *how* to improve text,
+  code, or prompt artifacts and deterministic scalar metrics are incomplete.
+
+Operational rule:
+
+1. prefer an explicit metric or reward function when one exists
+2. add textual feedback when the metric alone does not say what to change
+3. keep optimizer output as intermediate evidence, not final acceptance
+4. gate completion on the reopened artifact and verifier, not on optimizer score alone
+
+For DSPy-derived patterns, the main portable pieces are:
+
+- `program + metric + trainset -> compiled candidate`
+- trace filtering from high-scoring runs
+- `BestOfN` / `Refine` reward-threshold loops
+- explicit `fail_count` / error-budget handling
+
+Prefer the modern `Refine` / `BestOfN` framing over the deprecated
+`Assert` / `Suggest` framing when describing evaluation retry policy.
+
+For TextGrad-derived patterns, the main portable pieces are:
+
+- natural-language `loss_fn` / evaluator instructions
+- separate forward model and backward / critic model
+- textual-gradient updates over mutable artifacts
+- saved trajectory / loss-history for inspection
+- multi-seed or majority-vote hygiene when objectives are noisy
+
+If the harness evaluates generated code, keep the TextGrad lesson explicit:
+untrusted code should run only inside a robust sandbox, and evaluation writeups
+should record instability rather than hiding it.
+
 ### AutoGen pattern
 
 AutoGen-style multi-agent chat is appropriate when role conflict is useful, not decorative.
@@ -988,6 +1031,9 @@ Minimum tags:
 - `framework`
 - `story_id`
 - `branch`
+- `optimizer_family`
+- `eval_objective`
+- `seed_policy`
 - `artifact_path`
 - `coherence_status`
 - `critic_round`
@@ -1197,6 +1243,11 @@ surface as merge-ready.
 
 See `checklist/SKILL.md` for the full pattern spec, Pydantic schemas, prompt
 contract, and reference implementation (`gap_critic.py` in storywriter).
+
+**Boundary with DSPy / TextGrad:** use `checklist` when the goal is a durable,
+structured audit artifact. Use DSPy-style reward functions or TextGrad-style
+losses when the goal is iterative optimizer feedback. A mature harness often uses
+both: optimizer loop first, checklist gate second.
 
 ---
 

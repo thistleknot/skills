@@ -5,6 +5,23 @@ Current version of the contract is always in SKILL.md; this file records what ch
 
 ---
 
+## 2026-05-02 — DSPy + TextGrad grounded the evaluation lane
+**Changed:** Added explicit evaluation-stack guidance to `SKILL.md`: `checklist`
+for structured audit artifacts, DSPy-style metric/reward compile-refine loops
+for scoreable modules, and TextGrad-style natural-language loss loops for text,
+code, and prompt refinement. Updated the repo mirror and the condensed `.llm.md`
+summary to keep the same evaluation story across invocation surfaces.
+**Reason:** `integrate/compiled.md` is now being used as a high-level requirements
+surface for skill evolution. The prior contract said "critic loop" but did not
+separate metric-first optimization from textual-feedback optimization, which made
+the evaluation lane underspecified.
+**Evidence:** Tier 3 grounding from `stanfordnlp/dspy` optimizer/refine docs and
+`zou-group/textgrad` README + evaluation docs; plus session crystallization that
+`agentic-harness` needs a clearer evaluation taxonomy than a single generic judge.
+**Supersedes:** Vague "evaluator-optimizer" phrasing as the only evaluation pattern.
+
+---
+
 ## 2026-04-28 — Applicability envelope added; evidence + history sidecars created
 **Changed:** Added `## Applicability Envelope` section to SKILL.md. Created EVIDENCE.md
 and HISTORY.md sidecars following the `skill-wiki` living-skill pattern.
