@@ -31,6 +31,12 @@ skills/
 │   │   ├── checklist                # LLM-as-judge validation pattern; structured findings with novelty proof
 │   │   ├── continuity-log           # compact-safe session memory; distilled decisions, resume points
 │   │   └── deep-research            # multi-source web evidence pipeline; LangGraph planner→researcher→synthesizer
+│   ├── openspec-workflow            # spec-driven change lifecycle with OpenSpec artifacts and Fabro handoff
+│   │   ├── openspec-propose         # create proposal/design/spec/tasks for a new change
+│   │   ├── openspec-explore         # think/discover mode around an OpenSpec change or idea
+│   │   ├── openspec-apply-change    # implement tasks from an OpenSpec change
+│   │   └── openspec-archive-change  # archive a completed OpenSpec change
+│   ├── fabro-create-workflow        # author Fabro `.fabro` + `.toml` workflows from natural-language requirements
 │   ├── substrate-selection          # runtime substrate policy: OpenCode / claw-code / aider / provider boundary
 │   ├── evaluator-optimizer          # LLM-generates→LLM-critiques→LLM-regenerates loop; MBR selection; stopping criteria
 │   ├── multi-agent-coordination     # peer messaging, plan-approval gates, task ownership, dynamic spawning
@@ -53,11 +59,11 @@ skills/
 │
 ├── tuning/                          # measure, optimize, record
 │   ├── optuna-nested-cv             # search engine + methodology primer: inner tune / outer unbiased estimate
-│   ├── hyper-parm_tuning            # superseded predecessor retained for history and migration context
-│   ├── agentic-hyperparm            # behavioral dial tuning for agents: retrieval depth, reranking, chunking, context budget, planning depth, verification passes, abstention policy, sampler settings
+│   ├── hyper-parm_tuning            # superseded predecessor; canonical home for Weighted Stage Allocation pattern
+│   ├── agentic-hyperparm            # behavioral knob tuning for agentic systems; instantiates Stage Allocation for L1-L4 layers
+│   ├── class-balancing              # log inverse freq → Box-Cox normalize → ratio weights for imbalanced classifiers
 │   ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
-│   ├── representation-pipeline      # representation design: raw signal → embedding space
-│   └── stratified-quota-sampling    # balance imbalanced datasets: Box-Cox normalization → Fibonacci-tiered quotas → relevance-weighted sampling within tiers
+│   └── representation-pipeline      # representation design: raw signal → embedding space
 │
 ├── artifacts/                       # masterpiece outputs and information design
 │   ├── documentation                # choose canonical doc vs changelog vs timestamped fixes-applied artifact
@@ -65,9 +71,12 @@ skills/
 │   ├── gist_correlation_matrix      # sorted correlation matrix as complete relational map; two sorting approaches (orthogonal vs coverage)
 │   └── spiral-radial-clustering-display  # multi-dimensional spiral visualization; GMM+HDBSCAN+ordering→UMAP 2D with Gestalt encoding
 │
-└── learning/                        # reinforcement learning and policy optimization
-    ├── deep-q-rl                    # DQN + Russian Doll MCTS for any scored discrete-action framework; code-rl extension
-    └── siamese_from_correlation_matrix  # derive metric-learning pairs directly from embedding/correlation structure
+├── learning/                        # reinforcement learning and policy optimization
+│   ├── deep-q-rl                    # DQN + Russian Doll MCTS for any scored discrete-action framework; code-rl extension
+│   └── siamese_from_correlation_matrix  # derive metric-learning pairs directly from embedding/correlation structure
+│
+└── pipelines/                       # end-to-end domain workflows (invoke sub-skills as needed)
+    └── pdf-extraction               # docling→base64 strip→VLM→reinsert→methods; table enhancement with tabula+camelot+VLM fusion; classifier training via class-balancing
 ```
 
 ## Key Relationships
@@ -95,8 +104,10 @@ skills/
 21. `skill-wiki` is the meta-skill governing the living skill library lifecycle. It owns the intake pipeline, promotion gates, crystallization protocol, supersession rules, sidecar conventions (EVIDENCE.md, HISTORY.md), and the periodic sweep that keeps skills consistent over time. It is NOT memory storage (→ `agentic_kg_memory`) and NOT project state (→ `memory-bank`).
 22. `documentation` decides which durable doc artifact to update: canonical README/spec, cumulative changelog, or a timestamped fixes-applied note.
 23. `response-style` governs user-facing prose: voice preservation, anti-cliche writing, and answer coherence. Harness-state coherence remains with `agentic-harness`.
-24. `agentic-hyperparm` tunes the behavioral dial set of an agent (retrieval depth, reranking, chunking, context budget, planning depth, verification passes, abstention policy, sampler settings). Distinct from `optuna-nested-cv` (ML search engine) and `hyper-parm_tuning` (retrieval/ranking stack tuning) — this skill targets agent cognitive parameters, not model weights or pipeline architecture. Uses `optuna-nested-cv` as the search engine and `mlflow` for trial lineage.
-25. `stratified-quota-sampling` balances imbalanced datasets via Box-Cox normalization → Fibonacci-tiered quotas (5/8/13 at ±1σ) → relevance-weighted sampling within tiers. Use when naive top-N or uniform sampling fails due to long-tail class imbalance. Distinct from data augmentation — this is a selection/allocation protocol, not a generation one.
+24. `class-balancing` is a general-purpose class weight protocol. It computes log inverse frequency per class, applies Box-Cox normalization to tame the distribution tail, clips negatives, and normalizes to ratios for use as `class_weight` in sklearn or `weight` in PyTorch CrossEntropyLoss. Used anywhere labeled data has heavy class imbalance — layout element classification, NER, retrieval judgment labeling.
+25. `pdf-extraction` is the end-to-end PDF→enriched-Markdown pipeline workflow: docling→base64 strip→VLM image description→reinsert→methods extraction (5 phases via `run_pipeline.bat`). Includes a table enhancement sub-pipeline: docling JSON bboxes→pymupdf crop→tabula+camelot extraction→VLM fusion→patched Markdown. The layout classifier uses `class-balancing` for training. Standalone workflow skill; not a child of `agentic-harness`.
+26. `openspec-workflow` is the spec-driven product/change lifecycle skill. Its companion action skills (`openspec-propose`, `openspec-explore`, `openspec-apply-change`, `openspec-archive-change`) are command-shaped entry points into the same OpenSpec operating model.
+27. `fabro-create-workflow` is the Fabro graph/run-config authoring companion. It can support `openspec-workflow` when a repo needs a new Fabro pipeline, but it is also usable as a standalone workflow-design skill.
 
 ## MCG Foundation — The Conceptual Backbone
 
@@ -186,12 +197,17 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | Stage | Skill(s) |
 |---|---|
 | Understand intent, decompose | `reasoning`, `architecture` |
+| Explore requirements before formalizing a change | `openspec-explore`, `reasoning` |
+| Draft OpenSpec artifacts for a new change | `openspec-propose`, `openspec-workflow` |
 | Execute multi-step task autonomously | `react_agent` |
 | Generate / modify code | `code` |
 | Test-driven implementation | `tdd-agent` |
 | Isolate and fix bugs | `debugging` |
 | Autonomous fix-run-retry loop | `debugging` (self-repair section) |
 | Verify behavior, write tests | `validation` |
+| Implement tasks from a spec-driven change | `openspec-apply-change`, `openspec-workflow` |
+| Finalize/archive a completed spec-driven change | `openspec-archive-change`, `openspec-workflow` |
+| Author Fabro workflow graphs and run configs | `fabro-create-workflow` |
 | Produce README / changelog / fixes-applied docs | `documentation` |
 | Iterative output quality improvement | `evaluator-optimizer` |
 | Autonomous hill-climbing on a metric | `autoresearch` |
@@ -205,6 +221,8 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | MCP tool registration and routing | `mcp-tool-registry` |
 | Offline batch eval, regression detection | `checklist` (eval-pipeline section) |
 | Hyperparameter search / training | `optuna-nested-cv`, `mlflow` |
+| Imbalanced classifier class weights | `class-balancing` |
+| PDF→enriched-Markdown pipeline | `pdf-extraction` |
 | Semantic knowledge retrieval | `agentic_kg_memory`, `gist-retriever` |
 | Cross-session episodic recall | `agentic_kg_memory` (episodic section) |
 | RL from code execution feedback | `deep-q-rl` (code-rl section) |
@@ -215,6 +233,8 @@ This library is optimized for automated software development. Skill-to-pipeline 
 
 ## Recent Direction
 
+- **2026-05-02**: Added `class-balancing` (log inverse freq → Box-Cox → ratio weights for imbalanced classifiers) and `pdf-extraction` (full docling pipeline + table enhancement via tabula+camelot+VLM fusion). `hyper-parm_tuning` now frames Weighted Stage Allocation as the canonical cross-skill pattern; `agentic-hyperparm` is the agent-specific instantiation. `arxiv-bridge` was updated with CLI flags and a sequential-only warning.
+- Imported the portable OpenSpec/Fabro skill family as live agent skills: `openspec-workflow`, `openspec-propose`, `openspec-explore`, `openspec-apply-change`, `openspec-archive-change`, and `fabro-create-workflow`. Current rollout is agent-only first; any dark-factory pipeline promotion remains a separate second pass.
 - **Wave 3 Pareto additions** (Tier 3, scores 6–9): `autoresearch` (new skill); `context-engineering` section → `code`; `eval-pipeline` section → `checklist`; `agent-as-ci-gate` full protocol → `agent-governance`; `code-rl` section → `deep-q-rl`. All 15 Pareto candidates now implemented.
 - **Super System Prompt extraction finished**: added `documentation` (timestamped-vs-cumulative doc strategy) and `response-style` (voice preservation, anti-cliche prose, user-facing coherence).
 - **Wave 2 Pareto additions** (Tier 2, scores 12–16): `context-compaction`, `security-review`, `mcp-tool-registry` (new skills); `self-repair` section → `debugging`; `hierarchical-task-planning` section → `agentic-harness`; `episodic-memory` section → `agentic_kg_memory`.
