@@ -112,18 +112,50 @@ docling JSON  →  table bboxes (BOTTOMLEFT coords)
           ┌──────────┼──────────┐
           │          │          │
      pymupdf      tabula     camelot
-    (crop PNG)  (java text) (line detect)
+    (crop PNG)  (java text) (lattice→stream)
           │          │          │
           └──────────┴──────────┘
                      │
                Ollama VLM (qwen3-vl:2b)
+               [image = authoritative]
                      │
-              enhanced MD table
+               Jaccard fingerprint
+               (MD block matching)
+                     │
+              patched MD in-place
 ```
 
-Tabula uses percentage area coordinates (from top-left); camelot uses PDF
-point coordinates (BOTTOMLEFT origin). The VLM receives all three sources
-and the cropped image, uses the image as authoritative truth.
+### Extractor failure modes (in VLM arbitration prompt)
+
+| Extractor | Failure mode |
+|-----------|-------------|
+| Docling | May hallucinate column spans in complex tables; reliable for simple grids |
+| Tabula | Column alignment drifts on rotated/skewed tables; needs clear delimiters |
+| Camelot lattice | Requires visible grid lines; splits merged/spanning cells |
+| Camelot stream | Column boundaries drift in multi-column/dense layouts |
+
+The VLM prompt explicitly names each failure mode so the judge doesn't simply
+pick the longest output.
+
+### Camelot pre-classification
+
+`extract_camelot` returns `(text, flavor, accuracy_pct)`. Lattice is tried
+first; if it succeeds, `accuracy >= 80` signals a ruled table. The flavor and
+accuracy are passed to the VLM prompt as context — a lattice run with 95%
+accuracy is a more trustworthy input than a stream run with 40%.
+
+### Cross-reference: JSON table → MD pipe block
+
+`find_md_table_match(md_content, docling_md, fallback_idx)` uses Jaccard
+token overlap between the docling table reconstruction and each `|...|` pipe
+block in the markdown. If the best overlap score ≥ 0.25 the fingerprint match
+is used; otherwise falls back to positional (N-th JSON table → N-th MD block).
+This prevents silent wrong-block patching when table counts diverge between
+docling JSON and the rendered markdown.
+
+Coordinate spaces: tabula uses percentage coordinates from top-left; camelot
+uses PDF points in BOTTOMLEFT origin. Both are converted via `_tabula_area`
+and `_camelot_area` helpers from the docling BOTTOMLEFT bbox.
 
 ---
 
@@ -222,6 +254,149 @@ When `deep-research` encounters a PDF URL or local path:
 The `_methods.md` output is the primary enrichment artifact — it contains
 the paper's core algorithmic contributions as structured pseudocode, suitable
 for RAG chunking and similarity search.
+
+---
+
+## Figure / Schematic Transcription (Phase 3)
+
+`vlm_describe.py` runs a single generic prompt for all images. For **annotated
+diagrams, schematics, and parts illustrations** this is insufficient — the
+spatial relationship between annotation labels and the components they point to
+is lost in a prose caption.
+
+### Image type taxonomy
+
+| Type | Best output format | Prompt strategy |
+|------|--------------------|-----------------|
+| Chart / plot | Markdown table of data series + axis labels | Extract values explicitly |
+| Simple diagram / flowchart | Numbered list of nodes + edges | "List every labeled box and every arrow" |
+| Annotated part / assembly | Structured list: component → annotation text → spatial relationship | Two-pass (labels first, then associations) |
+| Circuit / schematic | Component list + net list or ASCII topology | "List every component identifier and its connections" |
+| Photo (no annotation) | Single-paragraph dense caption | Generic PROMPT is fine |
+
+### Two-pass strategy for annotated images
+
+For images where annotation labels point to specific parts:
+
+**Pass 1 — label extraction:**
+```
+List every text label visible in this image, exactly as written.
+Return as a JSON array of strings.
+```
+
+**Pass 2 — association:**
+```
+For each label below, identify what component or region it points to
+and describe that component's function or appearance.
+Labels: {labels_from_pass1}
+Return as JSON: [{"label": "...", "component": "...", "description": "..."}]
+```
+
+The two-pass approach prevents the model from hallucinating label text in a
+single-pass description where spatial attention competes with content generation.
+
+### Structured output for schematics
+
+For circuit diagrams or architecture schematics, request a net/edge list rather
+than prose — this is semantically lossless and RAG-searchable:
+
+```
+Transcribe this schematic. Return JSON:
+{
+  "components": [{"id": "...", "type": "...", "label": "..."}],
+  "connections": [{"from": "id", "to": "id", "label": "..."}]
+}
+```
+
+### Integration point
+
+These specialized prompts are not yet wired into `vlm_describe.py`. Docling's
+own layout labels (`picture` vs `table` vs `figure`) provide the classification
+signal — no separate classifier call needed.
+
+Recommended implementation path:
+1. Add a `PROMPT_TEMPLATES` dict keyed by docling label type
+2. Pass docling label to `vlm_describe.py` via the CSV `image_type` column
+3. Keep current generic `PROMPT` as the `picture`/unknown fallback
+4. `value_added` gate is unchanged — runs before the type-specific prompt
+
+### Multimodal RAG strategy for diagrams
+
+**Research conclusion (ColPali paper arXiv:2407.01449, SciGraphQA arXiv:2308.03349,
+DocParsing survey arXiv:2410.21169):**
+
+| Approach | Retrieval (diagrams) | Generation | Verdict |
+|---|---|---|---|
+| Text transcription only (current) | ⚠️ Loses spatial/structural info | ❌ No image at gen time | **Broken for diagrams** |
+| **Hybrid: description for retrieval + base64 at gen time** | ✅ Text finds relevant chunks | ✅ VLM gets full image | **Production optimum** |
+| CLIP/SigLIP visual embedding | ❌ Worse than text on documents | — | Not suitable |
+| ColPali (page-level patch vectors) | ✅✅ Best on visually rich docs | ✅ | Long-term; needs GPU infra |
+
+**Critical gap in the current pipeline**: `vlm_describe.py` computes descriptions
+and writes them to `{paper_id}_images.csv`, but `ingestion/arxiv_chunking_pipeline.py`
+never reads the CSV. Chunks contain `<image_NNN>` placeholder tags but no
+descriptions — the VLM work is discarded before retrieval.
+
+**Tier 1 fix (no new infrastructure):** In the chunking pipeline, load
+`{paper_id}_images.csv` and expand `<image_NNN>` to:
+```
+<image_001 desc="VLM description here" value_added="true">
+```
+This makes descriptions BM25/dense searchable at zero additional cost.
+
+**Tier 2 (hybrid production pattern):** Store per-image in pgvector chunks:
+- `description` (text, for retrieval)
+- `base64_data` (for VLM at answer generation time)
+- `value_added` flag
+- `paper_id` + `image_index` cross-reference
+
+At query time: text retrieval finds the chunk → image base64 is fetched →
+passed to VLM alongside text context. Spatial structure (annotations, wire
+topology, call-outs) is preserved for answering, not transcribed away.
+
+**Tier 3 (long-term):** ColPali/ColQwen2 for L1 visual retrieval. Stores
+1024×128 float32 patch embeddings per page (~257KB). MaxSim late interaction
+over patches — each query token attends to the most relevant image region.
+~0.16s/page indexing vs. 10-30s for captioning. ColQwen2 (Qwen2-VL 2B)
+outperforms ColPali by +5.3 nDCG@5. Given Qwen3-VL is already in this
+pipeline, ColQwen2 is a natural Tier 3 upgrade.
+
+### Multimodal RAG strategy for diagrams
+
+**Architecture context**: This pipeline is **not** a chunked retrieval pipeline.
+Retrieval uses titles/abstracts only (Chroma + manual BM25 on disk). The PDF
+pipeline runs only after a paper is already selected for deeper reading. The
+output (`_methods.md`) is a reading/extraction artifact, not a retrieval document.
+
+**Research conclusion (ColPali arXiv:2407.01449, SciGraphQA arXiv:2308.03349):**
+For annotated parts diagrams, circuit schematics, and architecture diagrams,
+text transcription is measurably lossy — spatial topology (what label points
+at what, which wire connects where) cannot be faithfully recovered as prose.
+
+**Correct pattern for this pipeline:**
+- Infographics, charts, plots → VLM description in `_methods.md` is sufficient
+- Schematics, annotated assemblies, circuit diagrams → preserve base64, pass
+  image + question to VLM at query time rather than transcribing upfront
+
+The base64 already exists after Phase 2: all images are stored in
+`{stem}_images.csv` keyed by `<image_NNN>` tag. Table crops are in
+`{stem}_table_crops/`. No new storage required.
+
+**Query-time pattern** (single paper, no retrieval layer):
+```python
+# Load CSV, find image by tag
+df = pd.read_csv("paper_images.csv")
+row = df[df.image_index == "001"].iloc[0]
+b64 = row["base64_data"]
+# Pass image + question to VLM
+response = ollama.generate(model="qwen3-vl:2b",
+    prompt="What does the feedback loop in this diagram do?",
+    images=[b64])
+```
+
+**What NOT to do**: CLIP/SigLIP embeddings for document images — benchmarks
+show they perform worse than BM25 on document retrieval. ColPali is only
+relevant if moving to a chunked/page-level retrieval architecture later.
 
 ---
 
