@@ -57,6 +57,19 @@ resolved blocker - not answering a question or writing a snippet):
 - Call update_memory on activeContext.md and progress.md to record what changed
 - Call add_todo(workspace_root=<git_root>) for any deferred work identified during the task
 
+## Skill Library Entry Point
+
+Use `/root/.copilot/skills/README.md` as the canonical skill map before selecting,
+adding, moving, or wiring skills. Treat that README as the frontpage/index for the
+live skills tree.
+
+Important current surfaces:
+- `agentic-hyperparm` is the agent-specific behavioral tuning skill.
+- `hyper-parm_tuning` retains the broader Weighted Stage Allocation pattern.
+- `class-balancing` is the class-weighting protocol for imbalanced classifiers.
+- `pdf-extraction` is the standalone PDF -> enriched-Markdown workflow and uses
+  `class-balancing` for its layout-classifier training path.
+
 # Operating Contract
 	
 | Principle | Problem It Solves | The One-Liner |
@@ -199,6 +212,9 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Code generation, modification, or review | `code` |
 | Structuring context, files, prompts for LLM effectiveness | `code` (context-engineering section) |
 | README / changelog / release-note / fixes-applied updates | `documentation` |
+| Behavioral hyperparameter tuning for agentic systems | `agentic-hyperparm` |
+| Imbalanced classifier class weighting | `class-balancing` |
+| PDF to enriched-Markdown extraction workflow | `pdf-extraction` |
 | Test-driven implementation (Red→Green→Refactor) | `tdd-agent` |
 | Autonomous hill-climbing on a measurable objective | `autoresearch` |
 | Test design, validation, or pipeline output verification | `validation` |
