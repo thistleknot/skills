@@ -41,6 +41,31 @@ reasoning_client = OpenAI(api_key="dummy-key", base_url="http://127.0.0.1:8069/v
 If copilot-proxy is unavailable, fall back to whatever model is active in the
 current session — the skill logic is model-agnostic.
 
+## Default Agent Settings
+
+This skill inherits its behavioral hyperparameters from
+`agentic-harness/default_agent_settings.json`. Load them at run init:
+
+```python
+import json
+from pathlib import Path
+
+HARNESS_DIR = Path(__file__).parents[1] / "agentic-harness"
+DEFAULT_SETTINGS = json.loads((HARNESS_DIR / "default_agent_settings.json").read_text())
+
+def get_agent_settings(**overrides) -> dict:
+    return {**DEFAULT_SETTINGS, **overrides}
+
+# Example: react-agent uses defaults as-is
+settings = get_agent_settings()
+# retrieval_depth=5, reranking="llm_judge", context_budget=512,
+# planning_depth=1, verification_passes=0, temperature=0.0,
+# top_p=0.9, frequency_penalty=0.7, abstention_policy="exclude_if_low"
+```
+
+Override only what diverges from the contract.
+See `agentic-harness/SKILL.md § Default Agent Settings` for the full parameter reference.
+
 ## Core Thesis
 
 An LLM agent given a complex task fails in predictable ways: illegal actions

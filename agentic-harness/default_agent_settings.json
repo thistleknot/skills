@@ -1,0 +1,12 @@
+{
+  "_comment": "Default behavioral hyperparameters for agentic harness pipelines. Loaded by deep-research and react-agent as their baseline config. Override per-run where needed.",
+  "retrieval_depth": 5,
+  "reranking": "llm_judge",
+  "context_budget": 512,
+  "planning_depth": 1,
+  "verification_passes": 0,
+  "temperature": 0.0,
+  "top_p": 0.9,
+  "frequency_penalty": 0.7,
+  "abstention_policy": "exclude_if_low"
+}

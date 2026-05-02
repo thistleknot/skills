@@ -144,6 +144,57 @@ Current working default:
 This keeps the stack inspectable and prevents "backend support" from meaning
 "a helper module exists somewhere with unit tests."
 
+## Default Agent Settings
+
+Canonical behavioral hyperparameters live in `default_agent_settings.json`
+(same folder as this skill). All harness applications — `deep-research`,
+`react-agent`, and any future harness sub-skill — load this file as their
+baseline and override only what diverges from the defaults.
+
+```json
+// agentic-harness/default_agent_settings.json
+{
+  "retrieval_depth": 5,
+  "reranking": "llm_judge",
+  "context_budget": 512,
+  "planning_depth": 1,
+  "verification_passes": 0,
+  "temperature": 0.0,
+  "top_p": 0.9,
+  "frequency_penalty": 0.7,
+  "abstention_policy": "exclude_if_low"
+}
+```
+
+| Param | Default | What it controls |
+|---|---|---|
+| `retrieval_depth` | 5 | ReAct iterations — think→act→observe loops; agent gets 4 analysis steps before the final answer |
+| `reranking` | `llm_judge` | After multi-step analysis, a synthesis call reconciles accumulated steps before output; `"none"` skips |
+| `context_budget` | 512 | Chars of prior-step analysis carried into each next step; 0 = stateless, 2048 = full memory |
+| `planning_depth` | 1 | CoT steps inside the final JSON call; 1 = single-shot answer generation |
+| `verification_passes` | 0 | Self-critique loops after the answer; 0 = no second-guessing |
+| `temperature` | 0.0 | Sampling entropy; 0 = deterministic/greedy |
+| `top_p` | 0.9 | Nucleus sampling cutoff; prunes the bottom 10% probability mass |
+| `frequency_penalty` | 0.7 | Suppresses token repetition; prevents re-selecting the same tokens across steps |
+| `abstention_policy` | `exclude_if_low` | Low-confidence picks are dropped from the final selection rather than included |
+
+**Loading pattern (Python):**
+
+```python
+import json
+from pathlib import Path
+
+HARNESS_DIR = Path(__file__).parent  # or absolute path to agentic-harness/
+DEFAULT_SETTINGS = json.loads((HARNESS_DIR / "default_agent_settings.json").read_text())
+
+def get_agent_settings(**overrides) -> dict:
+    """Return merged settings: defaults + caller overrides."""
+    return {**DEFAULT_SETTINGS, **overrides}
+```
+
+Sub-skills call `get_agent_settings()` with only the keys they need to change.
+The defaults are the contract; overrides are the exception.
+
 ## Repo Mirror Guidance
 
 When this skill is mirrored into a project repository, keep the repo copy
