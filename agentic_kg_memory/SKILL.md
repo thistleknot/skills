@@ -250,7 +250,7 @@ Recommended event hooks:
 | **on_new_source** | auto-ingest, extract triplets, update graph, update index.md |
 | **on_session_start** | load relevant context pages based on recent activity and current task |
 | **on_session_end** | compress session observations into episodic entries, file insights back to pages |
-| **on_query** | check whether the answer is worth filing back (quality score > threshold) |
+| **on_query** | check whether the answer is worth filing back (confidence > threshold) |
 | **on_memory_write** | check for contradictions with existing knowledge, trigger supersession if warranted |
 | **on_schedule** | periodic lint, consolidation pass, temporal retention decay |
 
@@ -779,7 +779,7 @@ This is the escape hatch that keeps the living graph from becoming a headache:
 ## Three-Tier Confidence Stack
 
 ```text
-triplet      extraction prior      -> observed/inferred + mutable confidence
+triplet      extraction prior      -> observed/inferred + explicit confidence
 page         retrieval fitness     -> objective/throughline/entity fit
 throughline  runtime posterior     -> MemRL-style Q-score
 ```
@@ -863,9 +863,16 @@ object_signal
 span_id
 doc_id
 epistemics        # observed | inferred
-confidence        # mutable, not write-once
+confidence        # explicit extraction-time confidence, mutable as downstream evidence updates it
 created_at
 updated_at
+```
+
+When serializing a triplet for training or audit surfaces, emit the confidence inline with
+epistemics:
+
+```text
+subject | predicate (observed, confidence=0.92) | object
 ```
 
 ### Dense triplet representation
@@ -904,7 +911,10 @@ not a second LLM-generated semantic summary unless you can show a clear gain.
 
 Use extraction-time priors, but do not freeze them forever.
 
-A minimal prior:
+Each extracted fact should carry an explicit confidence scalar alongside its
+`observed` / `inferred` tag. If the extractor does not emit one directly, initialize it
+from epistemics:
+
 - observed -> `1.0`
 - inferred -> `0.5`
 

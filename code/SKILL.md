@@ -111,10 +111,13 @@ class AbductiveReasoning(BaseModel):
     conclusion: str              # hypothesis maximising entailed_facts coverage
 ```
 
-- Predicate tags (`observed` / `inferred`) apply to both sets.
+- Predicate tags (`observed` / `inferred`) and explicit confidence scores apply to both sets.
 - Every extracted fact must appear in exactly one set — enforce with `assert len(entailed & non_entailed) == 0`.
 - The conclusion should be chosen by the LLM to **maximise** the size of `entailed_facts`.
 - `Set[str]` gives deduplication; deterministic ordering is applied in post-processing.
+
+Default training / audit serialization:
+`subject | predicate (observed, confidence=0.92) | object`
 
 ### Deterministic ordering for training samples
 Hard-code the sort key into the serialised training string before writing to disk.
@@ -135,10 +138,10 @@ Include all reasoning layers in `output_text`, not just the conclusion:
 
 ```
 [ENTAILED]
-subject | predicate (observed|inferred) | object
+subject | predicate (observed|inferred, confidence=0.92) | object
 ...
 [NON-ENTAILED]
-subject | predicate (observed|inferred) | object
+subject | predicate (observed|inferred, confidence=0.68) | object
 ...
 [CONCLUSION]
 The abductive hypothesis.
@@ -146,6 +149,16 @@ The abductive hypothesis.
 
 Non-entailed facts in the training target teach the student model which observations
 exist but are not load-bearing — a richer epistemics signal than entailed-only output.
+
+### Training record filtering
+When training records vary materially in token length, filter them before downstream
+training using the same policy as the QLoRA length filter:
+
+1. tokenize the full training record
+2. log-normalize token lengths
+3. apply a Box-Cox transform
+4. compute transformed median and MAD
+5. discard records outside `median ± 2 * MAD`
 
 ### Pre-processing order matters
 For quotes / natural language input: `emojibake.fix(text)` **before** `nltk.sent_tokenize`.

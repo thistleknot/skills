@@ -44,6 +44,7 @@ class EnrichedTriplet:
     # Metadata
     polarity: str = "affirmed"
     inference_type: str = "observed"
+    confidence: float = 1.0
     
     # For BM25 enrichment
     bm25_subject: str = ""  # Subject synsets + hypernyms joined
@@ -109,6 +110,7 @@ class EnrichedTriplet:
             
             "polarity": self.polarity,
             "inference_type": self.inference_type,
+            "confidence": self.confidence,
         }
 
 

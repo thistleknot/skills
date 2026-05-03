@@ -72,6 +72,7 @@ class TestEnrichedTriplet:
         assert enriched.subject == "dog"
         assert enriched.predicate == "eats"
         assert enriched.object == "meat"
+        assert enriched.confidence == 1.0
     
     def test_enriched_triplet_computes_canonical(self):
         """Should compute canonical identities after initialization."""
@@ -155,6 +156,7 @@ class TestEnrichedTriplet:
         assert isinstance(d, dict)
         assert d["subject"] == "dog"
         assert d["subject_canonical"] == ("dog.n.01",)
+        assert d["confidence"] == 1.0
 
 
 class TestTripletEnricher:

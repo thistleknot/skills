@@ -48,13 +48,16 @@ It owns:
 - provenance vs ontology boundaries
 
 It does **not** own:
-- triplet confidence updates
+- triplet confidence scoring or updates
 - page or wiki-memory construction
 - NLI retrieval
 - throughline ranking
 - MemRL-style score evolution
 
 Those belong to `agentic_kg_memory`.
+
+`kg_ontology` should preserve triplet epistemics and confidence metadata while it
+canonicalizes spans, but it does not compute or revise that confidence.
 
 ## Core Thesis
 
