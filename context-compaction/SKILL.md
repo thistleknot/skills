@@ -54,6 +54,22 @@ else is pushed to external storage and recalled on demand.
 
 ---
 
+## Context Budget
+
+**Hard budget: compacted instructions + memories ≤ ~4k tokens at session start.**
+
+- Copilot instructions + AGENTS.md injection is the baseline cost — keep it compact.
+- Memory reads at session start must be *targeted*, not bulk dumps.
+  - Do **not** call `list_memory()` or equivalent without a specific question.
+  - Use the L2→L1→L0 cascade: grep/index lookup first, BM25 second, full read last.
+- Each list item in any CompactionPacket field is one sentence max — this is also the
+  storage unit in the broader framework (atomic list elements, never chunked documents).
+
+If instructions + memories exceed 4k tokens before any task work begins, compact memory
+before proceeding.
+
+---
+
 ## Compaction Triggers
 
 | Trigger | Threshold | Action |

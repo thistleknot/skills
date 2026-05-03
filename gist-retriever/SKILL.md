@@ -237,6 +237,18 @@ The expected local storage split is:
 This is enough because the semantic triplet space is already a strong compression
 of the source corpus.
 
+### Atomic list elements — no chunking
+
+**This framework does not chunk.** All stored knowledge lives as atomic-sized list
+elements: individual triplets, single premises, one-sentence facts. The pipeline
+table above uses the word "chunks" to mean *retrieval candidates* (individual records
+returned by BM25/dense search), not split fragments of a larger document.
+
+- Each list element is already at the minimum meaningful unit of information.
+- Reconstruction (Layer 6) assembles elements into logical units for the reader,
+  not the retriever.
+- Never split an atomic element to fit a context budget; evict instead.
+
 ## Fallback Behavior
 
 If Chroma is temporarily unavailable:

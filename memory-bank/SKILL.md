@@ -65,6 +65,24 @@ Do **not** use `memory-bank` for:
 
 Those belong to `agentic_kg_memory`.
 
+## Read Policy — targeted first, bulk last
+
+**Do not call `list_memory()` at session start.** AGENTS.md is auto-injected; it
+already contains the current memory state. Bulk reads blow up context.
+
+| Need | Tool |
+|---|---|
+| Specific fact or decision | `search_memory(query)` |
+| One file | `search_memory(query, file="activeContext.md")` |
+| Full audit / setup | `list_memory()` — use sparingly |
+
+**Budget rule**: instructions + injected memories must stay ≤ ~4k tokens before
+any task work begins. If over budget, compact before proceeding (see `context-compaction`).
+
+The framework stores knowledge as **atomic list elements** — one fact, one sentence,
+one triplet per element. Never bulk-append paragraphs; break into individual items
+so targeted search finds them cleanly.
+
 ## Meta-documentation pattern
 
 The six-file structure inside `~/memory-bank/` is a reusable documentation template —
