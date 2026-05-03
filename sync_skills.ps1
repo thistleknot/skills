@@ -256,7 +256,7 @@ foreach ($mirror in $Mirrors) {
         robocopy $Master $mirror /MIR /L /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" "__pycache__" ".pytest_cache" ".react_agent" /XF "*.pyc" "*.db" "*.jsonl" 2>&1 |
             Where-Object { $_ -match '\S' } | Select-Object -First 20 | ForEach-Object { Write-Host "     $_" -ForegroundColor DarkGray }
     } else {
-        robocopy $Master $mirror /MIR /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" "__pycache__" ".pytest_cache" ".react_agent" /XF "*.pyc" "*.db" "*.jsonl" | Out-Null
+        robocopy $Master $mirror /MIR /NJH /NJS /NDL /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" /XF "*.pyc" "*.db" "*.jsonl" | Out-Null
         $rc = $LASTEXITCODE
         if ($rc -le 1) {
             Write-Host "     OK (exit $rc)" -ForegroundColor Green
@@ -273,7 +273,7 @@ Write-Host @"
   Option A — WinSCP CLI (if winscp.com is on PATH):
     winscp.com /command ``
       "open sftp://$RemoteUser@$RemoteHost" ``
-      "synchronize remote -filemask=`"| .*`" `"$Master`" $RemotePath" ``
+      "synchronize remote -filemask=""|git/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*.*[0-9a-f]*/""  ""$Master"" $RemotePath" ``
       "exit"
 
   Option B — rsync (via WSL or Git Bash):
@@ -297,10 +297,7 @@ if ($launch -eq 'y') {
     $wscp = Get-Command "winscp.com" -ErrorAction SilentlyContinue
     if ($wscp) {
         Write-Host "  Launching WinSCP..." -ForegroundColor Green
-        & winscp.com /command `
-            "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" `
-            "synchronize remote -filemask=`"| .*`" `"$Master`" $RemotePath" `
-            "exit"
+        & winscp.com /command "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" "synchronize remote -filemask=|git/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*.*[0-9a-f]*/ ""$Master"" $RemotePath" "exit"
     } else {
         Write-Host "  winscp.com not found on PATH. Open WinSCP manually and sync:" -ForegroundColor Yellow
         Write-Host "    $Master  -->  $RemoteUser@${RemoteHost}:$RemotePath"

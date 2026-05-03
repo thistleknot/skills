@@ -54,6 +54,21 @@ Minimum backbone behaviors:
 - artifact and evidence production at known paths
 - checkpointed plan / todo / state tracking
 - critic-gated completion rather than "looks good" completion
+- **Critic agent ensemble option:** For difficult problems, the harness can launch an autogen set of critic agents at three sampler settings (conservative, balanced, creative). Each critic independently evaluates the candidate solution. Their feedback is aggregated and compared before finalizing changes. This option is configurable and should be enabled for high-stakes or ambiguous tasks.
+
+### Critic Agent Ensemble Protocol
+
+When enabled, the harness will:
+1. Launch three critic agents, each with a distinct sampler setting:
+   - Conservative (low temperature, strict rubric)
+   - Balanced (default settings)
+   - Creative (higher temperature, permissive rubric)
+2. Collect structured feedback/verdicts from each critic.
+3. Aggregate and disposition the feedback (e.g., majority vote, consensus, or escalate to human if critics disagree).
+4. Only finalize changes if the aggregated verdict meets acceptance criteria.
+5. Log all critic feedback for traceability.
+
+This protocol is recommended for ambiguous, high-impact, or novel tasks where single-critic evaluation may be insufficient.
 
 Extra planners, evaluators, memory layers, or multi-agent rooms can sit on top
 of this backbone, but they should not replace it.

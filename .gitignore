@@ -18,6 +18,7 @@ __pycache__/
 .venv/
 dist/
 build/
+test_*.py  # Test files are not versioned
 
 # Todo state (local, not versioned)
 .todo/
