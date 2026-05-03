@@ -50,6 +50,7 @@ skills/
 │   ├── security-review              # STRIDE-A, OWASP Top 10, data-flow tracing, secret/CVE detection
 │   ├── build-observability          # run-centric observability contract: runs/events/commands, collectors, dashboards, trace enrichment
 │   ├── timeout-guard                # runaway-task policy; interrupt and recovery rules
+│   ├── git-workflow                 # branch strategy (test→dev→main), push gates, LLM verification protocol with headless-browser checks
 │   └── skill-wiki                   # living skill library lifecycle; intake → staged → active → superseded governance
 │
 ├── memory/                          # persist knowledge across sessions and tasks
@@ -125,6 +126,7 @@ skills/
 34. `doc-synthesizer` parses project structure via AST (Python focus; all languages via markers), builds dependency graphs, and generates Mermaid diagrams for module dependencies and data flow. Output feeds `documentation`, `codebase-knowledge-graph`, and architecture review. URI fetch/crawl extensible for Phase 2.
 35. `build-observability` is the run-centric observability layer for agentic execution. `agentic-harness` owns control flow and retries; `build-observability` projects runtime exhaust into normalized `runs/events/commands` records and operator-facing dashboard views.
 36. `react-fastapi-sqlite` is the full-stack application scaffold skill: React frontend (with TanStack Query for server-state caching), FastAPI backend (with SQLModel ORM layer), and SQLite file-based database. Use when building SPAs with Python REST backends, configuring client-side data fetching and invalidation patterns, or structuring domain-driven CRUD operations. Output: production-ready project layout with separation of concerns (api/ → hooks/ → pages/components/ hierarchy). Integrates with `code` for implementation standards and `validation` for integration testing.
+37. `git-workflow` is the branch strategy and LLM safety protocol for this repository. Enforces test→dev→main push gates, requires LLM verification against last known working commit before each push, and pairs `code` verification (git diff checks) with `headless-browser-verification` screenshots for web frontend changes. Prevents accidental pushes to main by requiring explicit user approval at each stage.
 
 ## MCG Foundation — The Conceptual Backbone
 
