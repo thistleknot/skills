@@ -58,6 +58,7 @@ skills/
 │   │   # meta: DESCRIPTION/ARCHITECTURE/HISTORY pattern — applies to any skill folder
 │   ├── todo                         # sqlite-backed task tracking with FastMCP bridge
 │   ├── cognitive-taxonomy           # unified memory classification: implicit/explicit/agentic paradigms; forms/functions/dynamics; System 1 vs 2 routing
+│   ├── memory-architecture          # canonical 5-layer memory stack design: 4 templates (factual KB, personal assistant, autonomous agent, research); inter-layer routing; entity/procedure/query flows
 │   ├── agentic_kg_memory            # MCG Context Graph side: semantic memory policy, retrieval, patterns, tribal knowledge, episodic memory
 │   │   ├── kg_ontology              # MCG DKG entity-identity layer: synset/hypernym BM25 canonicalization
 │   │   └── gist-retriever           # layered sparse+dense retrieval engine (BM25 + Chroma)
@@ -130,6 +131,8 @@ skills/
 37. `git-workflow` is the branch strategy and LLM safety protocol for this repository. Enforces test→dev→main push gates, requires LLM verification against last known working commit before each push, and pairs `code` verification (git diff checks) with `headless-browser-verification` screenshots for web frontend changes. Prevents accidental pushes to main by requiring explicit user approval at each stage.
 
 38. `cognitive-taxonomy` is the **reference skill for all memory decisions**. It synthesizes four peer-reviewed papers into a unified classification system: implicit/explicit/agentic paradigms, forms/functions/dynamics taxonomy, biological-artificial crosswalk, and neuro-symbolic System 1 vs System 2 dual-process reasoning. Use it to classify memory patterns, route queries correctly, diagnose underperformance (why is vector-only failing?), and design new memory architectures. It's a pure reference skill (no code changes) that sits above all memory subsystems (`agentic_kg_memory`, `procedural-memory`, `continuity-log`, `context-compaction`).
+
+39. `memory-architecture` is the **canonical design reference for agent memory systems**. Implements the Meta Context Graph layered stack with 4 concrete templates: (1) factual knowledge base (Implicit→Explicit→Working), (2) personal assistant with memory (adds Episodic), (3) autonomous agent (adds Procedural), (4) research/knowledge synthesis pipeline. Each template includes full 5-layer architecture, entity anchor flow, procedure discovery flow, query routing lifecycle, and anti-patterns. Use when designing a new agent with memory, evaluating existing systems for gaps, onboarding developers. Depends on `cognitive-taxonomy` for classification; feeds into `procedural-memory`, `agentic_kg_memory`, `context-compaction` for implementation.
 
 ## MCG Foundation — The Conceptual Backbone
 

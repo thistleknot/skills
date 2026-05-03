@@ -6,11 +6,11 @@ description: >
   provides design templates for combining memory skills into coherent systems.
   Use when designing a new memory-augmented agent system or evaluating an existing
   one for gaps.
-status: staged
+status: active
 tier: L2
-last_validated: 2026-05-02
+last_validated: 2026-05-03
 supersedes: []
-validation_method: session
+validation_method: documentation_review
 ---
 
 # Memory Architecture — Unified Design Reference
