@@ -7,11 +7,11 @@ description: >
   (2603.15280). Use when classifying a memory pattern, choosing an architecture,
   explaining why vector+BM25 alone is insufficient, or deciding what kind of memory
   to use for a given task type.
-status: staged
+status: active
 tier: L2
-last_validated: 2026-05-02
+last_validated: 2026-05-03
 supersedes: []
-validation_method: session
+validation_method: documentation_review
 ---
 
 # Cognitive Taxonomy — Memory Classification Reference
