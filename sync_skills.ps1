@@ -273,11 +273,11 @@ Write-Host @"
   Option A — WinSCP CLI (if winscp.com is on PATH):
     winscp.com /command ``
       "open sftp://$RemoteUser@$RemoteHost" ``
-      "synchronize remote `"$Master`" $RemotePath" ``
+      "synchronize remote -filemask=`"| .*`" `"$Master`" $RemotePath" ``
       "exit"
 
   Option B — rsync (via WSL or Git Bash):
-    rsync -avz --delete "$($Master.Replace('\','/'))" $RemoteUser@${RemoteHost}:$RemotePath
+    rsync -avz --delete --exclude='.*' "$($Master.Replace('\','/'))" $RemoteUser@${RemoteHost}:$RemotePath
 
   Option C — Manual WinSCP:
     Host    : $RemoteHost
@@ -299,7 +299,7 @@ if ($launch -eq 'y') {
         Write-Host "  Launching WinSCP..." -ForegroundColor Green
         & winscp.com /command `
             "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" `
-            "synchronize remote `"$Master`" $RemotePath" `
+            "synchronize remote -filemask=`"| .*`" `"$Master`" $RemotePath" `
             "exit"
     } else {
         Write-Host "  winscp.com not found on PATH. Open WinSCP manually and sync:" -ForegroundColor Yellow
