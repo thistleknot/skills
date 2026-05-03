@@ -92,6 +92,141 @@ training_artifacts/
 
 ---
 
+#### 1a. SPO Training Pipeline Validation (Synthetic Pair Optimization)
+
+**What to capture for SPO/synthetic pair training:**
+
+When training models on synthetic paired data (original ↔ inferred), collect these specific artifacts:
+
+```
+spo_training_artifacts/
+├── optuna_tuning/
+│   ├── optuna_trials.json
+│   │   ├── Trial number, hyperparameters tested, eval_loss achieved
+│   │   ├── All trials in sequence (shows search history)
+│   │   └── Marked: best_trial_number, best_eval_loss
+│   │
+│   ├── optuna_config.yaml
+│   │   ├── Search space: learning rate range, batch size range, dropout range
+│   │   ├── Optimization direction: minimize (loss) or maximize (accuracy)
+│   │   ├── Pruner: patience=5, max_epochs=20
+│   │   └── Sampler: TPE or grid search
+│   │
+│   └── best_hyperparams.yaml
+│       ├── Learning rate (from Optuna)
+│       ├── Batch size
+│       ├── Dropout / regularization
+│       ├── Optimizer (Adam, SGD, etc.)
+│       └── Trial number that found these
+│
+├── training_phase/
+│   ├── best_hyperparams_applied.yaml
+│   │   ├── Same as above (confirmation of what was used for final training)
+│   │   └── "Using best_hyperparams from optuna trial #42"
+│   │
+│   ├── training_log.csv
+│   │   ├── epoch, train_loss, val_loss, eval_loss
+│   │   ├── One row per epoch (full training run)
+│   │   ├── Shows all epochs: 1 through final_epoch
+│   │   └── Timestamps for each epoch
+│   │
+│   ├── training_epochs.txt
+│   │   ├── "Total epochs trained: N"
+│   │   ├── "Early stopping triggered at epoch M (best val_loss at epoch K)"
+│   │   ├── "Final epoch: N"
+│   │   └── "Training time: X hours"
+│   │
+│   └── eval_loss_summary.txt
+│       ├── "Optuna best eval_loss: <value>"
+│       ├── "Final model eval_loss (on holdout): <value>"
+│       ├── "Delta: optuna vs final: <value>"
+│       └── "Interpretation: (improved/regressed/stable)"
+│
+└── holdout_validation/
+    ├── synthetic_pairs_holdout.csv
+    │   ├── Column: original_synthetic (what was in training data)
+    │   ├── Column: inferred_output (what model predicted on holdout)
+    │   ├── Column: match (yes/no, comparing original vs inferred)
+    │   ├── Side-by-side pairing for visual inspection
+    │   └── 50-100 representative samples minimum
+    │
+    ├── holdout_eval_loss.json
+    │   ├── "eval_loss_on_holdout": <final_value>
+    │   ├── "metric": "cross_entropy / mse / custom_loss"
+    │   ├── "dataset_size": N
+    │   └── "Note: If not directly available during training, compute from predictions"
+    │
+    ├── holdout_statistics.txt
+    │   ├── "Total holdout samples: N"
+    │   ├── "Match rate: X%"
+    │   ├── "Mismatch examples: top 10 failures"
+    │   └── "Confidence scores: mean, min, max"
+    │
+    └── loss_comparison.png
+        ├── X-axis: epoch
+        ├── Y-axis: loss (log scale)
+        ├── Line 1: Optuna eval_loss (dashed red, single point at best trial)
+        ├── Line 2: Training phase val_loss (solid blue, all epochs)
+        ├── Line 3: Final holdout eval_loss (dashed green, single point at end)
+        └── Annotations: labels for each, delta between optuna and final
+```
+
+**Key insight: Two eval_loss values**
+- **Optuna eval_loss**: Best loss achieved during hyperparameter tuning phase (small dataset, 20 epochs max)
+- **Final model eval_loss**: Loss on full holdout set after training with best hyperparams (large dataset, full training)
+- These will differ; that's expected. Show both for comparison.
+
+**Validation gate:** Do NOT claim "SPO training complete" until:
+- [ ] Optuna tuning captured: all trials, best trial number, best_eval_loss
+- [ ] Optuna config documented: search space, pruner settings, sampler
+- [ ] Best hyperparameters extracted from Optuna and saved
+- [ ] Full training run logged: epoch, train_loss, val_loss, final epochs count
+- [ ] Final model eval_loss computed on holdout set
+- [ ] Holdout validation: synthetic pairs (original ↔ inferred) shown side-by-side in CSV
+- [ ] Match rate calculated: how many inferred match original
+- [ ] Loss comparison plot: shows Optuna eval_loss vs final model eval_loss visually
+- [ ] If final eval_loss not available, compute it from holdout predictions (show calculation)
+
+**Red flags:**
+- ❌ Optuna trials not documented (can't see hyperparameter search)
+- ❌ Only Optuna eval_loss reported, no final model eval_loss (incomplete validation)
+- ❌ Only final eval_loss reported, no Optuna history (can't verify search was good)
+- ❌ Final eval_loss suspiciously similar to Optuna eval_loss (suggests data leakage or misreporting)
+- ❌ Holdout pairs not shown side-by-side (can't visually verify inferences)
+- ❌ Match rate not calculated (how do we know model is working?)
+- ❌ Epochs trained not documented (reproducibility question)
+- ❌ Loss comparison plot missing (can't see convergence delta)
+
+**Example structure:**
+
+```
+spo_training_artifacts/
+├── optuna_tuning/
+│   ├── optuna_trials.json  (50 trials, best at #42 with eval_loss=0.124)
+│   ├── optuna_config.yaml  (search space, pruner patience=5, max_epochs=20)
+│   └── best_hyperparams.yaml  (lr=0.001, batch_size=32, dropout=0.2)
+│
+├── training_phase/
+│   ├── best_hyperparams_applied.yaml  (same as above, confirmed)
+│   ├── training_log.csv  (120 epochs, final val_loss=0.098)
+│   ├── training_epochs.txt  ("Trained 120 epochs, early stopping at epoch 115")
+│   └── eval_loss_summary.txt  ("Optuna: 0.124, Final: 0.087, improved by 29.8%")
+│
+└── holdout_validation/
+    ├── synthetic_pairs_holdout.csv  (100 rows: original vs inferred)
+    ├── holdout_eval_loss.json  (0.087 on full holdout set)
+    ├── holdout_statistics.txt  ("Match rate: 94.2%")
+    └── loss_comparison.png  (Shows three points: optuna, training curve, final)
+```
+
+**Interpretation guide:**
+- If final eval_loss < Optuna eval_loss: ✅ Training improved hyperparams (expected)
+- If final eval_loss ≈ Optuna eval_loss: ⚠️ No improvement; check for data leakage or plateau
+- If final eval_loss > Optuna eval_loss: ❌ Regression; investigate training dynamics
+- Match rate should be >80% for acceptable model quality; <60% is concerning
+
+---
+
 ### 2. Inference Validation (Predictions on Holdout)
 
 **What to capture:**
