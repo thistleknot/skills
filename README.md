@@ -28,7 +28,8 @@ skills/
 │   ├── validation                   # test design, verification protocol, behavior contracts
 │   ├── architecture                 # system design, abstract-class planning, domain → code mapping
 │   ├── tdd-agent                    # Red→Green→Refactor as distinct agentic phases; test-first design contract
-│   └── autoresearch                 # autonomous iterative hill-climbing: scorer + proposer + git/sqlite checkpoint loop
+│   ├── autoresearch                 # autonomous iterative hill-climbing: scorer + proposer + git/sqlite checkpoint loop
+│   └── react-fastapi-sqlite         # full-stack scaffold: React (TanStack Query) + FastAPI (SQLModel ORM) + SQLite; SPA + REST backend
 │
 ├── orchestration/                   # route work, enforce policy, manage cross-session state
 │   ├── agentic-design-patterns      # LangGraph workflow shape, router/gate topology, manager/BA/dev/QA rooms
@@ -123,6 +124,7 @@ skills/
 33. `test-planner` generates coverage-aware test plans with status flags (🟢 GREEN=DONE, 🟡 YELLOW=PARTIAL, 🔴 RED=MISSING). Proposes concrete scenarios by test level (smoke/unit/integration/e2e/regression) and detects regression subjects via git diff. Output feeds `tdd-agent` for test-driven implementation and `validation` for coverage verification.
 34. `doc-synthesizer` parses project structure via AST (Python focus; all languages via markers), builds dependency graphs, and generates Mermaid diagrams for module dependencies and data flow. Output feeds `documentation`, `codebase-knowledge-graph`, and architecture review. URI fetch/crawl extensible for Phase 2.
 35. `build-observability` is the run-centric observability layer for agentic execution. `agentic-harness` owns control flow and retries; `build-observability` projects runtime exhaust into normalized `runs/events/commands` records and operator-facing dashboard views.
+36. `react-fastapi-sqlite` is the full-stack application scaffold skill: React frontend (with TanStack Query for server-state caching), FastAPI backend (with SQLModel ORM layer), and SQLite file-based database. Use when building SPAs with Python REST backends, configuring client-side data fetching and invalidation patterns, or structuring domain-driven CRUD operations. Output: production-ready project layout with separation of concerns (api/ → hooks/ → pages/components/ hierarchy). Integrates with `code` for implementation standards and `validation` for integration testing.
 
 ## MCG Foundation — The Conceptual Backbone
 
