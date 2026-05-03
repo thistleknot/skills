@@ -251,6 +251,89 @@ visual_artifacts/
 
 ---
 
+#### 4a. UI Module Unit Testing via Hacks (Autonomous Validation)
+
+**Pattern: Temporary layout hacks + headless PNG capture for autonomous unit testing**
+
+When testing UI modules autonomously without manual interaction, use this workflow:
+
+**Workflow:**
+1. **Create hack commit** (test/hack branch or local commit)
+   - Modify HTML/CSS to set default state for isolated module testing
+   - Examples: hide parent containers, set default form values, change layout to show only target module
+   - Commit message: `HACK: Isolate [module] for unit testing via headless PNG capture`
+
+2. **Capture PNG with headless Chromium**
+   ```bash
+   chromium --headless --screenshot=module_test.png \
+     --window-size=1920,1080 \
+     file:///path/to/modified/page.html
+   ```
+
+3. **Validate visually** (automated or manual review)
+   - PNG is clean, module displays correctly in isolation
+   - No rendering errors, no broken layouts
+   - Text legible, colors correct, spacing as expected
+
+4. **Commit proof**
+   - Store PNG: `validation_artifacts/2026-05-03-[module]-unit-test/module_test.png`
+   - Store hack diff: `validation_artifacts/2026-05-03-[module]-unit-test/hack_diff.patch`
+   - Commit message references both
+
+5. **Revert hack** (tracked separately)
+   - `git revert [hack-commit]` or `git reset --hard HEAD~1`
+   - Commit message: `Revert hack: Reset [module] to production state`
+   - This creates an auditable trace: hack → validate → revert
+
+**Storage convention:**
+```
+validation_artifacts/2026-05-03-[module]-unit-test/
+├── module_test.png                 # Headless capture with isolated module
+├── hack_diff.patch                 # Show what UI changes were made
+├── headless_command.txt            # Exact chromium invocation for reproducibility
+├── test_summary.txt                # What was tested, what passed
+└── revert_commit.txt               # SHA of the revert commit (proves we cleaned up)
+```
+
+**Git history for accountability:**
+```
+abc1234 Revert hack: Reset modal to production state
+def5678 Add validation artifacts for modal unit test
+ghi9012 HACK: Isolate modal component for headless PNG testing
+───────────────────────────────────────────────────────
+(clean history: hack is visible, but reverted)
+```
+
+**Integration with headless-browser-verification:**
+- Use headless-browser-verification skill to automate PNG capture and comparison
+- Pairs with this artifact pattern to provide "unit test in isolation" capability
+- Enables autonomous testing of UI modules without manual browser interaction
+
+**Example use case:**
+Testing a modal component:
+1. Hack: Hide all overlays, set modal to always-visible state
+2. Capture: `chromium --screenshot=modal_open.png page.html`
+3. Validate: PNG shows clean, properly-positioned modal with all elements visible
+4. Commit: Store PNG + hack diff as proof
+5. Revert: `git revert [hack-commit]` to restore production state
+
+**Validation gate for this pattern:**
+- [ ] Hack commit clearly labeled "HACK" in message (searchable)
+- [ ] PNG captured with headless Chromium (tool + command documented)
+- [ ] Hack diff saved showing exact UI changes made
+- [ ] PNG looks correct (module renders, no errors)
+- [ ] Revert commit exists (proves cleanup, maintains clean history)
+- [ ] Timeline auditable: hack → validate → revert (3 commits, all visible)
+
+**Red flags:**
+- ❌ Hack commit not clearly labeled (hard to search/audit)
+- ❌ PNG captured with manual browser (not reproducible)
+- ❌ Hack never reverted (leaves code dirty)
+- ❌ No diff saved (can't understand what was hacked)
+- ❌ Multiple hacks stacked without intermediate validation (untraceable)
+
+---
+
 ### 5. API Validation (REST/GraphQL Endpoints)
 
 **What to capture:**
@@ -438,6 +521,7 @@ Before claiming validation passed:
 - `tdd-agent` — before marking Red→Green→Refactor complete, collect artifacts
 - `debugging` — when claiming "bug fixed", prove it with before/after artifacts
 - `git-workflow` — before pushing to dev, validate with artifacts; diff + proof
+- `headless-browser-verification` — UI module unit testing via hacks (Section 4a: hack → capture → validate → revert)
 
 **Pattern:**
 ```
@@ -449,12 +533,25 @@ Before claiming validation passed:
 6. If discrepancy found → iterate, recollect artifacts, revalidate
 ```
 
+**UI Module Testing Pattern (NEW):**
+```
+1. Create hack commit: modify layout/defaults to isolate module
+2. Capture PNG: headless Chromium screenshot of isolated module
+3. Validate: PNG looks correct, module renders, no errors
+4. Commit artifacts: store PNG + hack diff in validation_artifacts/
+5. Revert hack: git revert to restore production state
+6. Auditability: hack → validate → revert visible in git log
+
+See Section 4a for detailed workflow and red flags.
+```
+
 **Never:**
 - ❌ "Validation passed" without artifacts
 - ❌ "Tests passing" without test output logs
 - ❌ "Model trained" without loss curves
 - ❌ "UI looks good" without screenshots
 - ❌ "API working" without request/response examples
+- ❌ "Module tested" without headless PNG proof (for UI work)
 
 Always:
 - ✅ Validation claim + supporting artifacts
@@ -462,6 +559,7 @@ Always:
 - ✅ Artifacts linked to specific commit/version
 - ✅ Before/after comparison where applicable
 - ✅ Error cases demonstrated, not just happy path
+- ✅ Hacks tracked and reverted (for UI module testing)
 
 ---
 
