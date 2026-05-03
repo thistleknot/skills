@@ -20,6 +20,10 @@ skills/
 │   ├── codebase-knowledge-graph     # current-repo whole-system map; foundational vs incidental code; ripple analysis before edits
 │   ├── code                         # implementation standards, naming, refactor sequence
 │   │   └── design-patterns          # GoF / contract / relationship-shape companion to code
+│   ├── code-extraction              # extract source files + configs into copy-paste-ready markdown artifact (docling-style)
+│   ├── diagnostic-scanner           # language-aware compiler/linter scanning; errors/warnings grouped by severity
+│   ├── test-planner                 # coverage-aware test plan generation (green/yellow/red status); regression detection
+│   ├── doc-synthesizer              # AST-based documentation with Mermaid dependency/data-flow diagrams
 │   ├── debugging                    # error isolation, salience tiers, diagnostic strategy, self-repair loop
 │   ├── validation                   # test design, verification protocol, behavior contracts
 │   ├── architecture                 # system design, abstract-class planning, domain → code mapping
@@ -114,7 +118,11 @@ skills/
 28. `fabro-create-workflow` is the Fabro graph/run-config authoring companion. It can support `openspec-workflow` when a repo needs a new Fabro pipeline, but it is also usable as a standalone workflow-design skill.
 29. `agentic-harness` now has an explicit evaluation mix: `checklist` for structured audit artifacts, DSPy-derived metric/reward compile-refine patterns when scoring is explicit, and TextGrad-derived textual-loss loops when the critic must explain how to improve text/code/prompts. Optimizer scores inform repair; artifact-backed verification still decides completion.
 30. `codebase-knowledge-graph` is the current-repository relationship-mapping protocol. It builds the typed module/file/class/function graph and the foundational-vs-incidental distinction that should exist before `code`, `debugging`, or `validation` edits proceed.
-31. `build-observability` is the run-centric observability layer for agentic execution. `agentic-harness` owns control flow and retries; `build-observability` projects runtime exhaust into normalized `runs/events/commands` records and operator-facing dashboard views.
+31. `code-extraction` extracts source files + configs from any project into a unified markdown artifact (docling-style: parse → normalize → markdown + JSON metadata). Supports multi-language detection (Python, Go, Rust, Swift, Java, JS/TS via markers or 8+ source files). Output feeds `codebase-knowledge-graph`, `documentation`, and LLM context assembly.
+32. `diagnostic-scanner` invokes language-appropriate tools (mypy/pylint, go vet, cargo check, swiftc, eslint, etc.) and normalizes errors/warnings by severity and category. Produces fix prompts ready for LLM remediation. Output feeds `validation` and `code` for structured violation handling.
+33. `test-planner` generates coverage-aware test plans with status flags (🟢 GREEN=DONE, 🟡 YELLOW=PARTIAL, 🔴 RED=MISSING). Proposes concrete scenarios by test level (smoke/unit/integration/e2e/regression) and detects regression subjects via git diff. Output feeds `tdd-agent` for test-driven implementation and `validation` for coverage verification.
+34. `doc-synthesizer` parses project structure via AST (Python focus; all languages via markers), builds dependency graphs, and generates Mermaid diagrams for module dependencies and data flow. Output feeds `documentation`, `codebase-knowledge-graph`, and architecture review. URI fetch/crawl extensible for Phase 2.
+35. `build-observability` is the run-centric observability layer for agentic execution. `agentic-harness` owns control flow and retries; `build-observability` projects runtime exhaust into normalized `runs/events/commands` records and operator-facing dashboard views.
 
 ## MCG Foundation — The Conceptual Backbone
 
