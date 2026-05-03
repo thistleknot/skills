@@ -214,6 +214,24 @@ Override only what diverges — e.g., a research run that needs more iterations:
 
 See `agentic-harness/SKILL.md § Default Agent Settings` for the full parameter reference.
 
+### Choosing `retrieval_depth` for research tasks
+
+Deep-research tasks typically need depth ≥ 8. Calibrate using this conditional model:
+
+```
+IF question = factual lookup with known authoritative source     → retrieval_depth = 5
+IF question = multi-source corroboration / comparative claim     → retrieval_depth = 8 (research default)
+IF question = novel / contested / multi-hop causal chain         → retrieval_depth = 12+
+ELSE (scope ambiguous)                                           → ask: "Quick scan (5), standard
+                                                                   research (8), or exhaustive
+                                                                   investigation (12+)?"
+```
+
+Contingencies to record in `contingency_map`:
+- If a foundational claim fails to verify, raise `retrieval_depth` on dependent subquestions before proceeding.
+- If early fetches surface contradictory sources, add a reconciliation step rather than picking one arbitrarily.
+- If the question falls outside available sources, surface the gap explicitly — do not generate speculative evidence.
+
 ---
 
 ## Configuration (env vars / `.env`)

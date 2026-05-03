@@ -178,6 +178,24 @@ baseline and override only what diverges from the defaults.
 | `frequency_penalty` | 0.7 | Suppresses token repetition; prevents re-selecting the same tokens across steps |
 | `abstention_policy` | `exclude_if_low` | Low-confidence picks are dropped from the final selection rather than included |
 
+### Choosing `retrieval_depth`
+
+Select `retrieval_depth` using if/then/else conditions **before** the run starts, not after evidence gaps appear mid-execution.
+
+```
+IF task = single well-defined lookup (find X, what is Y)        → retrieval_depth = 3
+IF task = moderate complexity (multi-file, unclear scope)        → retrieval_depth = 5 (default)
+IF task = multi-hop reasoning / synthesis / long horizon         → retrieval_depth = 8+
+ELSE (scope ambiguous)                                           → ask: "How thorough should this be —
+                                                                   quick scan (3), standard (5), or
+                                                                   exhaustive (8+)?"
+```
+
+Contingencies to record before dispatch:
+- If early iterations surface contradictions or evidence gaps, raise `retrieval_depth` before final synthesis — not after.
+- If iterations exhaust without convergence, surface the unresolved subquestions rather than generating a speculative answer.
+- If the user stated a time/cost constraint, cap `retrieval_depth` at the constraint ceiling and flag what was skipped.
+
 **Loading pattern (Python):**
 
 ```python

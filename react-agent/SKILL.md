@@ -66,6 +66,21 @@ settings = get_agent_settings()
 Override only what diverges from the contract.
 See `agentic-harness/SKILL.md § Default Agent Settings` for the full parameter reference.
 
+### Choosing `retrieval_depth`
+
+Before fixing `retrieval_depth`, apply this conditional model:
+
+```
+IF task = single-file change or bounded lookup            → retrieval_depth = 3
+IF task = multi-file refactor or moderate investigation   → retrieval_depth = 5 (default)
+IF task = architectural change / unknown codebase         → retrieval_depth = 8+
+ELSE (scope ambiguous from the task statement)            → ask during the Ambiguity Check interview
+```
+
+Contingencies:
+- If Phase 1 Reconnaissance uncovers unexpected scope, raise `retrieval_depth` before Phase 2 planning begins.
+- If iterations exhaust and the acceptance criterion is unmet, surface what is blocked rather than declaring done.
+
 ## Core Thesis
 
 An LLM agent given a complex task fails in predictable ways: illegal actions

@@ -93,14 +93,14 @@ function Show-Diff($masterFile, $mirrorFile) {
 Write-Header "Reading last commit timestamp"
 $lastCommitStr = git -C $Master log -1 --format="%ci" 2>$null
 if (-not $lastCommitStr) {
-    Write-Warning "Cannot read git log from $Master — treating all mirror files as potentially new."
+    Write-Warning "Cannot read git log from $Master -- treating all mirror files as potentially new."
     $lastCommit = [datetime]::MinValue
 } else {
     $lastCommit = [datetime]::Parse($lastCommitStr.Trim())
 }
 Write-Host "  Last commit : $lastCommit"
 Write-Host "  Master      : $Master"
-if ($DryRun) { Write-Host "  [DRY RUN — no changes will be made]" -ForegroundColor Magenta }
+if ($DryRun) { Write-Host "  [DRY RUN -- no changes will be made]" -ForegroundColor Magenta }
 
 # ── Step 2: Detect new skill folders in mirrors not in master ─────────────────
 Write-Header "Checking for skill folders missing from master"
@@ -153,7 +153,7 @@ foreach ($mirror in $Mirrors) {
             }
         }
     }
-    if ($count -eq 0) { Write-Host "  [OK] $mirror — no locally-modified files" -ForegroundColor Green }
+    if ($count -eq 0) { Write-Host "  [OK] $mirror -- no locally-modified files" -ForegroundColor Green }
 }
 
 # ── Step 4: Reconciliation ────────────────────────────────────────────────────
@@ -199,7 +199,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
             } elseif ($resp -eq 'd') {
                 Write-Host "`n[$($item.MirrorLabel)] $($item.Rel)  (mirror: $($item.MirrorTime.ToString('yyyy-MM-dd HH:mm')))" -ForegroundColor Cyan
                 if (-not $item.MasterExists) {
-                    Write-Host "  [NEW FILE — does not exist in master]" -ForegroundColor Magenta
+                    Write-Host "  [NEW FILE -- does not exist in master]" -ForegroundColor Magenta
                 }
                 Show-Diff $item.MasterFile $item.MirrorFile
                 $choice = Read-Host "  Copy to master? [y/n]"
@@ -289,11 +289,16 @@ Write-Host @"
 
 $launch = Read-Host "`nLaunch WinSCP now? [y/n]"
 if ($launch -eq 'y') {
+    $inputUser = Read-Host "  SSH username (default: $RemoteUser)"
+    if ($inputUser -ne '') { $RemoteUser = $inputUser }
+    $securePwd  = Read-Host "  SSH password" -AsSecureString
+    $plainPwd   = [System.Net.NetworkCredential]::new('', $securePwd).Password
+
     $wscp = Get-Command "winscp.com" -ErrorAction SilentlyContinue
     if ($wscp) {
         Write-Host "  Launching WinSCP..." -ForegroundColor Green
         & winscp.com /command `
-            "open sftp://$RemoteUser@$RemoteHost" `
+            "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" `
             "synchronize remote `"$Master`" $RemotePath" `
             "exit"
     } else {

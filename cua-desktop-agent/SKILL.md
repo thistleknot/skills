@@ -1,3 +1,11 @@
+---
+name: cua-desktop-agent
+description: Autonomous desktop automation via vision-language model (VLM) perception loop. Use when a task requires visual verification of desktop state, autonomous retry until a correct result, or working with applications that lack APIs (games, legacy software, QA testing where screenshots are the ground truth).
+status: active
+last_validated: 2026-05-02
+supersedes: []
+validation_method: session
+---
 # CUA Desktop Agent Skill
 
 ## Purpose
