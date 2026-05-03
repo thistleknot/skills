@@ -14,6 +14,38 @@ Balance imbalanced datasets by:
 
 This prevents both **under-sampling** of rare classes and **over-sampling** of frequent ones, while respecting the empirical distribution shape.
 
+## Scope Boundary and Paired Skills
+
+This skill owns **which records get seen** under a fixed budget.
+
+| Need | Owner |
+|------|-------|
+| Pick records from an imbalanced pool under a budget | `stratified-quota-sampling` |
+| Reweight the loss after records are chosen | `class-balancing` |
+| Tune quota/sampler knobs and compare campaigns | `optuna-nested-cv` |
+
+Rules:
+- Use **replace=False** when the goal is coverage saturation over a finite corpus.
+- If you want every Optuna trial to reflect final training, keep the same no-replacement policy in search and final training.
+- When the sampling policy changes materially (full epochs -> fixed-budget coverage, new quota family, different tier weighting), treat it as a new study namespace in Optuna.
+
+## Coverage-Bounded Training Recipe
+
+Use this pattern when full-dataset epochs are the wrong objective and the real goal is
+to cover a corpus gradually without revisiting the same records until the pool is exhausted.
+
+1. Fix a per-epoch budget, e.g. `sample_fraction = 0.05`.
+2. Partition the remaining unsampled pool into Box-Cox-derived tiers or other strata.
+3. Allocate quotas from the **remaining** pool, not the original pool.
+4. Draw within each tier with `replace=False`.
+5. Form token-target batches from the selected records.
+6. Mark those records consumed for the current run.
+7. Recompute quotas from the remaining pool for the next epoch.
+
+This is a **coverage scheduler**, not bootstrap training. The run ends when either:
+- the optimization budget is reached, or
+- the unsampled pool can no longer satisfy the requested quota policy.
+
 ## The Problem
 
 Naive top-N sampling from long-tailed distributions yields:
@@ -219,6 +251,7 @@ samples = stratified_quota_sample(
 - ❌ Uniform random across classes (rare classes drown frequent ones)
 - ❌ Per-class independent sampling (ignores global imbalance)
 - ❌ Arbitrary hard thresholds (tiers derived from data)
+- ❌ With-replacement resampling when the real objective is finite-pool coverage
 
 ## Anti-Patterns
 

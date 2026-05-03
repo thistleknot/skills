@@ -86,6 +86,23 @@ Use the same three takes consistently across all trials so parameter changes are
 
 Never score a trial from one stochastic take. Use multiple sampler settings, repeated seeds, or median-of-k when the scorer has occasional outliers. The rule: do not let evaluator variance masquerade as parameter signal.
 
+### Sampling Policy Contract
+
+If final training uses a fixed-budget sampler, Optuna must evaluate the **same**
+sampling regime. Do not search on full-dataset epochs and then deploy a quota or
+coverage scheduler later.
+
+Use this split of ownership:
+- `stratified-quota-sampling` owns the no-replacement coverage scheduler and quota logic
+- `class-balancing` owns residual loss weighting after the sample is drawn
+- `optuna-nested-cv` owns the study, search budget, scalar objective, and namespace isolation
+
+Treat any of these as a new study namespace trigger:
+- full-epoch training -> fixed-budget coverage training
+- with-replacement -> without-replacement sampling
+- changed quota family or tier allocation rule
+- changed sample fraction or token budget semantics
+
 ---
 
 ## Scope Boundary
@@ -101,6 +118,7 @@ It owns:
 - SQLite-backed study persistence and resumability
 - TPE sampler configuration and startup budget
 - nested cross-validation structure (outer holdout, inner Optuna)
+- search over sampler-policy knobs once the sampler contract is fixed
 - per-fold normalization to prevent preprocessing leakage
 - composite scalar objective construction
 - study namespace design to isolate experiments
@@ -110,6 +128,8 @@ It owns:
 It does **not** own:
 - product-level decisions about which metrics matter
 - architecture changes mid-search
+- sampler mechanics themselves (see `stratified-quota-sampling`)
+- class-loss weighting mechanics (see `class-balancing`)
 - LLM judge scoring (see `hyper-parm_tuning` for that path)
 - experiment UI / artifact registry behavior (see `mlflow`)
 

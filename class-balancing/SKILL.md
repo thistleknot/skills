@@ -24,6 +24,24 @@ last_validated: 2026-05-02
 
 ---
 
+## Scope Boundary and Paired Skills
+
+Use this skill for **loss weighting after sample selection**, not for choosing
+which records enter a batch or epoch.
+
+| Need | Owner |
+|------|-------|
+| Choose records from an imbalanced pool under a fixed coverage budget | `stratified-quota-sampling` |
+| Reweight class loss after the sample has already been chosen | `class-balancing` |
+| Tune sample fraction, quota ratios, or weighting knobs against a scalar objective | `optuna-nested-cv` |
+
+Rules:
+- Do **not** use class weights as a substitute for a no-replacement coverage scheduler.
+- Do use this skill after quota sampling when the selected subset still has meaningful residual skew.
+- If the weighting policy is part of the model-selection surface, namespace the Optuna study separately from runs that use a different sampler or weighting contract.
+
+---
+
 ## Box-Cox Log-Ratio Protocol
 
 ### Rationale
@@ -141,3 +159,4 @@ Under heavy-tailed data, calibrate the MAD multiplier empirically.
 | `pdf-extraction` | `train_layout_classifier.py` — EfficientNet-B0 layout region classifier |
 | Any PyTorch classifier | Drop-in `CrossEntropyLoss(weight=...)` |
 | Any sklearn estimator | Drop-in `sample_weight=` array |
+| `stratified-quota-sampling` users | Residual class weighting after quota-based subset selection |
