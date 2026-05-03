@@ -273,7 +273,7 @@ Write-Host @"
   Option A — WinSCP CLI (if winscp.com is on PATH):
     winscp.com /command ``
       "open sftp://$RemoteUser@$RemoteHost" ``
-      "synchronize remote -filemask=""|.git/|.git*|.gitignore|.*/|pytest_cache/|todo/|react_agent/|__pycache__/|copilot/|`$Recycle.Bin/|`$AV_ASW/|`$AV_ASW`$VAULT/|*.*[0-9a-f]*/""  ""$Master"" $RemotePath" ``
+      "synchronize remote -filemask=""|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*""  ""$Master"" $RemotePath" ``
       "exit"
 
   Option B — rsync (via WSL or Git Bash):
@@ -297,7 +297,7 @@ if ($launch -eq 'y') {
     $wscp = Get-Command "winscp.com" -ErrorAction SilentlyContinue
     if ($wscp) {
         Write-Host "  Launching WinSCP..." -ForegroundColor Green
-        & winscp.com /command "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" "synchronize remote -filemask=|.git/|.git*|.gitignore|.*/|pytest_cache/|todo/|react_agent/|__pycache__/|copilot/|`$Recycle.Bin/|`$AV_ASW/|`$AV_ASW`$VAULT/|*.*[0-9a-f]*/ ""$Master"" $RemotePath" "exit"
+        & winscp.com /command "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" "synchronize remote -filemask=|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]* ""$Master"" $RemotePath" "exit"
     } else {
         Write-Host "  winscp.com not found on PATH. Open WinSCP manually and sync:" -ForegroundColor Yellow
         Write-Host "    $Master  -->  $RemoteUser@${RemoteHost}:$RemotePath"
