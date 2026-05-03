@@ -1063,6 +1063,38 @@ task lists, and it is what enables parallel execution of independent sub-tasks.
 **When to use HTP inside the harness:** the work item is large enough that sequential
 execution would bottleneck the pipeline, and sub-problems are clearly separable.
 
+### Pre-Planning: Six Hats + Causal Tree
+
+Before decomposing into an HTP graph, run one structured pass over the task spec.
+This is the harness equivalent of asking hard questions before committing to a plan.
+
+**Six Hats sweep** (one sentence per hat — skip those that don't apply):
+
+| Hat | Lens | Ask |
+|---|---|---|
+| ⬜ White | Facts & data | What inputs, artifacts, and environment state are confirmed? |
+| 🔴 Red | Intuition | What feels underspecified or risky in the task spec? |
+| ⬛ Black | Failure modes | What are the harness-breaking failure classes for this task? |
+| 🟡 Yellow | Success | What does a clean artifact + passing gate look like? |
+| 🟢 Green | Alternatives | Is there a simpler decomposition or a reusable sub-harness? |
+| 🔵 Blue | Process | What is the correct topological order? Where are the real blockers? |
+
+**Temporal causal tree** — before issuing story cards, map the task as if/then/else:
+
+```
+TASK_ROOT
+ ├─ IF dependency_A satisfied → proceed to Level 1
+ │    ├─ IF artifact_B exists → skip generation, use existing
+ │    └─ ELSE → generate_B; gate on quality check
+ ├─ IF dependency_A missing → unblock_A first (new root sub-task)
+ └─ IF ambiguous spec → surface to user before any code runs
+```
+
+Contingencies that **must** be recorded in the HTP graph before dispatch:
+- The branch whose failure cascades to all sibling tasks (mark as `critical_path: true`)
+- Any step where the agent needs information it doesn't have yet (mark as `blocked` immediately, not mid-execution)
+- The earliest irreversible action (git push, DB write, external API call)
+
 ### Task Graph Model
 
 ```python

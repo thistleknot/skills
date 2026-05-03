@@ -209,6 +209,44 @@ of the following fields explicitly:
 This file is your north star. Return to it when you drift. The `completion_conditions`
 field is the source of truth for the Completion Protocol and Verifier role.
 
+### Phase 0.5: Six Hats + Causal Tree
+
+Before reconnaissance, run one pass of structured thinking over the task. This
+surfaces blind spots and contingencies **before** the first action, not after a
+failed attempt.
+
+**Six Hats sweep** (one sentence each — skip hats that don't apply):
+
+| Hat | Lens | Ask |
+|---|---|---|
+| ⬜ White | Facts & data | What do I know for certain? What am I missing? |
+| 🔴 Red | Intuition & risk feel | What feels wrong or risky here? |
+| ⬛ Black | Caution & failure modes | What could break this? What's the irreversible action? |
+| 🟡 Yellow | Benefits & best case | What does success look like concretely? |
+| 🟢 Green | Alternatives | Is there a simpler or different approach? |
+| 🔵 Blue | Process & meta | Am I solving the right problem? What order should this happen in? |
+
+**Temporal causal tree** — model the task as an if/then/else before acting:
+
+```
+START
+ ├─ IF precondition A holds → path P1
+ │    ├─ IF sub-condition B → action X
+ │    └─ ELSE → action Y; check again
+ ├─ IF precondition A missing → action Z (unblock A first)
+ └─ ELSE (ambiguous) → ask before proceeding
+```
+
+Identify at minimum:
+- The earliest point of irreversibility
+- The branch whose failure cascades furthest
+- Any step where the next action depends on information you don't yet have
+
+Add a `contingencies:` field to the Execution Contract in `task.md`:
+```markdown
+- contingencies: [branch → fallback for each major if/then/else node]
+```
+
 ### Phase 1: Reconnaissance
 
 Survey before you act. Do not propose solutions yet.

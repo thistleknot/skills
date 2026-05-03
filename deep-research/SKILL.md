@@ -448,6 +448,43 @@ factual lookups — perspectives add overhead without value there.
 
 ---
 
+## Pre-Research: Six Hats + Causal Tree
+
+Before the planner dispatches subquestions, run one structured pass over the research
+question. The goal is to surface contingencies and sharpen the decomposition before
+any fetch is issued — not after evidence gaps are discovered mid-run.
+
+**Six Hats sweep** (one sentence per hat):
+
+| Hat | Lens | Ask |
+|---|---|---|
+| ⬜ White | Facts & data | What is already confirmed? What is the key unknown? |
+| 🔴 Red | Intuition | What feels contested, politically sensitive, or rapidly changing? |
+| ⬛ Black | Caution | What failure mode would make the research useless (wrong framing, stale data)? |
+| 🟡 Yellow | Benefits | What would a definitive answer unlock? What shape should the evidence take? |
+| 🟢 Green | Alternatives | Is there an adjacent question that is better-evidenced or more tractable? |
+| 🔵 Blue | Process | What evidence order makes sense? What must be true before later subquestions are meaningful? |
+
+**Temporal causal tree** — model the research as an if/then/else before dispatching:
+
+```
+QUESTION
+ ├─ IF foundational_claim C is true → subquestions about implications of C
+ │    ├─ IF supporting evidence exists → cite and proceed
+ │    └─ ELSE → flag C as unverified; adjust confidence of downstream claims
+ ├─ IF C is contested → dispatch a dedicated "challenge C" subquestion
+ └─ IF C is definitionally ambiguous → clarify definition first (new subquestion 0)
+```
+
+Questions to answer before dispatching:
+- What is the earliest claim that, if false, invalidates all downstream subquestions?
+- Which subquestion result gates the others (critical path)?
+- What evidence would change the research conclusion entirely?
+
+Record the causal tree in the planner's `ResearchState` as `contingency_map: dict[subquestion_id, fallback]`.
+
+---
+
 ## Source Quality Hierarchy
 
 Not all evidence is equal. Weight claims by source tier:
