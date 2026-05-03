@@ -46,9 +46,9 @@ $RootTracked = @("README.md", "copilot-instructions.md", "MEMORY_SKILLS_PLAN.md"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 function Write-Header($msg) {
-    Write-Host "`n$('─' * 60)" -ForegroundColor DarkGray
+    Write-Host "`n$('-' * 60)" -ForegroundColor DarkGray
     Write-Host "  $msg" -ForegroundColor Cyan
-    Write-Host "$('─' * 60)" -ForegroundColor DarkGray
+    Write-Host "$('-' * 60)" -ForegroundColor DarkGray
 }
 
 function Get-TrackedFiles($root) {
@@ -253,10 +253,10 @@ Write-Header "Syncing master -> local mirrors"
 foreach ($mirror in $Mirrors) {
     Write-Host "  -> $mirror"
     if ($DryRun) {
-        robocopy $Master $mirror /MIR /L /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" /XF "*.pyc" 2>&1 |
+        robocopy $Master $mirror /MIR /L /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" "__pycache__" ".pytest_cache" ".react_agent" /XF "*.pyc" "*.db" "*.jsonl" 2>&1 |
             Where-Object { $_ -match '\S' } | Select-Object -First 20 | ForEach-Object { Write-Host "     $_" -ForegroundColor DarkGray }
     } else {
-        robocopy $Master $mirror /MIR /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" /XF "*.pyc" | Out-Null
+        robocopy $Master $mirror /MIR /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" "__pycache__" ".pytest_cache" ".react_agent" /XF "*.pyc" "*.db" "*.jsonl" | Out-Null
         $rc = $LASTEXITCODE
         if ($rc -le 1) {
             Write-Host "     OK (exit $rc)" -ForegroundColor Green

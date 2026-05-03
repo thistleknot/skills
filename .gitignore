@@ -12,11 +12,15 @@ learnings.jsonl
 
 # Python artifacts
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *.egg-info/
 .venv/
 dist/
 build/
+
+# Todo state (local, not versioned)
+.todo/
 
 # OS artifacts
 .DS_Store
