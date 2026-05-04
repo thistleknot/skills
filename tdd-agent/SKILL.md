@@ -198,4 +198,62 @@ with the regression test as context.
 - Devin TDD mode: +9.1 percentage points on SWE-bench Verified vs non-TDD mode (Cognition, 2025)
 - Self-debugging arXiv:2304.05128: execution-feedback loop (overlaps Green phase) +12% on TransCoder
 - Kent Beck, "Test-Driven Development: By Example" (2002): canonical Red-Green-Refactor origin
+
+---
+
+## Paired Feature Testing in Red-Green-Refactor
+
+When adding extensible features (see `git-workflow/SKILL.md § Paired/Dimensional Feature Testing`), adapt the phase contract to test both base and variant:
+
+### Red Phase: Failing Tests for Base + Variant
+
+Instead of a single happy-path test, write two failing tests:
+
+```python
+def test_base_unit_available_immediately():
+    """Base units render without prerequisites."""
+    unit_a = Unit(name="Rifleman", tech_required=None)
+    assert unit_a in available_units()
+
+def test_tech_gated_unit_hidden_until_unlocked():
+    """Tech-gated units only appear after tech is learned."""
+    unit_b = Unit(name="LaserSoldier", tech_required="laser_tech")
+    
+    # Before tech: hidden
+    assert unit_b not in available_units(techs=[])
+    
+    # After tech: visible
+    assert unit_b in available_units(techs=["laser_tech"])
+```
+
+Both tests FAIL on current code. This is the signal that the feature does not yet exist.
+
+### Green Phase: Implement Base + Variant Behavior
+
+Implement both:
+1. Base: Standard unit always available (simple case)
+2. Variant: Check tech prerequisites before showing unit (gating logic)
+
+Do not implement one without the other — both must pass together.
+
+```python
+def available_units(techs: list[str]) -> list[Unit]:
+    """Return units available given current tech list."""
+    return [u for u in ALL_UNITS if u.tech_required is None or u.tech_required in techs]
+```
+
+**Key:** this single implementation satisfies both tests. No duplication. The variant logic emerges from the data model.
+
+### Refactor Phase: No Changes if Tests Already Pass
+
+If Green passes and both tests are clear, Refactor may be minimal. The paired tests have already validated the design:
+- Base behaviour works
+- Variant behaviour works
+- Gating logic is correct
+
+Only refactor if: (1) code clarity needed, (2) duplication found, (3) naming could be clearer.
+
+**Do NOT refactor to "optimize" if it risks the paired-test contract.**
+
+---
 - `validation` skill: complementary — covers test design methodology; this skill encodes lifecycle contract
