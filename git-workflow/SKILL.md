@@ -137,6 +137,76 @@ A commit is "last known working" when:
 - Commit message doesn't match the actual changes
 - Multiple unrelated features mixed in one commit
 
+## Paired/Dimensional Feature Testing (Feature Expansion Validation)
+
+**Principle: Test two things at once to prove feature extensibility, not just basic functionality.**
+
+When verifying that a feature works, don't test it in isolation. Test two instances with different dimensions/conditions to prove that the feature is truly extensible and allows new variations.
+
+### Pattern: Feature + Variant Testing
+
+**The Problem:**
+- Testing a single feature case doesn't prove the feature is real
+- Example: "Can we add a unit?" tested by adding one unit doesn't prove we can add *different types* of units
+
+**The Solution:**
+- Test the base feature: Add Unit 1 with default/existing tech
+- Test a variant: Add Unit 2 with NEW tech that requires NEW conditions
+- This proves: (1) feature works, (2) feature is extensible, (3) new conditions can be enabled
+
+### Example Workflow
+
+**Scenario: Adding units to a system**
+
+❌ **Incomplete test (don't do this):**
+```
+Feature: "Can add a unit"
+Test: Add one unit with default tech
+Result: ✅ One unit added
+Proof: "Feature works"
+Problem: Doesn't prove system can handle DIFFERENT units or conditions
+```
+
+✅ **Complete test (do this instead):**
+```
+Feature: "Can add units with different tech prerequisites"
+Test 1: Add Unit A with Tech X (already available)
+        Result: ✅ Unit A renders correctly
+        
+Test 2: Add Unit B with Tech Y (new tech, NOT available by default)
+        Result: ✅ Unit B only appears when Tech Y is unlocked
+        
+Proof:
+  - Base feature works (Unit A with default tech)
+  - Feature is extensible (Unit B with new conditions)
+  - Conditional enabling works (Unit B hidden until Tech Y acquired)
+  - Artifacts: before/after screenshots, both unit types visible
+```
+
+### Validation Checklist for Paired Testing
+
+- [ ] Base feature tested with existing/default tech (proves basic functionality)
+- [ ] Variant feature tested with NEW tech/conditions (proves extensibility)
+- [ ] Both are visible/testable in same session (proves coexistence)
+- [ ] Variant only appears when NEW conditions met (proves conditional logic)
+- [ ] Artifacts show both (screenshots, test logs, or proof of state)
+- [ ] Diff shows new conditionals/branching logic added (not just copying base)
+
+### Why This Matters
+
+**Single test:** Feature might work by accident with hardcoded paths
+**Paired test:** Proves feature can handle variations and new dimensions
+
+Example: A "unit addition" feature that works for Unit A might have hardcoded assumptions about name, tech, stats, etc. Adding Unit B with different assumptions proves those aren't hardcoded.
+
+### Red Flags (Incomplete Testing)
+
+- ❌ Only one unit added, other functionality unchanged
+- ❌ New unit is just a copy with different name (no new logic)
+- ❌ No new tech/conditions added (nothing extensible to test)
+- ❌ Only happy-path tested; variant doesn't appear in validation
+- ❌ No artifacts showing both units/variants side-by-side
+
 ## Co-Author Trailer
 
 All commits must include the Copilot co-author trailer:
