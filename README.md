@@ -29,6 +29,7 @@ skills/
 │   ├── architecture                 # system design, abstract-class planning, domain → code mapping
 │   ├── tdd-agent                    # Red→Green→Refactor as distinct agentic phases; test-first design contract
 │   ├── autoresearch                 # autonomous iterative hill-climbing: scorer + proposer + git/sqlite checkpoint loop
+│   ├── cua-desktop-agent            # autonomous desktop automation via VLM perception loop; vision-based retry for legacy/API-less applications
 │   └── react-fastapi-sqlite         # full-stack scaffold: React (TanStack Query) + FastAPI (SQLModel ORM) + SQLite; SPA + REST backend
 │
 ├── orchestration/                   # route work, enforce policy, manage cross-session state
@@ -63,6 +64,7 @@ skills/
 │   ├── agentic_kg_memory            # MCG Context Graph side: semantic memory policy, retrieval, patterns, tribal knowledge, episodic memory
 │   │   ├── kg_ontology              # MCG DKG entity-identity layer: synset/hypernym BM25 canonicalization
 │   │   └── gist-retriever           # layered sparse+dense retrieval engine (BM25 + Chroma)
+│   ├── semantic-search-enrichment   # retrieval augmentation: query expansion, metadata boosting, semantic reranking
 │   ├── context-compaction           # active context-window management: tiered eviction, pre/post-compaction hooks
 │   ├── mcp-tool-registry            # MCP tool registration, discovery, routing, ACI design
 │   ├── request-intent-resolution    # request-thread routing, retrieval evaluation
@@ -74,6 +76,8 @@ skills/
 │   ├── agentic-hyperparm            # behavioral knob tuning for agentic systems; instantiates Stage Allocation for L1-L4 layers
 │   ├── class-balancing              # log inverse freq → Box-Cox normalize → ratio weights for imbalanced classifiers
 │   ├── stratified-quota-sampling    # coverage-bounded no-replacement sampler; Box-Cox tiers + quota allocation
+│   ├── cluster-quantized-knn        # O(1) approximate distance for KNN via cluster-quantization; fast interactive retrieval
+│   ├── mad-dynamic-batching         # MAD-gated token-aware dynamic batching for variable-length training data; quantile partitioning
 │   ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
 │   └── representation-pipeline      # representation design: raw signal → embedding space
 │
@@ -89,6 +93,7 @@ skills/
 │   └── siamese_from_correlation_matrix  # derive metric-learning pairs directly from embedding/correlation structure
 │
 └── pipelines/                       # end-to-end domain workflows (invoke sub-skills as needed)
+    ├── auto-ingest                  # on-demand and background PDF enrichment for arxiv_rag corpus; VLM methods extraction
     └── pdf-extraction               # docling→base64 strip→VLM→reinsert→methods; table enhancement with tabula+camelot+VLM fusion; classifier training via class-balancing
 ```
 
