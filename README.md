@@ -80,6 +80,7 @@ skills/
 ├── artifacts/                       # masterpiece outputs and information design
 │   ├── documentation                # choose canonical doc vs changelog vs timestamped fixes-applied artifact
 │   ├── response-style               # voice preservation, anti-cliche prose, user-facing coherence
+│   ├── business-writing             # professional document writing: resume, cover letter, portfolio; triplet bullets, spice gradient
 │   ├── gist_correlation_matrix      # sorted correlation matrix as complete relational map; two sorting approaches (orthogonal vs coverage)
 │   └── spiral-radial-clustering-display  # multi-dimensional spiral visualization; GMM+HDBSCAN+ordering→UMAP 2D with Gestalt encoding
 │
