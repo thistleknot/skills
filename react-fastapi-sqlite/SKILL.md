@@ -37,6 +37,39 @@ pages/    — compose hooks; pass data down as props
 components/ — pure UI; receive data + callbacks as props
 ```
 
+## API-First Frontend Testing Pattern
+
+When the page is the entry point but the behavior matters beyond rendering, put the
+business rule behind the API boundary first.
+
+```text
+page/component -> hook -> api client -> FastAPI route -> domain logic -> persistence
+```
+
+Use this shape when:
+- user actions create, mutate, or delete real application state
+- the same rule should be testable without booting a browser
+- the frontend should stay thin enough to swap UI layouts without rewriting business logic
+
+**Ownership split:**
+
+| Layer | Owns | Does not own |
+|---|---|---|
+| page/component | user intent, local UI state, rendering | domain rules, persistence, status-code semantics |
+| hook/api client | request wiring, cache invalidation, retries | business branching duplicated from backend |
+| FastAPI route/service | validation, state transitions, persistence, contract shape | DOM/layout concerns |
+
+**Testing payoff:**
+1. API behavior can be unit/integration tested directly.
+2. Page tests can focus on "does the client call the API and render the returned state?"
+3. Headless/browser proof becomes confirmation of rendering, not the only proof that the feature works.
+
+**Red flags:**
+- click handlers reimplement backend validation or gating logic
+- screenshots are the only proof for a stateful feature
+- page tests assert internal component state but never the API contract
+- the same rule is expressed once in React and again in FastAPI
+
 ---
 
 ## Stack
@@ -734,9 +767,9 @@ stated preference.
 
 **Workflow Integration Pattern:**
 1. Start with `code` (naming/pattern) + `architecture` (if redesigning data flow)
-2. Implement with `tdd-agent` (test-driven on both backend and frontend)
-3. Validate with `validation` (unit + E2E) + `diagnostic-scanner` (type-check)
-4. Verify with `headless-browser-verification` (frontend changes only)
+2. Implement with `tdd-agent` (API contract first, then frontend client wiring)
+3. Validate with `validation` (API proof + page behavior proof) + `diagnostic-scanner` (type-check)
+4. Verify with `headless-browser-verification` (frontend rendering changes only)
 5. Push via `git-workflow` (test branch → dev after user confirms visual + code checks)
 
 ---

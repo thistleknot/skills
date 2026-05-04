@@ -80,6 +80,36 @@ def validate_units():
 
 Do NOT skip to production without completing all stages. Each reveals different failure modes.
 
+## API-Backed Frontend Validation
+
+When a page or HTML surface calls an API, validate the feature at **three distinct layers**:
+
+1. **API contract layer** - request/response shape, status codes, state transitions, error cases
+2. **Page interaction layer** - correct request triggered, loading/error/success states rendered, cache/state updated
+3. **Visual layer** - screenshot/headless proof only when rendering or layout changed
+
+Do not collapse these into one check. A screenshot proves rendering. It does **not**
+prove the API contract or the business rule behind it.
+
+### Validation checklist for API-backed frontend work
+
+- [ ] API tested without the browser in the loop
+- [ ] Page/client test proves the correct call is made and handled
+- [ ] Paired states validated (success + failure, or base + variant)
+- [ ] Visual proof captured if the visible UI changed
+- [ ] Request/response artifacts archived when claiming API correctness
+- [ ] No business rule exists only in the page layer
+
+### Good paired cases
+
+- valid request vs invalid request
+- authorized vs unauthorized user
+- empty state vs populated state
+- base option vs gated/variant option
+
+See `react-fastapi-sqlite/SKILL.md` for the architecture split and
+`validation-artifacts/SKILL.md` for the proof package shape.
+
 ## Iterative Scale
 **Debugging progression:** 5 → 10 → 20 → 40 → 80
 

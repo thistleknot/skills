@@ -42,3 +42,25 @@ This skill sits under code work. Use it when a change stops being a local edit a
 
 ## Working Rule
 Use this skill with `code`: `code` owns the edit mechanics; `design-patterns` chooses the relationship shape and contract.
+
+## UI as Adapter, API as Contract Boundary
+
+When a frontend page kicks off real business behavior, the lightest useful pattern is:
+
+- **UI/hook layer as Adapter** - convert clicks, form input, and page events into API calls
+- **API/service layer as Facade or contract boundary** - own validation, state transitions, and persistence
+
+Choose this shape when:
+- the behavior should be unit-tested without a browser
+- more than one client could reuse the rule
+- the page is becoming hard to test because business logic is mixed into rendering
+
+**Contract shape:**
+- **Require:** page sends a well-formed request and handles declared result states
+- **Guarantee:** API owns the business rule, response schema, and error semantics
+- **Maintain:** one source of truth for domain behavior
+- **Assert:** contract tests at the API boundary; interaction tests at the page boundary
+
+This is usually a better fit than embedding branching logic directly in components.
+Use `react-fastapi-sqlite` for the concrete stack pattern, `tdd-agent` for the
+Red→Green→Refactor sequence, and `validation` for the proof matrix.

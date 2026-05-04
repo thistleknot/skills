@@ -115,6 +115,23 @@ Signs of a poor design discovered in Red:
 - Test must access private state to assert anything → wrong abstraction boundary
 - Test is hard to name concisely → the behaviour being specified is incoherent
 
+## API-First Frontend TDD
+
+When the UI talks to an API, Red should usually produce **two failing tests**:
+1. an API contract/state-transition test
+2. a page/client interaction test that consumes that contract
+
+Suggested sequence:
+- **Red:** specify the backend response/status behavior and the page behavior that depends on it
+- **Green:** implement the API contract first, then wire the page or hook to call it
+- **Refactor:** move leaking business rules out of the page and back behind the API boundary
+
+This keeps the page thin. If the frontend test is hard to write because too much
+logic lives in the component, that is design feedback: the boundary is wrong.
+
+**Do not accept screenshot-only proof as a substitute for Red.** A rendered page can
+look correct while the API contract, error handling, or state transitions are wrong.
+
 ---
 
 ## Coverage Gate

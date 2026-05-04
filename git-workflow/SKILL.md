@@ -357,6 +357,11 @@ headless-browser-verify http://localhost:3000 \
 # 4. User confirms both look good → push to dev
 ```
 
+**API-backed frontend changes:**
+- If the page change depends on backend/API behavior, require API or unit/integration proof **before** treating screenshots as sufficient.
+- Use screenshots to prove rendering and interaction state, not request semantics or business correctness.
+- Preferred proof stack: API test/log + page interaction test + visual artifact (if UI changed).
+
 **Example: Backend Changes (No Visual Verification)**
 ```bash
 # 1. Make backend changes (Python, FastAPI routes)

@@ -532,6 +532,23 @@ api_artifacts/
 - ❌ Latency > SLA (endpoint too slow)
 - ❌ Error rate spikes >5% under load (unstable)
 
+#### 5a. API-Backed Frontend Features
+
+When the visible feature is on a page but the real behavior lives behind an API,
+collect **both** proof families in the same validation package:
+
+- API artifacts: request/response pairs, schema validation, error handling
+- page/client artifacts: interaction test log showing the call and resulting UI state
+- visual artifact: screenshot or headless capture only if the visible UI changed
+
+**Minimum proof bundle:**
+- [ ] API request/response evidence for success and failure (or base and variant)
+- [ ] Page-level test evidence that the API result is rendered correctly
+- [ ] Visual proof if layout, HTML, CSS, or visible interaction changed
+- [ ] No claim based on screenshot alone for stateful/API-backed behavior
+
+For isolated UI-module capture, pair this with Section 4a (hack -> capture -> validate -> revert).
+
 ---
 
 ### 6. Script Validation (CLI Tools, Utilities)
