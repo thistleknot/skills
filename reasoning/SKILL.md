@@ -30,6 +30,77 @@ Dev-specific lenses: user, PM, security, critic. Apply whichever are load-bearin
 
 Anticipate rebuttals: identify where your position is weakest before presenting it.
 
+## Latent Knowledge Activation
+Before formalizing, activate domain knowledge that may already be available but not
+yet surfaced explicitly. This goes hand in hand with the latent-knowledge prompt
+sections in `AGENTS.md` / `copilot-instructions`.
+
+- What do I know about this domain that was not explicitly mentioned?
+- What deeper patterns or principles connect to this question?
+- Which concepts from adjacent domains are relevant?
+- What unstated implications follow from what I already know?
+- What contradictions or tensions exist in this knowledge space?
+- What parties interact and how (entities <-> predicates)?
+- What were relevant conditions prior to this point?
+- How would I explain this to someone with no background knowledge?
+- If I were to create a knowledge graph, what nodes would be connected?
+
+Use this before decomposition when the user gives a partial prompt, assumes shared
+context, or is asking about a domain with hidden structure.
+
+## Map-Reduce Grouping
+Before formalizing, when the domain is messy or unclear:
+
+1. List the ground-level ideas that come to mind first.
+2. Start with the leaves: the small, concrete items you notice before you know the category names.
+3. Then identify the branches: the larger groups or dimensions those leaves belong to.
+4. Clean up duplicates and split apart ideas that were bundled together.
+5. Group leaves that belong together.
+6. Name the branches based on what the grouped leaves have in common.
+7. If bigger patterns appear, grow the branches into a nested structure.
+8. Note overlaps, outliers, and missing pieces, then refine the structure.
+9. If a leaf belongs on more than one branch, say so instead of forcing it into one place.
+10. Answer from the structure you built, not from the raw list.
+
+Use this when the input is flat, overlapping, or mixed together. Skip it when the
+domain already has a fixed structure you need to follow.
+
+### Top-down Mode
+Use this when the material is too large, partially lost, or easier to understand
+from its governing structure than from its fragments.
+
+- Review the whole first, or the largest surviving slice.
+- Identify the core concepts, constraints, and load-bearing items.
+- Rank them by structural importance.
+- If the system is damaged, reconstruct the conceptual skeleton from breadcrumbs:
+  artifacts, interfaces, assumptions, decisions, and outputs.
+- Backfill details only after the trunk is stable.
+- Remap the material across useful dimensions such as dependency, function, risk,
+  chronology, or abstraction.
+- Separate observed structure from inferred reconstruction.
+- Refactor from the ranked map, not from raw sprawl.
+
+### Statistical Partitioning
+Use this when the space is measurable and you need principled boundaries for
+chunking, review, or refactoring.
+
+- Measure a feature that may reveal structure.
+- Choose a center that matches the distribution.
+- Prefer median for skewed, heavy-tailed, or noisy data.
+- Estimate spread with a robust statistic.
+- Prefer MAD when outliers would distort standard deviation.
+- Use the median as a first partition.
+- It provides a balanced split and a stable zoomed-out view of the space.
+- Derive candidate boundaries from center and spread.
+- Under roughly normal assumptions, `1.4826 * MAD` gives a sigma-like scale.
+- Under strong skew, transform first, then estimate boundaries in the transformed space.
+- Define the decision class before choosing the cutoff.
+- Typical range, anomaly band, chunk boundary, and hard exclusion need different thresholds.
+- Validate against the actual task.
+- Keep the partition only if it improves structure, chunking, or recovery.
+- Do not force this method where the shape disagrees.
+- Multimodal or categorical structure may require clustering, factor analysis, or explicit grouping instead.
+
 ## Problem Solving
 **Decompose** before solving: break into independent subproblems, identify dependencies, solve in topological order. State decomposition before implementing.
 
