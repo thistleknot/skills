@@ -573,6 +573,68 @@ should have requested more diverse sources. Check this at synthesis time.
 
 ---
 
+## Research + Paired Testing Integration
+
+**Pattern:** Before implementing paired-variant features, use deep-research to discover how similar features are validated in existing codebases. This creates an evidence trail and prevents reinventing failed approaches.
+
+### Workflow: Pre-Implementation Research for Feature Variants
+
+When planning paired feature testing (see `git-workflow/SKILL.md § Paired/Dimensional Feature Testing`):
+
+1. **Define the feature variant question:**
+   ```
+   "How do mature systems implement [feature class] with different [dimension/prerequisite]?"
+   Example: "How do game engines support unit types with different tech prerequisites?"
+   ```
+
+2. **Decompose into research subquestions:**
+   - What implementations exist for this feature class? (e.g., RTS games, game frameworks)
+   - How do existing systems gate feature variants by prerequisites?
+   - What validation patterns do they use for variant behavior?
+   - What failure modes have been documented?
+
+3. **Research execution:**
+   - Use `perspective_diversity_pattern` to gather evidence from: game engines, framework repos, technical blogs, research papers
+   - For each source, extract implementation patterns as `(subject, predicate, object)` triplets
+   - Capture gating logic, validation checkpoints, edge cases
+
+4. **Evidence → Design:**
+   - Report synthesis surfaces: "3 independent implementations gate variants via [mechanism]"
+   - Red flags: "No implementations found for [edge case]" — may indicate novel territory
+   - Decision: proceed with confidence or adapt based on evidence
+
+5. **Validation → Artifact:**
+   - Store research report in `validation_artifacts/YYYY-MM-DD-variant-research/`
+   - Link to paired test case as "Research baseline"
+   - When paired tests pass, update the artifact: "Validated against [N] known implementations"
+
+### Example: Adding Conditional Units to a Game
+
+**Research Question:**
+"How do existing game systems validate that new unit types work correctly alongside existing units?"
+
+**Decomposition:**
+- Subquestion 1: "What real game engines support multiple unit types?" (Starcraft engine, UnrealEngine, Godot examples)
+- Subquestion 2: "How do they validate new unit interactions don't break existing units?" (test strategy)
+- Subquestion 3: "What are documented edge cases when adding conditional unit types?" (failure patterns)
+
+**Evidence → Design Pair:**
+```
+Base Test (from evidence: standard units always work)
+├── Add Standard Unit A (no special tech)
+└── ✅ Renders, appears in list, craftable
+
+Variant Test (from evidence: conditional units require gating)
+├── Add Conditional Unit B (requires Tech X)
+├── Tech X not learned → Unit B hidden
+├── Unlock Tech X → Unit B appears + craftable
+└── ✅ Gating logic matches industry pattern from [Source: Starcraft engine article]
+```
+
+**Artifact:** Store the research report + pair evidence trace for future reference.
+
+---
+
 ## Research Anti-Patterns
 
 | Anti-pattern | Symptom | Fix |
@@ -582,3 +644,4 @@ should have requested more diverse sources. Check this at synthesis time.
 | Recency blindness | Synthesis relies on old sources for fast-moving topic | Filter by `extracted_at`; flag stale sources in synthesis prompt |
 | Citation laundering | Claim cites a blog that cites a paper — blog is the `source_id` | Upgrade: fetch the original paper; use it as source_id instead |
 | Saturation fraud | Reflector claims saturation with < 3 independent domains | `COVERAGE_MIN_DOMAINS=3` is a hard floor; override only with explicit justification |
+| Research-without-validation | Gather evidence but never validate against real implementation | For variant features: implement paired tests + link validation back to research report |

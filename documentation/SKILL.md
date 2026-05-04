@@ -83,6 +83,76 @@ Prefer a single changelog when:
 - Do **not** let documentation drift from real commands, file names, or current
   architecture.
 
+## Documenting Validated Feature Variants
+
+When paired-feature testing validates a new variant (see `git-workflow/SKILL.md § Paired/Dimensional Feature Testing`), document the **extensibility capability** for future developers.
+
+### Structure
+
+Choose the right artifact:
+
+1. **Canonical feature docs** (preferred) — if the repo has an existing feature guide
+   - Update to show: base behavior + variant behavior + when each is used
+   - Add: "Extensible via [mechanism]" (e.g., "Extensible via tech prerequisites")
+   - Include: validation evidence link if major variant
+
+2. **Variant reference** (timestamped) — if validation warrants isolated proof
+   - `VARIANT_VALIDATED_YYYY-MM-DD.md` with before/after screenshots or test logs
+   - Keep only if the variant is a breakthrough or required deep research
+
+3. **Example code in README** — if the repo teaches by example
+   - Show base case
+   - Show variant case
+   - Show: "Both work together; no conflicts"
+
+### Example: Game Unit System
+
+**Canonical doc update:**
+```markdown
+### Extensible Unit Types
+
+Units are extensible via tech prerequisites.
+
+**Base:** Standard units (no special requirements)
+- Appear immediately
+- Example: Rifleman, Scout
+
+**Variant:** Tech-gated units (unlock via research)
+- Hidden until tech is learned
+- Example: Laser Soldier (requires Laser Tech)
+
+**Validation:** Both types coexist without conflicts ✅
+- See validation_artifacts/2026-05-03-unit-variant-test/
+```
+
+**Artifact if needed:**
+```markdown
+# Unit Variant Validation — 2026-05-03
+
+## What was validated
+- Standard units still work ✅
+- Tech-gated units respect prerequisites ✅
+- No conflicts when both types exist ✅
+
+## Evidence
+- Base test: screenshots/logs showing standard units
+- Variant test: screenshots/logs showing gated units
+- Coexistence: both in same save file
+
+## Industry patterns consulted
+- Starcraft engine (published 2013)
+- UnrealEngine multiplayer docs (2024)
+- Godot game framework (2024 release)
+```
+
+### Guardrails
+
+- **Do** show both base and variant in the documentation
+- **Do** link to validation artifacts if they provide proof
+- **Do NOT** assume readers know the variant exists — state it explicitly
+- **Do NOT** document the feature without the validation evidence
+- **Keep it discoverable** — future devs should find the extensibility capability when they need it
+
 ## Output Checklist
 
 Before you stop, confirm:
@@ -90,3 +160,5 @@ Before you stop, confirm:
 1. The chosen documentation artifact matches the size and purpose of the change.
 2. The doc reflects the current code, commands, and paths exactly.
 3. The reader can tell what changed, what now works, and what still remains.
+4. If a feature variant was validated, the documentation shows both base and variant behaviors.
+5. If extensive research preceded the variant, a link to the research report exists.
