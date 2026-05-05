@@ -31,6 +31,25 @@ Before running any search, all six of these must be true:
 
 If any one is missing, fix that first. Do not start the search.
 
+### Scalar Objective Pattern
+
+The study must optimize one scalar. If multiple metrics matter, combine them
+explicitly and keep that definition fixed for the entire study.
+
+Example:
+- raw metrics: `precision`, `recall`
+- scalar objective: `(precision + recall) / 2`
+
+### Bank Roles
+
+Use explicit banks:
+- `tune` — used during search
+- `holdout` — used once after choosing the final config
+- optional `diagnostic` — used for error analysis, never for selection
+
+Do not keep peeking at holdout during tuning. That turns holdout into another
+tune set.
+
 ### Layerwise Decomposition
 
 Tune one layer at a time. Only use joint tuning after a stable layerwise baseline exists
@@ -51,6 +70,9 @@ Default order:
 | Categorical | Discrete strategy choices | Ranking mode, distance metric, affinity rule |
 
 `trial.suggest_float("lr", 1e-4, 1e-2, log=True)` vs `trial.suggest_float("threshold", 0.3, 0.9)` vs `trial.suggest_categorical("algo", ["kmeans", "hdbscan"])`.
+
+For structured probes, transform log-scaled factors in log space and map back
+with `exp` for evaluation. Do not force categorical choices onto a numeric axis.
 
 ### Structured Search (Alternative to TPE)
 
@@ -534,5 +556,5 @@ Avoid:
 - Logging only the winning trial and throwing away the artifact trail of the rest
 <!-- consolidation:see-also:start -->
 ## See Also
-[[hyper-parm_tuning]]  [[representation-pipeline]]  [[mlflow]]
+[[hyper-parm_tuning]]  [[agentic-hyperparm]]  [[representation-pipeline]]
 <!-- consolidation:see-also:end -->

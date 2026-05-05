@@ -169,5 +169,5 @@ Group 2 (4 docs):
 | Stale report | Docs changed since last run | Re-extract triplets for changed files only (content-hash check) |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[nearest-neighbor-chain]]  [[agentic_kg_memory]]  [[agentic-harness]]
+[[nearest-neighbor-chain]]  [[agentic_kg_memory]]  [[kg_ontology]]
 <!-- consolidation:see-also:end -->

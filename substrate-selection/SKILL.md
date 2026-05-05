@@ -42,5 +42,5 @@ validation_method: session
 - Keep `openclaw`, Copilot, Claude Code, and Pi in the comparison set with explicit confidence labels
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-harness]]  [[agentic-design-patterns]]  [[build-observability]]
+[[agentic-design-patterns]]  [[agentic-harness]]  [[build-observability]]
 <!-- consolidation:see-also:end -->

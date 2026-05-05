@@ -156,5 +156,5 @@ When using this skill, the final answer should make clear:
 - what the next turn should read first
 <!-- consolidation:see-also:start -->
 ## See Also
-[[react-agent]]  [[memory-bank]]  [[agentic-harness]]
+[[react-agent]]  [[memory-bank]]  [[memory-architecture]]
 <!-- consolidation:see-also:end -->

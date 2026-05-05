@@ -443,38 +443,14 @@ The high-level chain is:
 
 ### Synset/Hypernym Resolution via Guidance
 
-**Stage 1: Base triplet extraction**
-- LLM generates: `{ "subject": str, "predicate": str, "object": str, "polarity": "affirmed"|"negated", "inference_type": "observed"|"inferred" }`
+`kg_ontology` owns the synset/hypernym candidate-generation and canonicalization logic.
+At this layer, the contract is only:
 
-**Stage 2: Guidance-driven synset selection**
-- For each word in each element (subject, predicate, object):
-  - Retrieve top-5 word2vec neighbors
-  - Include the word itself as the 6th candidate
-  - Look up first-level hypernym for each synset via NLTK
-  - Format as candidate tuples: `[(synset_id, first_hypernym_id), ...]`
-- Present candidates to LLM with guidance constraints
-- LLM selects best synset + hypernym tuple per word (or abstains if confidence low)
-- Result: `subject_synset_hypernym_tuples`, `predicate_synset_hypernym_tuples`, `object_synset_hypernym_tuples` as lists of `[synset_id, hypernym_id]` pairs
+- extract `(subject, predicate, object, polarity, inference_type)` from source text
+- send the extracted spans to [[kg_ontology]] for candidate narrowing and winner selection
+- consume the returned canonical ids and BM25 enrichment when writing `kg_nodes`, `kg_edges`, and retrieval fields
 
-**Stage 3: BM25 index construction**
-- Extract lemmas from all selected synsets and hypernyms (strip `.pos.##` suffixes)
-- Flatten into space-separated text: `"subject_lemma subject_hypernym_lemma predicate_lemma ... object_lemma object_hypernym_lemma"`
-- Store as `bm25_index` column for semantic retrieval
-- Also upsert subject and object as `kg_nodes`; upsert the triplet as a `kg_edge` with `edge_type = predicate_lemma`
-
-**Example:**
-```json
-{
-  "subject": "love",
-  "predicate": "be",
-  "object": "madness",
-  "subject_synset_hypernym_tuples": [["love.n.01", "feeling.n.01"]],
-  "predicate_synset_hypernym_tuples": [["be.v.01", "exist.v.01"]],
-  "object_synset_hypernym_tuples": [["madness.n.01", "state.n.01"]]
-}
-```
-→ `bm25_index: "love feeling be exist madness state"`
-→ `kg_edge: (love, be, madness, affirmed)`
+See [[kg_ontology]] for the full guidance pipeline, visibility rules, and fallback policy.
 
 ### Source-to-triplet extraction
 
@@ -1715,73 +1691,14 @@ History is for auditability, not ranking.
 
 ## KG Ontology (Sub-skill)
 
-**Scope split:**
-- `kg_ontology` = **what node is this?** (canonical entity identity, canonicalization rules, layer separation)
-- `agentic_kg_memory` = **what does this evidence mean together?** (triplet confidence, page construction, throughline synthesis, retrieval)
+`kg_ontology` owns entity/predicate canonicalization, synset/hypernym candidate narrowing,
+BM25 hypernym injection, layer separation, and ontology anti-patterns.
+`agentic_kg_memory` consumes those ontology winners for triplet storage, retrieval,
+pages, and throughlines.
 
-Do not let pages, objectives, or throughlines invent their own node identities. They should consume the ontology winners produced by the canonicalization step.
-
-### Connection Type Map
-
-Seven distinct connection mechanisms operate in the graph:
-
-| # | Connection | Mechanism | Scope | Visible? |
-|---|---|---|---|---|
-| 1 | S-P-O within sentence | Triplet edge | Intra-sentence | Yes |
-| 2 | Same canonical ID across sentences | Shared node identity | Cross-sentence | Yes (implicit) |
-| 3 | SpaCy named entities across sentences | Named entity preservation → same canonical id | Cross-sentence | Yes (implicit) |
-| 4 | Source string → entailed triplets | Throughline `supporting_fks` | String-to-many | Yes |
-| 5 | Vertical alignment across sentences | BM25 — hypernym tokens injected into `bm25_text` | Cross-sentence | Implicit via retrieval |
-| 6 | Polarity / negation | Stopwords preserved in `bm25_text` (NOT, never, no) | Intra-triplet | Via BM25 term match |
-| 7 | Hypernym scaffolding | `subClassOf` lattice | Ontology layer | **Hidden by default** |
-
-**Vertical alignment rule:** hypernym edges are NOT exposed as explicit cross-sentence graph edges. Inject subject's hypernym chain tokens into `bm25_text` at index time. A query for `animal` then retrieves rows for `dog`, `wolf`, `canine` via shared token `animal.n.01` — no explicit edge required.
-
-**Polarity rule:** do NOT remove stopwords from triplet text fed into `bm25_text`. Negation markers (`NOT`, `never`, `no`, `without`) are load-bearing. Stripping them collapses `dog NOT eat plant` and `dog eat plant` into the same BM25 representation.
-
-### Layer Separation
-
-**Visible default graph:** canonical entity nodes, canonical predicate nodes, quote/document provenance nodes, semantic evidence edges.
-
-**Hidden by default:** `instance_of`, `has_label`, alias links, hypernym/`subClassOf` scaffolding, candidate sense lists, rejected canonicalization candidates, raw extracted phrase nodes. These belong in a debug or ontology view only.
-
-### Canonicalization Rules
-
-**Entities:**
-1. Named entity (`person`, `org`, `location`, `work`) → preserve full normalized span as canonical id.
-2. Otherwise: generate noun/proper-noun head candidates → lemmatize → score with role-aware and corpus-aware signals → choose one deterministic winner.
-3. Store original phrases, rejected candidates, and aliases as provenance only — never as canonical id.
-- Examples: `What Happiness Consists Of` → `happiness`; `Marcus Tullius Cicero` → `marcus_tullius_cicero`
-
-**Predicates:**
-1. Select predicate-head candidates. Prefer `VERB`, then `AUX`, then nominalized relation heads.
-2. Lemmatize the candidate head; use the winning single canonical identity in the visible graph.
-- Examples: `search for` → `search`; `is devoted to` → `devote`
-
-**Role-conditioned selection:** subject/object slots prefer noun/proper-noun identities; predicate slots prefer verb/relation-head identities. Use semantic role to break POS ties.
-
-### Candidate Generation Narrowing
-
-Never make the LLM choose from the whole ontology. Build a tightly scoped candidate set:
-1. Look up the normalized token/span in a first-synset dictionary if available
-2. Retrieve top-21 embedding-near lexical neighbors
-3. For each strong neighbor, retrieve the top-3 first-synset candidates + first-level hypernym
-4. Score using POS priors, role, BM25 fit, and frequency
-5. Present the narrowed shortlist to the LLM for selection or abstention
-
-Same narrowing applies to hypernyms. Hypernyms are ontology scaffolding, not free-floating replacement labels — they must stay coupled to the candidate synset pool that produced them.
-
-**Fallback:** if synset confidence is too low, keep lemma-level identity as canonical winner; preserve the candidate shortlist in provenance for later repair.
-
-### Ontology Anti-Patterns
-
-- Using raw snake_case or extractor phrases as ontology ids
-- Showing `instance_of` / `has_label` in the default graph
-- Mixing hypernym structure into the same view as answer evidence
-- Using multi-word predicate phrases as final visible relation ids
-- Letting pages or throughlines redefine ontology ids
-- Treating lemma collapse as enough when role or POS evidence points elsewhere
-- Treating provenance text as ontology identity
+Do not let pages, objectives, or throughlines invent their own node identities.
+See [[kg_ontology]] for the full connection map, canonicalization contract,
+visibility rules, and fallback policy.
 
 ---
 

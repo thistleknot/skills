@@ -178,7 +178,9 @@ produces a tuned config that fails on production inputs it never saw.
 
 ## Layerwise Tuning Protocol
 
-Tune in strict layer order. Freeze each layer before moving to the next.
+Use the **Weighted Stage Allocation** pattern from `hyper-parm_tuning` for the full
+freeze-one-layer / validate / move-downstream contract. This skill only
+instantiates that pattern for agent behavior.
 
 ### Recommended Order
 
@@ -206,29 +208,10 @@ is wasted budget.
 
 ## Search Strategy
 
-### Option A — Structured Probe (Default for Expensive Evaluations)
-
-```text
-1. Start from the current best (or a center config if no baseline exists)
-2. For each parameter in the layer, probe center+sigma and center-sigma
-3. Score each probe on the tune bank
-4. Record the winning direction for each parameter
-5. Build a joint candidate from all winning directions
-6. Run local refinement samples around the current best
-7. Accept only if the new config beats the incumbent
-```
-
-Budget with `n` parameters and `r` refinement samples: `2n + r + 1` evaluations.
-
-### Option B — TPE/Bayesian (for Broader Exploration)
-
-Use `optuna-nested-cv` for the search engine. Register the composite scalar as
-the Optuna objective. Persist the study to SQLite so the search is resumable.
-
-Reserve TPE for layers where parameter interactions are strong and interpretability
-is less important than coverage.
-
-Always log every trial to MLflow for lineage and cross-run comparison.
+See `hyper-parm_tuning` for the full structured-probe vs TPE mechanics. In this
+agentic setting, default to structured probes per layer because full episodes are
+expensive; escalate to `optuna-nested-cv` only when cross-parameter interactions
+are strong enough to justify broader search.
 
 ## Trial Loop
 

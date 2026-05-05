@@ -231,5 +231,5 @@ If both fail, `bridge_search` returns `[]` with a printed warning.
    appear. arXiv Atom fallback has better recency coverage.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[auto-ingest]]  [[pdf-extraction]]  [[deep-research]]
+[[auto-ingest]]  [[pdf-extraction]]  [[agentic_kg_memory]]
 <!-- consolidation:see-also:end -->

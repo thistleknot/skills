@@ -394,5 +394,5 @@ The action:
 5. Deletes the original merged branch
 <!-- consolidation:see-also:start -->
 ## See Also
-[[openspec-propose]]  [[openspec-apply-change]]  [[openspec-explore]]
+[[openspec-propose]]  [[openspec-apply-change]]  [[openspec-archive-change]]
 <!-- consolidation:see-also:end -->

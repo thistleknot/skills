@@ -47,55 +47,18 @@ Do not use this skill when:
 - there is no stable evaluator
 - the "hyperparameters" are really feature or product decisions
 
-## Preconditions
-Before tuning, establish all of the following:
-
-1. A fixed pipeline shape or model workflow
-2. A baseline configuration that runs end to end
-3. A bounded search space for each factor
-4. A scalar objective to maximize or minimize
-5. A `tune` split and a separate `holdout` split
-6. A persistence path for trial artifacts
-
-If any one of these is missing, fix that first rather than starting the search.
-
-## Objective Design
-The optimizer must target one scalar.
-
-- If you care about multiple metrics, combine them explicitly.
-- If the evaluator is noisy, average multiple takes before scoring a trial.
-- Keep the scalar definition stable across all trials.
-
-Example pattern:
-- raw metrics: `precision`, `recall`
-- scalar objective: `(precision + recall) / 2`
-
-## Sampler Policy
-When the evaluator is an LLM judge, score each query with three named sampler takes:
-
-- `conservative`
-- `balanced`
-- `creative`
-
-Use the same three takes consistently across trials so parameter changes are compared under the same judge-variance surface.
-
-Default interpretation:
-- `conservative` checks whether the evidence still looks correct under low-variance judging
-- `balanced` is the middle estimate
-- `creative` stress-tests whether the evidence still covers the query under a looser reading
-
-The per-query score should be the mean across these three takes before rolling up to the corpus scalar.
-
-## Split Design
-Use explicit banks:
-
-- `tune` — used during search
-- `holdout` — used once after choosing the final config
-- optional `all` or `diagnostic` — used for error analysis, never for selection
-
-Do not keep peeking at holdout during tuning. That turns holdout into another tune set.
+## Methodology Primer
+For the full search preconditions, scalar-objective contract, judge sampler policy,
+and bank design, see `optuna-nested-cv`'s **Methodology Primer**. That
+higher-authority skill now owns the reusable optimizer setup contract; this file
+keeps the Weighted Stage Allocation pattern and the tuning-specific cautions that
+remain distinctive here.
 
 ## Decomposition Strategy
+This section is the canonical home for the **Weighted Stage Allocation** pattern.
+See `optuna-nested-cv` for the full methodology primer and optimizer mechanics;
+apply those mechanics stage by stage using the order below.
+
 Prefer layerwise tuning over full joint tuning.
 
 Typical order:
@@ -107,100 +70,11 @@ Typical order:
 
 Use joint tuning only after a stable layerwise pass, and only when evidence shows interaction effects are load-bearing.
 
-## Search Space Design
-Choose the parameter type that matches the response curve.
-
-### Linear
-Use for narrow bounded ranges and additive behavior.
-
-Examples:
-- thresholds in a small interval
-- bonuses or weights near zero
-- top-k values over a modest range
-
-### Log
-Use for multiplicative or order-of-magnitude behavior.
-
-Examples:
-- regularization strengths
-- decay factors
-- temperature-like scales
-- retrieval weights spanning powers of ten
-
-In log mode, transform to log space for probing and refinement, then map back with `exp` for evaluation.
-
-### Categorical
-Use for discrete strategy choices.
-
-Examples:
-- ranking mode
-- distance metric
-- affinity composition rule
-
-Do not pretend categorical choices are numeric.
-
-## Search Strategies
-
-### 1. Structured Search
-Use when evaluations are expensive and interpretability matters.
-
-Protocol:
-1. Start from a center configuration
-2. For each factor, probe `center + sigma` and `center - sigma`
-3. Score each probe against the same `tune` bank
-4. Record the winning direction, if any
-5. Build a joint candidate from all winning directions
-6. Run a small number of local refinement samples around the current best
-7. Accept only if the new config beats the incumbent
-
-Benefits:
-- fixed and predictable evaluation budget
-- explicit directional signal per factor
-- easier post-hoc interpretation
-- cheaper than open-ended black-box search
-
-Budget rule:
-- with `n` factors and `r` refinement samples, total evaluations are:
-  - baseline
-  - `2 * n` one-at-a-time probes
-  - one joint candidate
-  - `r` local refinements
-
-Default example:
-- if `r = 5`, total evaluations = `2 * n + 7`
-
-### 2. TPE / Bayesian Search
-Use when you have more evaluation budget and want broader exploration.
-
-Guidelines:
-- seed with startup trials before trusting the sampler
-- persist the study if the run may need to resume
-- still use the same scalar objective and same `tune` bank
-- still reserve holdout for final confirmation only
-
-Benefits:
-- better broad search coverage
-- useful when factor interactions are strong
-- less manual bias than hand-authored structured probes
-
-Tradeoff:
-- less interpretable than structured search
-- budget can be harder to reason about
-
-## Noise Handling
-If the evaluator is stochastic, do not score a trial from one take.
-
-Use one of these:
-- multiple sampler settings and average the score
-- repeated runs with different seeds
-- median-of-k if the scorer has occasional outliers
-
-The rule is simple: do not let evaluator variance masquerade as parameter signal.
-
-For this workflow, the default multiple-sampler setting is the fixed trio:
-- `conservative`
-- `balanced`
-- `creative`
+## Search Mechanics
+See `optuna-nested-cv`'s **Methodology Primer** for the full search-space typing
+(`linear` / `log` / `categorical`), structured-probe details, TPE guidance, and
+noise-handling contract. This skill keeps the stage order; `optuna-nested-cv`
+owns the reusable search mechanics.
 
 ## Persistence
 Persist every trial artifact.
@@ -323,5 +197,5 @@ When using this skill, the final answer should report:
 - any remaining uncertainty or overfit risk
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-hyperparm]]  [[optuna-nested-cv]]  [[mlflow]]
+[[optuna-nested-cv]]  [[agentic-hyperparm]]  [[mlflow]]
 <!-- consolidation:see-also:end -->

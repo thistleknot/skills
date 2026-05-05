@@ -204,5 +204,5 @@ Seam:
 - the agent can pause implementation long enough to map the dependency surface
 <!-- consolidation:see-also:start -->
 ## See Also
-[[documentation]]  [[validation]]  [[tdd-agent]]
+[[validation]]  [[documentation]]  [[tdd-agent]]
 <!-- consolidation:see-also:end -->

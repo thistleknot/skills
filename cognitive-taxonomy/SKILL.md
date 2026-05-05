@@ -39,6 +39,7 @@ This skill provides a unified classification system drawn from:
 ## When NOT to Use
 
 - Implementing memory mechanics (use `procedural-memory` or `agentic_kg_memory`)
+- Composing the layered memory stack (use `memory-architecture`)
 - Managing project state (use `memory-bank`)
 - Evolving skills (use `skill-wiki`)
 

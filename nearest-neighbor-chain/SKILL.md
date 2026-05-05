@@ -193,5 +193,5 @@ Singletons (N): doc_g  doc_h  doc_i  ...
 | Inconsistent groups across runs | Tie-breaking in sort order | Use a stable sort; add a secondary sort on `(i, j)` index for determinism |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[consolidation]]  [[representation-pipeline]]  [[siamese_from_correlation_matrix]]
+[[consolidation]]  [[representation-pipeline]]  [[agentic_kg_memory]]
 <!-- consolidation:see-also:end -->
