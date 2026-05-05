@@ -117,6 +117,34 @@ when several wiki/skill candidates look correlated, it should decide whether the
 should be merged, cross-referenced, updated together, or kept separate rather than
 letting similarity alone make that decision.
 
+## Receiving Layer / Bird's-Eye Triage
+
+This meta-cognitive layer sits at the **receiving layer** above leaf workers and
+subagents. It tracks:
+- the overall goal
+- the user's likely intent
+- local past context and prior contradictions
+- what leaf nodes have floated upward
+
+Its job is not just to collect outputs. It performs triage on partially lost,
+fragmented, or conflicting knowledge:
+
+1. identify the concepts being surfaced
+2. backfill where / when context is available
+3. group leaf outputs into higher-level themes
+4. decide what should be routed onward, redirected, down-ranked, or rejected
+
+This is a bottom-up map-reduce move:
+
+```text
+leaf outputs -> concept grouping -> branch theme -> routed next action
+```
+
+If a leaf node suggests something that contradicts what the receiving layer knows
+is not entailed by local context, user intent, or other agent findings, do **not**
+pass it through unfiltered. Mark the contradiction, reduce confidence, and reroute
+or request verification first.
+
 ## Relation to Agentic Harness
 
 Keep `react-agent` and `agentic-harness` separate.
@@ -138,7 +166,7 @@ Keep `react-agent` and `agentic-harness` separate.
 When the system being changed is itself an agentic pipeline, use this split:
 
 ```text
-react-agent      -> manages task contract, plan, progress, evidence, and handoffs
+react-agent      -> manages task contract, intent tracking, receiving-layer triage, progress, evidence, and handoffs
 agentic-harness  -> manages coherence loop, legality loop, critic loop, and harness repair
 ```
 

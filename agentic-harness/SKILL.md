@@ -160,12 +160,12 @@ Recommended composition:
 
 ```text
 react-agent
-    -> Phase 0-2: contract, recon, plan, kanban, branch discipline
+    -> Phase 0-2: contract, recon, plan, kanban, branch discipline, receiving-layer triage
     -> delegates harness-specific execution to agentic-harness
 agentic-harness
     -> diagnoses coherence failures
     -> repairs proposer / validator / critic logic
-    -> returns a stable harness candidate plus coherence verdict
+    -> returns a stable harness candidate plus coherence verdict and leaf findings upward
 ```
 
 Do not collapse them into one skill unless you find repeated evidence that the
