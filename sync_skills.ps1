@@ -18,14 +18,27 @@
 .PARAMETER DryRun
     Report what would be done without making any changes.
 
+.PARAMETER Username
+    SSH username to use for the remote WinSCP launch step.
+
+.PARAMETER Password
+    SSH password to use for the remote WinSCP launch step.
+
+.PARAMETER Yes
+    Auto-confirm interactive yes/no prompts so the script can be re-run non-interactively.
+
 .EXAMPLE
     .\sync_skills.ps1
     .\sync_skills.ps1 -DryRun
     .\sync_skills.ps1 -Force
+    .\sync_skills.ps1 -Username root -Password hunter2 -y
 #>
 param(
     [switch]$Force,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [string]$Username,
+    [string]$Password,
+    [Alias('y')][switch]$Yes
 )
 
 Set-StrictMode -Version Latest
@@ -40,6 +53,10 @@ $Mirrors = @(
 $RemoteUser = "root"
 $RemoteHost = "192.168.3.17"
 $RemotePath = "/root/.copilot/skills"
+
+if ($Username) {
+    $RemoteUser = $Username
+}
 
 # Root-level files to track (relative names)
 $RootTracked = @("README.md", "copilot-instructions.md", "MEMORY_SKILLS_PLAN.md", "AGENTS.md")
@@ -87,6 +104,20 @@ function Show-Diff($masterFile, $mirrorFile) {
     } else {
         Write-Host "  (no diff output)" -ForegroundColor DarkGray
     }
+}
+
+function Read-Choice($Prompt, $Default = '', $AutoYesChoice = 'y') {
+    if ($Yes) {
+        Write-Host "  [AUTO] $Prompt -> $AutoYesChoice" -ForegroundColor DarkGray
+        return $AutoYesChoice
+    }
+
+    $response = Read-Host $Prompt
+    if ([string]::IsNullOrWhiteSpace($response)) {
+        return $Default
+    }
+
+    return $response.Trim().ToLowerInvariant()
 }
 
 # ── Step 1: Last commit timestamp ─────────────────────────────────────────────
@@ -168,13 +199,12 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
         foreach ($item in $newFolders) {
             Write-Host "  [$($item.MirrorLabel)] $($item.FolderName)" -ForegroundColor Yellow
         }
-        $resp = Read-Host "`nCopy these new folders to master? [y/n/d=show contents first] (default: d)"
-        if ($resp -eq '') { $resp = 'd' }
+        $resp = Read-Choice "`nCopy these new folders to master? [y/n/d=show contents first] (default: d)" 'd' 'y'
         foreach ($item in $newFolders) {
             if ($resp -eq 'd') {
                 Write-Host "`n  Contents of $($item.FolderName):" -ForegroundColor Cyan
                 Get-ChildItem $item.FullPath | ForEach-Object { Write-Host "    $($_.Name)" }
-                $choice = Read-Host "  Copy '$($item.FolderName)' to master? [y/n]"
+                $choice = Read-Choice "  Copy '$($item.FolderName)' to master? [y/n]" '' 'y'
                 if ($choice -eq 'y') { $pendingFolderCopies += $item }
             } elseif ($resp -eq 'y') {
                 $pendingFolderCopies += $item
@@ -185,8 +215,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
     # Handle modified files
     if ($needsMerge.Count -gt 0) {
         Write-Host "`n$($needsMerge.Count) tracked file(s) in mirrors are newer than last commit and differ from master." -ForegroundColor Yellow
-        $resp = Read-Host "How to handle? [y=copy all to master / n=skip all / d=diff each] (default: d)"
-        if ($resp -eq '') { $resp = 'd' }
+        $resp = Read-Choice "How to handle? [y=copy all to master / n=skip all / d=diff each] (default: d)" 'd' 'y'
 
         foreach ($item in $needsMerge) {
             if ($resp -eq 'y') {
@@ -202,7 +231,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
                     Write-Host "  [NEW FILE -- does not exist in master]" -ForegroundColor Magenta
                 }
                 Show-Diff $item.MasterFile $item.MirrorFile
-                $choice = Read-Host "  Copy to master? [y/n]"
+                $choice = Read-Choice "  Copy to master? [y/n]" '' 'y'
                 if ($choice -eq 'y') {
                     if (-not $DryRun) {
                         $parent = Split-Path $item.MasterFile -Parent
@@ -235,7 +264,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
         Write-Host "`nMaster has uncommitted changes after merge:" -ForegroundColor Yellow
         Write-Host $masterStatus
         if (-not $DryRun) {
-            $commit = Read-Host "Commit merged changes now? [y/n]"
+            $commit = Read-Choice "Commit merged changes now? [y/n]" '' 'y'
             if ($commit -eq 'y') {
                 git -C $Master add -A
                 git -C $Master commit -m "Merge locally-promoted skills back to master`n`nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
@@ -284,15 +313,22 @@ Write-Host @"
     User    : $RemoteUser
     Remote  : $RemotePath
     Local   : $Master
-    Mode    : Mirror (remote = local, delete extras)
+  Mode    : Mirror (remote = local, delete extras)
 "@ -ForegroundColor DarkGray
 
-$launch = Read-Host "`nLaunch WinSCP now? [y/n]"
+$launch = Read-Choice "`nLaunch WinSCP now? [y/n]" '' 'y'
 if ($launch -eq 'y') {
-    $inputUser = Read-Host "  SSH username (default: $RemoteUser)"
-    if ($inputUser -ne '') { $RemoteUser = $inputUser }
-    $securePwd  = Read-Host "  SSH password" -AsSecureString
-    $plainPwd   = [System.Net.NetworkCredential]::new('', $securePwd).Password
+    if (-not $Username) {
+        $inputUser = Read-Host "  SSH username (default: $RemoteUser)"
+        if ($inputUser -ne '') { $RemoteUser = $inputUser }
+    }
+
+    if ($Password) {
+        $plainPwd = $Password
+    } else {
+        $securePwd = Read-Host "  SSH password" -AsSecureString
+        $plainPwd = [System.Net.NetworkCredential]::new('', $securePwd).Password
+    }
 
     $wscp = Get-Command "winscp.com" -ErrorAction SilentlyContinue
     if ($wscp) {
@@ -306,3 +342,4 @@ if ($launch -eq 'y') {
 
 Write-Header "Done"
 if ($DryRun) { Write-Host "  [DRY RUN - no changes were made]" -ForegroundColor Magenta }
+exit 0
