@@ -6,7 +6,7 @@
 ## Groups
 
 ### Group 1 (4 skills)
-[[agentic-hyperparm]]  -->  [[hyper-parm_tuning]]  -->  [[optuna-nested-cv]]  -->  [[representation-pipeline]]
+[[agentic-hyperparm]]  -->  [[hyper-parm_tuning]]  -->  [[optuna-nested-cv]]  -->  [[mlflow]]
 
 ### Group 2 (4 skills)
 [[doc-synthesizer]]  -->  [[code-extraction]]  -->  [[diagnostic-scanner]]  -->  [[test-planner]]
@@ -21,10 +21,10 @@
 [[gist-retriever]]  -->  [[agentic_kg_memory]]  -->  [[kg_ontology]]
 
 ### Group 6 (3 skills)
-[[cognitive-taxonomy]]  -->  [[memory-architecture]]  -->  [[procedural-memory]]
+[[arxiv-bridge]]  -->  [[auto-ingest]]  -->  [[pdf-extraction]]
 
 ### Group 7 (3 skills)
-[[arxiv-bridge]]  -->  [[auto-ingest]]  -->  [[pdf-extraction]]
+[[cognitive-taxonomy]]  -->  [[memory-architecture]]  -->  [[procedural-memory]]
 
 ### Group 8 (2 skills)
 [[consolidation]]  -->  [[nearest-neighbor-chain]]
@@ -40,4 +40,4 @@
 
 ## Singletons
 
-[[agent-governance]]  [[agentic-design-patterns]]  [[autoresearch]]  [[build-observability]]  [[business-writing]]  [[checklist]]  [[class-balancing]]  [[cluster-quantized-knn]]  [[code]]  [[codebase-knowledge-graph]]  [[context-compaction]]  [[continuity-log]]  [[cua-desktop-agent]]  [[debugging]]  [[deep-q-rl]]  [[deep-research]]  [[documentation]]  [[evaluator-optimizer]]  [[fabro-create-workflow]]  [[feature-catalog]]  [[git-workflow]]  [[headless-browser-verification]]  [[mad-dynamic-batching]]  [[mcp-tool-registry]]  [[mlflow]]  [[multi-agent-coordination]]  [[openspec-explore]]  [[openspec-workflow]]  [[react-fastapi-sqlite]]  [[reasoning]]  [[request-intent-resolution]]  [[response-style]]  [[security-review]]  [[semantic-search-enrichment]]  [[skill-sync]]  [[skill-wiki]]  [[stratified-quota-sampling]]  [[substrate-selection]]  [[tdd-agent]]  [[timeout-guard]]  [[validation]]  [[validation-artifacts]]
+[[agent-governance]]  [[agentic-design-patterns]]  [[autoresearch]]  [[build-observability]]  [[business-writing]]  [[checklist]]  [[class-balancing]]  [[cluster-quantized-knn]]  [[code]]  [[codebase-knowledge-graph]]  [[context-compaction]]  [[continuity-log]]  [[cua-desktop-agent]]  [[debugging]]  [[deep-q-rl]]  [[deep-research]]  [[documentation]]  [[evaluator-optimizer]]  [[fabro-create-workflow]]  [[feature-catalog]]  [[git-workflow]]  [[headless-browser-verification]]  [[mad-dynamic-batching]]  [[mcp-tool-registry]]  [[multi-agent-coordination]]  [[openspec-explore]]  [[openspec-workflow]]  [[react-fastapi-sqlite]]  [[reasoning]]  [[representation-pipeline]]  [[request-intent-resolution]]  [[response-style]]  [[security-review]]  [[semantic-search-enrichment]]  [[skill-sync]]  [[skill-wiki]]  [[stratified-quota-sampling]]  [[substrate-selection]]  [[tdd-agent]]  [[timeout-guard]]  [[validation]]  [[validation-artifacts]]

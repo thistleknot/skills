@@ -556,5 +556,5 @@ Avoid:
 - Logging only the winning trial and throwing away the artifact trail of the rest
 <!-- consolidation:see-also:start -->
 ## See Also
-[[hyper-parm_tuning]]  [[agentic-hyperparm]]  [[representation-pipeline]]
+[[hyper-parm_tuning]]  [[agentic-hyperparm]]  [[mlflow]]
 <!-- consolidation:see-also:end -->

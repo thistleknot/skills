@@ -371,6 +371,14 @@ The graph wins on two axes:
    BM25 requires both entities to co-occur in a single document. A graph answers it
    natively via recursive CTE.
 
+**StructMem (2604.21748) middle path**: if full graph construction is too costly, use
+*dual-perspective extraction* + *periodic consolidation* as a lightweight alternative:
+extract both a **factual entry** (what happened) and a **relational entry** (how it
+binds to participants / prior events) from each event, then periodically consolidate
+semantically related events within temporal windows. This achieves structured reasoning
+without explicit entity resolution or graph traversal overhead (see `cognitive-taxonomy`
+§7 for the full flat–structured–graph spectrum).
+
 Your triplets already ARE edges: subject → predicate → object maps 1:1 to a typed
 directed edge. The graph is a natural structural consequence of triplet extraction, not
 an additional abstraction.

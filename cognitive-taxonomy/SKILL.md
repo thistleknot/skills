@@ -185,12 +185,42 @@ This is the single most impactful design decision for any memory-augmented agent
 | `memory-architecture` (new) | Meta-knowledge | Factual (about memory) | System 1 |
 | `cognitive-taxonomy` (new) | Meta-knowledge | Factual (about memory) | System 1 |
 
+## 7. Flat–Structured–Graph Architecture Spectrum (StructMem)
+
+A second orthogonal dimension for **explicit memory** is the *implementation architecture* — how
+retrieved units relate to each other structurally. StructMem (2604.21748) defines three points:
+
+| Architecture | Structural Richness | Cost | Failure Mode |
+|---|---|---|---|
+| **Flat** (vector / BM25) | None — bag of propositions | Low | Can't model relational structure; temporal progression severed |
+| **Structured hierarchical** (StructMem) | Event-level binding + cross-event consolidation | Medium | Weaker multi-hop than full graph |
+| **Graph** (KG / GraphRAG) | Full entity-relation traversal | High | Extraction instability; hallucinated edges persist; latency |
+
+**StructMem's mechanism** (middle path):
+1. **Dual-perspective entry extraction** — from each event, extract both a *factual entry* (what happened) and a *relational entry* (how it relates to participants / prior events), both temporally anchored.
+2. **Periodic semantic consolidation** — group semantically related events within temporal windows; consolidate without explicit schema design, entity resolution, or symbolic graph traversal.
+
+**Benchmark result (LoCoMo):** StructMem improves temporal reasoning and multi-hop QA vs.
+flat memory while substantially reducing token usage, API calls, and runtime vs. full-graph approaches.
+
+**Mapping to this skill set:**
+
+| Architecture | Skill |
+|---|---|
+| Flat | `agentic_kg_memory` BM25 + Chroma tier |
+| Structured hierarchical | Target state for `agentic_kg_memory` + `consolidation` pipeline |
+| Graph | `agentic_kg_memory` KG edges tier (already present) |
+
+StructMem confirms that periodic consolidation (owned by `consolidation`) is the lightweight
+path to relational structure without full graph maintenance overhead.
+
 ## Evidence
 
 - AI Hippocampus (2601.09113) implicit/explicit/agentic taxonomy, published TMLR 2025
 - Memory in the Age of AI Agents (2512.13564) forms/functions/dynamics taxonomy, 46 authors
 - AI Meets Brain (2512.23343) biological-artificial crosswalk, cognitive neuroscience bridge
 - NS-Mem (2603.15280) neuro-symbolic dual-process, +4.35% accuracy gain, code available
+- StructMem (2604.21748) flat–structured–graph spectrum; dual-perspective extraction + periodic consolidation; LoCoMo benchmark
 <!-- consolidation:see-also:start -->
 ## See Also
 [[memory-architecture]]  [[procedural-memory]]  [[agentic_kg_memory]]
