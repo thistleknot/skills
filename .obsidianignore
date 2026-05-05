@@ -1,39 +1,19 @@
-# Obsidian vault ignore — only SKILL.md files and _skill_graph.md should appear in graph view
+# Obsidian vault ignore — ONLY SKILL.md files and _skill_graph.md appear in graph view
+#
+# Strategy: exclude ALL .md files, then re-include only what we want.
+# This is the only approach that survives new files being added to the repo.
 
-# Research/intake staging area
+# Step 1: exclude every .md file at any depth
+**/*.md
+
+# Step 2: re-include only the canonical skill files
+!**/SKILL.md
+!_skill_graph.md
+
+# Step 3: re-exclude SKILL.md files inside staging / disabled areas
+#         (directory rules override the !**/SKILL.md above when listed after it)
+disabled/
 integrate/
-
-# Memory bank (lives at ~/memory-bank/, mirrored here)
 memory-bank/
-
-# Root-level workspace / agent task files
 .react_agent/
 .github/
-
-# Root-level non-skill docs
-README.md
-MEMORY_SKILLS_PLAN.md
-copilot-instructions.md
-
-# Skill subfolder companion docs (internal, not cross-linked)
-**/HISTORY.md
-**/EVIDENCE.md
-**/DELIVERABLES.md
-**/MEMORY_ENHANCEMENT.md
-**/diagram.md
-**/enhancements/
-**/references/
-
-# React-agent workspace nested inside react-agent skill folder
-react-agent/.react_agent/
-react-agent/HARNESS.md
-react-agent/MEMORY.md
-react-agent/QUALITY.md
-react-agent/README.md
-
-# Legacy companion docs (predated SKILL.md naming)
-architecture/architecture.md
-code/code.md
-debugging/debugging.md
-validation/validation.md
-stratified-quota-sampling/stratified-quota-sampling.md
