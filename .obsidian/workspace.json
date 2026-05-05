@@ -158,7 +158,8 @@
               "title": "Outline"
             }
           }
-        ]
+        ],
+        "currentTab": 3
       }
     ],
     "direction": "horizontal",
@@ -186,12 +187,16 @@
     "openspec-archive-change",
     "openspec-apply-change/SKILL.md",
     "openspec-apply-change",
+    "plugins/model-router/agents/task.agent.md",
+    "plugins/model-router/plugin.json",
+    "plugins/model-router/agents",
+    "plugins/model-router",
+    "plugins",
+    "debugging/SKILL.md",
+    "Untitled 1.canvas",
     "consolidation/__pycache__/consolidate.cpython-310.pyc",
     "consolidation/__pycache__",
-    "consolidation/merge_execute.py",
     "Untitled.canvas",
-    "Untitled 1.base",
-    "Untitled.base",
     "README.md",
     "agent-governance/SKILL.md"
   ]
