@@ -168,5 +168,5 @@ Common correction patterns from this session:
 - Song/record counts drifting back to outdated values
 <!-- consolidation:see-also:start -->
 ## See Also
-[[response-style]]  [[agentic_kg_memory]]  [[react-agent]]
+[[response-style]]  [[agentic_kg_memory]]  [[react-agent]]  [[openspec-workflow]]  [[agentic-harness]]
 <!-- consolidation:see-also:end -->

@@ -175,5 +175,5 @@ material should update or de-duplicate by stable runtime IDs, not fork phantom r
 - A local SQL store is available; shared deployments may additionally provide Postgres
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-harness]]  [[agentic_kg_memory]]  [[react-agent]]
+[[agentic-harness]]  [[agentic_kg_memory]]  [[react-agent]]  [[skill-wiki]]  [[memory-bank]]
 <!-- consolidation:see-also:end -->

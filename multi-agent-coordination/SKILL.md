@@ -201,5 +201,5 @@ stalled agents and re-assign tasks if an agent has been `IN_FLIGHT` for > `stall
 - Data Interpreter arXiv:2402.18679: +25% InfiAgent-DABench with hierarchical task graph decomposition
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-harness]]  [[agentic-design-patterns]]  [[react-agent]]
+[[agentic-harness]]  [[agentic-design-patterns]]  [[react-agent]]  [[agent-governance]]  [[openspec-workflow]]
 <!-- consolidation:see-also:end -->

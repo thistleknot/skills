@@ -183,5 +183,5 @@ Fix Prompt: Ready for go vet recommendations
 | Permission denied | Read access denied | Skip file, log warning |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[code-extraction]]  [[test-planner]]  [[doc-synthesizer]]
+[[code-extraction]]  [[test-planner]]  [[doc-synthesizer]]  [[agentic-harness]]  [[debugging]]
 <!-- consolidation:see-also:end -->

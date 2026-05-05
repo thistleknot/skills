@@ -87,5 +87,5 @@ Before you stop, confirm:
 4. The response stays coherent with the goal and leaves no load-bearing gap.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[business-writing]]  [[agentic_kg_memory]]  [[react-agent]]
+[[business-writing]]  [[agentic_kg_memory]]  [[react-agent]]  [[agentic-harness]]  [[continuity-log]]
 <!-- consolidation:see-also:end -->

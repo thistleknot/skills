@@ -458,5 +458,5 @@ eval/
 - Baseline update requires explicit commit message: `eval: update baseline (pass_rate: X → Y)`
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-harness]]  [[agent-governance]]  [[deep-research]]
+[[agentic-harness]]  [[agent-governance]]  [[deep-research]]  [[validation-artifacts]]  [[react-agent]]
 <!-- consolidation:see-also:end -->

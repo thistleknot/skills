@@ -647,5 +647,5 @@ Variant Test (from evidence: conditional units require gating)
 | Research-without-validation | Gather evidence but never validate against real implementation | For variant features: implement paired tests + link validation back to research report |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-harness]]  [[react-agent]]  [[agentic_kg_memory]]
+[[agentic-harness]]  [[react-agent]]  [[agentic_kg_memory]]  [[codebase-knowledge-graph]]  [[tdd-agent]]
 <!-- consolidation:see-also:end -->

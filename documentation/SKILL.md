@@ -164,5 +164,5 @@ Before you stop, confirm:
 5. If extensive research preceded the variant, a link to the research report exists.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[codebase-knowledge-graph]]  [[git-workflow]]  [[validation]]
+[[codebase-knowledge-graph]]  [[git-workflow]]  [[validation]]  [[openspec-workflow]]  [[deep-research]]
 <!-- consolidation:see-also:end -->

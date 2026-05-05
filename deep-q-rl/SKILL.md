@@ -524,5 +524,5 @@ code_rl_samples_per_level = [5, 3, 1]   # vs default [21,13,8,5,3,2,1]
 | Unbounded rollouts | Set `max_attempts` (e.g., 10); return best seen if not fully solved |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[evaluator-optimizer]]  [[autoresearch]]  [[agentic-harness]]
+[[evaluator-optimizer]]  [[autoresearch]]  [[agentic-harness]]  [[agentic_kg_memory]]  [[react-agent]]
 <!-- consolidation:see-also:end -->

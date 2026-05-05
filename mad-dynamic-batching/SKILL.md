@@ -278,5 +278,5 @@ from collections import Counter
 - 95% CI: `median ± 1.96 × sigma_est`
 <!-- consolidation:see-also:start -->
 ## See Also
-[[stratified-quota-sampling]]  [[class-balancing]]  [[timeout-guard]]
+[[stratified-quota-sampling]]  [[class-balancing]]  [[timeout-guard]]  [[optuna-nested-cv]]  [[code]]
 <!-- consolidation:see-also:end -->

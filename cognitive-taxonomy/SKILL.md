@@ -223,5 +223,5 @@ path to relational structure without full graph maintenance overhead.
 - StructMem (2604.21748) flat–structured–graph spectrum; dual-perspective extraction + periodic consolidation; LoCoMo benchmark
 <!-- consolidation:see-also:start -->
 ## See Also
-[[memory-architecture]]  [[procedural-memory]]  [[agentic_kg_memory]]
+[[memory-architecture]]  [[procedural-memory]]  [[agentic_kg_memory]]  [[skill-wiki]]  [[memory-bank]]
 <!-- consolidation:see-also:end -->

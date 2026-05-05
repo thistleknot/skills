@@ -259,5 +259,5 @@ Only refactor if: (1) code clarity needed, (2) duplication found, (3) naming cou
 - `validation` skill: complementary — covers test design methodology; this skill encodes lifecycle contract
 <!-- consolidation:see-also:start -->
 ## See Also
-[[validation]]  [[codebase-knowledge-graph]]  [[debugging]]
+[[validation]]  [[codebase-knowledge-graph]]  [[debugging]]  [[evaluator-optimizer]]  [[agentic-harness]]
 <!-- consolidation:see-also:end -->

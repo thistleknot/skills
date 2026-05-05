@@ -929,5 +929,5 @@ Implement stages in topological order. Each file is complete — no partial impl
 Run the validation gate for each stage before moving to the next.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[git-workflow]]  [[request-intent-resolution]]  [[agentic-harness]]
+[[git-workflow]]  [[request-intent-resolution]]  [[agentic-harness]]  [[openspec-workflow]]  [[validation-artifacts]]
 <!-- consolidation:see-also:end -->

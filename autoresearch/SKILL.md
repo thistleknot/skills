@@ -292,5 +292,5 @@ The key insight: the proposer learns from the change log. Each iteration's ratio
 - Self-debugging arXiv:2304.05128 — execution feedback loop, +12%
 <!-- consolidation:see-also:start -->
 ## See Also
-[[deep-q-rl]]  [[evaluator-optimizer]]  [[agentic-harness]]
+[[deep-q-rl]]  [[evaluator-optimizer]]  [[agentic-harness]]  [[debugging]]  [[tdd-agent]]
 <!-- consolidation:see-also:end -->

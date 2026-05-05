@@ -330,5 +330,5 @@ When using this skill, report:
 - which todo ids changed
 <!-- consolidation:see-also:start -->
 ## See Also
-[[memory-bank]]  [[auto-ingest]]  [[pdf-extraction]]
+[[memory-bank]]  [[auto-ingest]]  [[pdf-extraction]]  [[agentic_kg_memory]]  [[agentic-harness]]
 <!-- consolidation:see-also:end -->

@@ -494,5 +494,5 @@ Ready to hand off.
 - Screenshot-based verification: common in acceptance testing (Gherkin/BDD)
 <!-- consolidation:see-also:start -->
 ## See Also
-[[validation-artifacts]]  [[cua-desktop-agent]]  [[git-workflow]]
+[[validation-artifacts]]  [[cua-desktop-agent]]  [[git-workflow]]  [[openspec-workflow]]  [[react-fastapi-sqlite]]
 <!-- consolidation:see-also:end -->

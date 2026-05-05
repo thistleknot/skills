@@ -1733,5 +1733,5 @@ When using this skill, report:
 - rationale for the decision
 <!-- consolidation:see-also:start -->
 ## See Also
-[[kg_ontology]]  [[gist-retriever]]  [[agentic-harness]]
+[[kg_ontology]]  [[gist-retriever]]  [[agentic-harness]]  [[memory-bank]]  [[skill-wiki]]
 <!-- consolidation:see-also:end -->

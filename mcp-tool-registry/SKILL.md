@@ -232,5 +232,5 @@ per-framework adapters.
 - awesome-copilot: MCP plugin ecosystem; 60+ MCP server implementations catalogued
 <!-- consolidation:see-also:start -->
 ## See Also
-[[feature-catalog]]  [[code]]  [[react-agent]]
+[[feature-catalog]]  [[code]]  [[react-agent]]  [[agentic-harness]]  [[multi-agent-coordination]]
 <!-- consolidation:see-also:end -->

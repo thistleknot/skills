@@ -208,5 +208,5 @@ For PR reviews, scope the analysis to the diff:
 - Anthropic Claude Code: sandboxing and tool-access controls documentation (2025)
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agent-governance]]  [[agentic-harness]]  [[openspec-workflow]]
+[[agent-governance]]  [[agentic-harness]]  [[openspec-workflow]]  [[debugging]]  [[checklist]]
 <!-- consolidation:see-also:end -->

@@ -410,5 +410,5 @@ relevant if moving to a chunked/page-level retrieval architecture later.
 | `mcp-tool-registry` | pattern reference for FastMCP server design |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[auto-ingest]]  [[arxiv-bridge]]  [[agentic_kg_memory]]
+[[auto-ingest]]  [[arxiv-bridge]]  [[agentic_kg_memory]]  [[todo]]  [[agentic-harness]]
 <!-- consolidation:see-also:end -->

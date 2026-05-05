@@ -162,5 +162,5 @@ Metadata: language=go, file_count=12, test_count=2
 | Invalid markdown | Unclosed code block | Report and halt; user reviews output |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[diagnostic-scanner]]  [[doc-synthesizer]]  [[test-planner]]
+[[diagnostic-scanner]]  [[doc-synthesizer]]  [[test-planner]]  [[agentic-harness]]  [[openspec-workflow]]
 <!-- consolidation:see-also:end -->

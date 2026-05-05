@@ -1,6 +1,6 @@
 ---
 name: openspec-workflow
-description: "Autonomous spec-driven development with OpenSpec + Fabro. You orchestrate spec artifacts (proposal, design, specs, tasks), then Fabro handles implementation with its multi-model planning, review, and verification pipeline. Use when: (1) building a new app from scratch, (2) making any code change in a repo that uses OpenSpec, (3) creating or modifying proposals, designs, specs, or task breakdowns, (4) shipping PRs that need spec artifacts. Covers the full lifecycle: spec → Fabro build → verify → ship. Requires: openspec CLI, fabro CLI, gh CLI, git."
+description: "All OpenSpec operations in one skill. Covers: explore mode (thinking partner, no implementation), propose (create change + all artifacts in one step), apply (implement tasks from a change), archive (finalize and archive a completed change), and the full spec-driven development lifecycle with OpenSpec + Fabro. Use for any OpenSpec operation. Requires: openspec CLI, fabro CLI, gh CLI, git."
 ---
 
 # OpenSpec Workflow
@@ -394,5 +394,83 @@ The action:
 5. Deletes the original merged branch
 <!-- consolidation:see-also:start -->
 ## See Also
-[[openspec-propose]]  [[openspec-apply-change]]  [[openspec-explore]]
+[[react-agent]]  [[agentic-harness]]  [[git-workflow]]  [[fabro-create-workflow]]  [[cua-desktop-agent]]
 <!-- consolidation:see-also:end -->
+
+---
+
+## Explore Mode
+
+Enter explore mode when the user wants to think through something before or during a change. **Thinking partner only — never implement in explore mode.** You may read files, search code, and create OpenSpec artifacts, but NEVER write implementation code.
+
+**The stance:** Curious, not prescriptive. Open threads, not interrogations. Visual (ASCII diagrams). Adaptive. Patient. Grounded in the actual codebase.
+
+```bash
+openspec list --json   # check for active changes at session start
+```
+
+When a change exists, read its artifacts and reference them naturally in conversation. Offer to capture decisions when they crystallize:
+
+| Insight Type | Capture location |
+|---|---|
+| New requirement | `specs/<capability>/spec.md` |
+| Design decision | `design.md` |
+| Scope change | `proposal.md` |
+| New work | `tasks.md` |
+
+Always offer to capture; never auto-capture. The user decides.
+
+---
+
+## Propose
+
+Create a new change and generate all artifacts (proposal, design, tasks) in one step.
+
+1. If no name/description provided, ask what the user wants to build.
+2. `openspec new change "<kebab-case-name>"` — creates scaffolded change directory
+3. `openspec status --change "<name>" --json` — get artifact build order and `applyRequires`
+4. For each artifact in dependency order:
+   ```bash
+   openspec instructions <artifact-id> --change "<name>" --json
+   ```
+   Read `context`/`rules` as constraints (never copy them into the file). Use `template` as structure. Write to `outputPath`.
+5. Loop until all `applyRequires` artifacts have `status: "done"`.
+6. Confirm: "All artifacts created! Ready for implementation. Run apply to start tasks."
+
+**Guardrails:** always read dependency artifacts before creating a new one; if a change with that name exists, ask to continue or create new; verify each file exists after writing.
+
+---
+
+## Apply
+
+Implement tasks from an existing OpenSpec change.
+
+1. Identify the change (from context, or prompt via `openspec list --json`). Announce: "Using change: \<name\>".
+2. `openspec status --change "<name>" --json` — understand schema and which artifact has tasks.
+3. `openspec instructions apply --change "<name>" --json` — get `contextFiles`, task list, progress, dynamic instruction.
+4. Read all files listed in `contextFiles`.
+5. Show current progress (N/M tasks complete).
+6. Loop through pending tasks: implement → mark `- [ ]` → `- [x]` → next.
+7. Pause if: task is unclear, implementation reveals a design issue, error/blocker, or user interrupts.
+8. On completion: suggest archive. On pause: explain why and wait.
+
+**Guardrails:** keep changes minimal per task; update checkbox immediately after completing; use `contextFiles` from CLI output, don't assume filenames; pause on ambiguity, don't guess.
+
+---
+
+## Archive
+
+Finalize and archive a completed change.
+
+1. Identify the change (prompt via `openspec list --json` if not provided — always let user choose, never auto-select).
+2. `openspec status --change "<name>" --json` — check artifact completion.
+3. Read tasks file; count incomplete `- [ ]` tasks. Warn if any are incomplete; confirm before proceeding.
+4. If delta specs exist in `openspec/changes/<name>/specs/`: assess sync state, show summary, offer "Sync now (recommended)" or "Archive without syncing".
+5. Archive:
+   ```bash
+   mkdir -p openspec/changes/archive
+   mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>
+   ```
+6. Show completion summary: change name, schema, archive location, sync status.
+
+**Guardrails:** preserve `.openspec.yaml` (moves with directory); don't block archive on warnings, just inform and confirm; always show a summary of what happened.

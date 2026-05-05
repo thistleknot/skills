@@ -370,5 +370,5 @@ Run a library sweep when:
 - The agent can read existing SKILL.md files before modifying them
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic_kg_memory]]  [[agentic-harness]]  [[react-agent]]
+[[agentic_kg_memory]]  [[agentic-harness]]  [[react-agent]]  [[procedural-memory]]  [[memory-bank]]
 <!-- consolidation:see-also:end -->

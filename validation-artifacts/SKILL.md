@@ -744,5 +744,5 @@ Proof: Artifacts stored in validation_artifacts/2026-05-03-*
 - Load testing: k6 documentation, Locust
 <!-- consolidation:see-also:start -->
 ## See Also
-[[headless-browser-verification]]  [[git-workflow]]  [[agentic-harness]]
+[[headless-browser-verification]]  [[git-workflow]]  [[agentic-harness]]  [[optuna-nested-cv]]  [[validation]]
 <!-- consolidation:see-also:end -->

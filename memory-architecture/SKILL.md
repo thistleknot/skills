@@ -326,5 +326,5 @@ Extraction   Pattern mining    Neural +      EMA decay
 - MemGPT (arXiv:2310.08560) tiered memory architecture foundation
 <!-- consolidation:see-also:start -->
 ## See Also
-[[cognitive-taxonomy]]  [[procedural-memory]]  [[agentic_kg_memory]]
+[[cognitive-taxonomy]]  [[procedural-memory]]  [[agentic_kg_memory]]  [[context-compaction]]  [[continuity-log]]
 <!-- consolidation:see-also:end -->

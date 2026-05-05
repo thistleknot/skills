@@ -384,5 +384,5 @@ workflow fails on a blocking check.
 - OWASP Top 10 for LLMs (2025): prompt injection, insecure tool use, excessive agency
 <!-- consolidation:see-also:start -->
 ## See Also
-[[security-review]]  [[agentic-harness]]  [[checklist]]
+[[security-review]]  [[agentic-harness]]  [[checklist]]  [[react-agent]]  [[multi-agent-coordination]]
 <!-- consolidation:see-also:end -->

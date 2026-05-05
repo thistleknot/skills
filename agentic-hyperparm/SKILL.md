@@ -302,5 +302,5 @@ When this skill completes, report:
 - Remaining uncertainty (e.g., parameters not yet tuned due to missing evaluator)
 <!-- consolidation:see-also:start -->
 ## See Also
-[[hyper-parm_tuning]]  [[optuna-nested-cv]]  [[mlflow]]
+[[hyper-parm_tuning]]  [[optuna-nested-cv]]  [[mlflow]]  [[agentic-harness]]  [[agentic_kg_memory]]
 <!-- consolidation:see-also:end -->

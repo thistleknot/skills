@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "6f9bac007e6d7f93",
+        "id": "d43f49fad4edbf7b",
         "type": "tabs",
         "children": [
           {
-            "id": "f8a78d0d7bd7c61c",
+            "id": "ed08cf9128ec3d7a",
             "type": "leaf",
             "state": {
               "type": "graph",
@@ -176,8 +176,14 @@
       "bases:Create new base": false
     }
   },
-  "active": "f8a78d0d7bd7c61c",
+  "active": "ed08cf9128ec3d7a",
   "lastOpenFiles": [
+    "consolidation/__pycache__/consolidate.cpython-310.pyc",
+    "consolidation/__pycache__",
+    "consolidation/merge_execute.py",
+    "Untitled.canvas",
+    "Untitled 1.base",
+    "Untitled.base",
     "README.md",
     "agent-governance/SKILL.md"
   ]

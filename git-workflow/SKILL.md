@@ -385,5 +385,5 @@ python -m pytest tests/api_test.py
 - **Repository**: thistleknot/skills on GitHub
 <!-- consolidation:see-also:start -->
 ## See Also
-[[skill-sync]]  [[validation-artifacts]]  [[validation]]
+[[skill-sync]]  [[validation-artifacts]]  [[validation]]  [[openspec-workflow]]  [[documentation]]
 <!-- consolidation:see-also:end -->

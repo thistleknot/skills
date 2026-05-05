@@ -379,5 +379,5 @@ fig.show()
 4. **Export**: Save coords + clustering to CSV for downstream analysis
 <!-- consolidation:see-also:start -->
 ## See Also
-[[siamese_from_correlation_matrix]]  [[gist_correlation_matrix]]  [[cluster-quantized-knn]]
+[[siamese_from_correlation_matrix]]  [[gist_correlation_matrix]]  [[cluster-quantized-knn]]  [[representation-pipeline]]  [[agentic_kg_memory]]
 <!-- consolidation:see-also:end -->

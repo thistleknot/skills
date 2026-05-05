@@ -258,5 +258,5 @@ ppWalkTrailPos = ppWalkTrail.length - 1;
 - Density walk temperature: adaptive median — scales with local neighborhood density
 <!-- consolidation:see-also:start -->
 ## See Also
-[[siamese_from_correlation_matrix]]  [[spiral-radial-clustering-display]]  [[gist_correlation_matrix]]
+[[siamese_from_correlation_matrix]]  [[spiral-radial-clustering-display]]  [[gist_correlation_matrix]]  [[representation-pipeline]]  [[agentic_kg_memory]]
 <!-- consolidation:see-also:end -->

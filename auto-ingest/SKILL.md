@@ -494,5 +494,5 @@ working directory changes.
   Full backlog (~1600 papers) takes 80-160 hours of continuous daemon runtime.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[pdf-extraction]]  [[arxiv-bridge]]  [[todo]]
+[[pdf-extraction]]  [[arxiv-bridge]]  [[todo]]  [[memory-bank]]  [[agentic_kg_memory]]
 <!-- consolidation:see-also:end -->

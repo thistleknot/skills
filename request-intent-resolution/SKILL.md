@@ -902,5 +902,5 @@ Validation gate before advancing. 10% sample during development � never
 wait for a full-corpus run during iteration.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic_kg_memory]]  [[optuna-nested-cv]]  [[react-fastapi-sqlite]]
+[[agentic_kg_memory]]  [[react-fastapi-sqlite]]  [[optuna-nested-cv]]  [[mlflow]]  [[representation-pipeline]]
 <!-- consolidation:see-also:end -->

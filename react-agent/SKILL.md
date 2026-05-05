@@ -652,5 +652,5 @@ START
 ```
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-harness]]  [[continuity-log]]  [[deep-research]]
+[[agentic-harness]]  [[continuity-log]]  [[openspec-workflow]]  [[deep-research]]  [[debugging]]
 <!-- consolidation:see-also:end -->
