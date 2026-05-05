@@ -167,7 +167,7 @@ Singletons (N): doc_g  doc_h  doc_i  ...
 | Document consolidation (`consolidation`) | Primary consumer; adds triplet Jaccard matrix builder and MERGE/migrate/xref prescriptions |
 | Semantic topic segmentation | Any corpus with a precomputed similarity matrix |
 | Knowledge graph partitioning | Group nodes by structural similarity before entity resolution |
-| Obsidian [[wikilink]] generation | Chains define which pages should cross-reference each other |
+| Obsidian `[[wikilink]]` generation | Chains define which pages should cross-reference each other |
 | Skill library grouping | Used by `consolidation` over SKILL.md files |
 
 ---
