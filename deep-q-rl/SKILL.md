@@ -522,3 +522,7 @@ code_rl_samples_per_level = [5, 3, 1]   # vs default [21,13,8,5,3,2,1]
 | Ignoring partial credit | Pass rate delta is a richer signal than binary pass/fail; use it |
 | Not checkpointing best patch | Always git-stash or checkpoint the highest-scoring patch before continuing |
 | Unbounded rollouts | Set `max_attempts` (e.g., 10); return best seen if not fully solved |
+<!-- consolidation:see-also:start -->
+## See Also
+[[evaluator-optimizer]]  [[autoresearch]]  [[agentic-harness]]
+<!-- consolidation:see-also:end -->

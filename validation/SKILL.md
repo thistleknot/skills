@@ -92,3 +92,7 @@ Transformations must be reversible. Validate both forward and backward data pers
 
 ## Development Workflow
 Document (features) → Unit Test (core functionality) → Integrate → Commit
+<!-- consolidation:see-also:start -->
+## See Also
+[[tdd-agent]]  [[codebase-knowledge-graph]]  [[git-workflow]]
+<!-- consolidation:see-also:end -->

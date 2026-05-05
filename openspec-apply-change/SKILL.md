@@ -156,5 +156,5 @@ This skill supports the "actions on a change" model:
 - **Allows artifact updates**: If implementation reveals design issues, suggest updating artifacts - not phase-locked, work fluidly
 <!-- consolidation:see-also:start -->
 ## See Also
-[[openspec-archive-change]]
+[[openspec-archive-change]]  [[openspec-propose]]  [[openspec-explore]]
 <!-- consolidation:see-also:end -->

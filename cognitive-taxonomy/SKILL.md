@@ -192,5 +192,5 @@ This is the single most impactful design decision for any memory-augmented agent
 - NS-Mem (2603.15280) neuro-symbolic dual-process, +4.35% accuracy gain, code available
 <!-- consolidation:see-also:start -->
 ## See Also
-[[memory-architecture]]
+[[memory-architecture]]  [[procedural-memory]]  [[agentic_kg_memory]]
 <!-- consolidation:see-also:end -->

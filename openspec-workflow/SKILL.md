@@ -392,3 +392,7 @@ The action:
 3. Runs `openspec archive --yes` on a new branch
 4. Opens a PR with the archive and spec sync changes
 5. Deletes the original merged branch
+<!-- consolidation:see-also:start -->
+## See Also
+[[openspec-propose]]  [[openspec-apply-change]]  [[openspec-explore]]
+<!-- consolidation:see-also:end -->

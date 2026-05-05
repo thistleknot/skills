@@ -256,3 +256,7 @@ ppWalkTrailPos = ppWalkTrail.length - 1;
 - Two-path routing validated: filter-first path uses `_distExact` over filtered survivors; unfiltered path uses `_dist3d` (cluster-approx) with KNN pre-sort
 - MMR formula from: Carbonell & Goldstein (1998) "The Use of MMR, Diversity-Based Reranking for Reordering Documents and Producing Summaries"
 - Density walk temperature: adaptive median — scales with local neighborhood density
+<!-- consolidation:see-also:start -->
+## See Also
+[[siamese_from_correlation_matrix]]  [[spiral-radial-clustering-display]]  [[gist_correlation_matrix]]
+<!-- consolidation:see-also:end -->

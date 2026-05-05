@@ -124,10 +124,11 @@ def write_obsidian_links(skill_files: list, names: list, M: np.ndarray,
     """
     N = len(names)
 
-    # top-N neighbors per skill above tau, descending similarity
+    # top-N neighbors per skill, unconditional -- τ is a prescription floor,
+    # not a navigation floor; every skill should connect to its closest peers
     neighbors: dict[str, list[str]] = {}
     for i, name in enumerate(names):
-        row = [(M[i, j], names[j]) for j in range(N) if j != i and M[i, j] >= TAU]
+        row = [(M[i, j], names[j]) for j in range(N) if j != i]
         row.sort(reverse=True)
         neighbors[name] = [n for _, n in row[:top_n]]
 
@@ -173,7 +174,7 @@ def write_obsidian_links(skill_files: list, names: list, M: np.ndarray,
     ]
     for rank, chain in enumerate(real_groups, 1):
         chain_names = [names[i] for i in chain]
-        member_links = "  →  ".join(f"[[{n}]]" for n in chain_names)
+        member_links = "  -->  ".join(f"[[{n}]]" for n in chain_names)
         lines.append(f"### Group {rank} ({len(chain)} skills)")
         lines.append(member_links)
         lines.append("")
@@ -189,8 +190,8 @@ def write_obsidian_links(skill_files: list, names: list, M: np.ndarray,
     graph_file.write_text("\n".join(lines), encoding="utf-8")
 
     print(f"\nObsidian: {updated} SKILL.md file(s) updated with See Also links")
-    print(f"Obsidian: index written → {graph_file}")
-    print("  Open this folder as an Obsidian vault → Graph view shows semantic clusters.")
+    print(f"Obsidian: index written -> {graph_file}")
+    print("  Open this folder as an Obsidian vault -> Graph view shows semantic clusters.")
 
 
 # -- main ---------------------------------------------------------------------
@@ -238,7 +239,7 @@ def main() -> None:
         else:
             changed_list = ", ".join(sorted(changed))
             print(f"Consolidation: only {len(changed)} skill(s) changed since last run "
-                  f"({changed_list}). Need ≥{MIN_CHANGED} for a meaningful correlation shift. "
+                  f"({changed_list}). Need >={MIN_CHANGED} for a meaningful correlation shift. "
                   f"Skipping. Use --force to override.")
         return
 
@@ -341,7 +342,7 @@ def main() -> None:
 
     # -- checkpoint ------------------------------------------------------------
     save_checkpoint(db_path, current_hashes, len(real_groups), len(changed))
-    print(f"\nCheckpoint saved → {db_path}")
+    print(f"\nCheckpoint saved -> {db_path}")
 
 
 if __name__ == "__main__":

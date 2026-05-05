@@ -162,3 +162,7 @@ Before you stop, confirm:
 3. The reader can tell what changed, what now works, and what still remains.
 4. If a feature variant was validated, the documentation shows both base and variant behaviors.
 5. If extensive research preceded the variant, a link to the research report exists.
+<!-- consolidation:see-also:start -->
+## See Also
+[[codebase-knowledge-graph]]  [[git-workflow]]  [[validation]]
+<!-- consolidation:see-also:end -->

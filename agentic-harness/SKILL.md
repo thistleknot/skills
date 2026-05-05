@@ -1508,5 +1508,5 @@ deterministic + LLM hybrid pattern. This is settled consensus, not an experiment
 - The pipeline produces artifacts that can be inspected for gate-passing criteria
 <!-- consolidation:see-also:start -->
 ## See Also
-[[react-agent]]
+[[react-agent]]  [[agentic_kg_memory]]  [[agentic-design-patterns]]
 <!-- consolidation:see-also:end -->

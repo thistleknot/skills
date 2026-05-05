@@ -377,3 +377,7 @@ fig.show()
 2. **Batch Processing**: Extend to N separate clustering problems (e.g., per-user playlists)
 3. **Comparison View**: Side-by-side of old vs new clustering (or different GMM/HDBSCAN seeds)
 4. **Export**: Save coords + clustering to CSV for downstream analysis
+<!-- consolidation:see-also:start -->
+## See Also
+[[siamese_from_correlation_matrix]]  [[gist_correlation_matrix]]  [[cluster-quantized-knn]]
+<!-- consolidation:see-also:end -->

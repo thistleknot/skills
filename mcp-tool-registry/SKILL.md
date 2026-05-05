@@ -230,3 +230,7 @@ per-framework adapters.
 - ACI research: "ACI: The Interface Design Problem for Agents" — tool quality = model quality in practice
 - Microsoft A2A protocol (2025): agent-to-agent routing built on MCP semantics
 - awesome-copilot: MCP plugin ecosystem; 60+ MCP server implementations catalogued
+<!-- consolidation:see-also:start -->
+## See Also
+[[feature-catalog]]  [[code]]  [[react-agent]]
+<!-- consolidation:see-also:end -->

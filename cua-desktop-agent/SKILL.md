@@ -106,3 +106,7 @@ Based on [trycua/cua](https://github.com/trycua/cua):
 - Ollama must be running (`ollama serve`) before agent starts
 - Screen resolution affects coordinate accuracy — calibrate per environment
 - Consider adding OCR (Tesseract) for text-based verification alongside vision
+<!-- consolidation:see-also:start -->
+## See Also
+[[headless-browser-verification]]  [[openspec-workflow]]  [[agentic-harness]]
+<!-- consolidation:see-also:end -->

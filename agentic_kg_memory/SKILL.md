@@ -1808,5 +1808,5 @@ When using this skill, report:
 - rationale for the decision
 <!-- consolidation:see-also:start -->
 ## See Also
-[[kg_ontology]]  [[gist-retriever]]
+[[kg_ontology]]  [[gist-retriever]]  [[agentic-harness]]
 <!-- consolidation:see-also:end -->

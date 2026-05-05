@@ -191,3 +191,7 @@ Singletons (N): doc_g  doc_h  doc_i  ...
 | All singletons | τ too high or similarity matrix too sparse | Lower τ; check that boilerplate was stripped before vectorizing |
 | Long chains with low-score tail hops | Chain extends through pairs near τ | Raise τ slightly; or add a max-chain-length cap |
 | Inconsistent groups across runs | Tie-breaking in sort order | Use a stable sort; add a secondary sort on `(i, j)` index for determinism |
+<!-- consolidation:see-also:start -->
+## See Also
+[[consolidation]]  [[representation-pipeline]]  [[siamese_from_correlation_matrix]]
+<!-- consolidation:see-also:end -->

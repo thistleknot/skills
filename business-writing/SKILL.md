@@ -166,3 +166,7 @@ Common correction patterns from this session:
 - Education placed at top for an experienced candidate
 - MSc instead of M.S.
 - Song/record counts drifting back to outdated values
+<!-- consolidation:see-also:start -->
+## See Also
+[[response-style]]  [[agentic_kg_memory]]  [[react-agent]]
+<!-- consolidation:see-also:end -->

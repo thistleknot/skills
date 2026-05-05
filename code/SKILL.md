@@ -258,3 +258,7 @@ Cut from the bottom if context is tight. Never cut the active task specification
 - Anthropic Claude Code documentation: CLAUDE.md authorship guidelines (2025)
 - ACE arXiv:2510.04618 — context as evolving playbook; context quality predicts agent quality
 - Copilot CLI: `copilot-instructions.md` as primary context injection point
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic-harness]]  [[agentic_kg_memory]]  [[react-agent]]
+<!-- consolidation:see-also:end -->

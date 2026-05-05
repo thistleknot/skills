@@ -56,3 +56,7 @@ Isolate by division: working vs broken, logic vs data vs environment, expected v
 
 ## ReAct Sequence
 Before responding: Observe (prior state) → Plan tools → Execute → Reason over results → Plan response → Respond.
+<!-- consolidation:see-also:start -->
+## See Also
+[[debugging]]  [[react-agent]]  [[agentic_kg_memory]]
+<!-- consolidation:see-also:end -->

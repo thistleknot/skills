@@ -44,5 +44,5 @@ This skill sits under code work. Use it when a change stops being a local edit a
 Use this skill with `code`: `code` owns the edit mechanics; `design-patterns` chooses the relationship shape and contract.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[architecture]]
+[[architecture]]  [[codebase-knowledge-graph]]  [[agentic-design-patterns]]
 <!-- consolidation:see-also:end -->

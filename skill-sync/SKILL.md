@@ -185,3 +185,7 @@ Same as `sync_skills.ps1`:
 
 Remote mirror sync (to/from `192.168.3.17`) uses WinSCP or rsync; the LLM merge
 step applies before the outbound push, not after.
+<!-- consolidation:see-also:start -->
+## See Also
+[[git-workflow]]  [[agentic-harness]]  [[todo]]
+<!-- consolidation:see-also:end -->

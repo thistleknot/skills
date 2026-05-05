@@ -167,3 +167,7 @@ Group 2 (4 docs):
 | All singletons | τ too high or triplet extraction sparse | Lower τ or improve extraction prompt |
 | Merge candidate is false positive | Triplets share surface terms, not meaning | Switch to NLI-based soft Jaccard |
 | Stale report | Docs changed since last run | Re-extract triplets for changed files only (content-hash check) |
+<!-- consolidation:see-also:start -->
+## See Also
+[[nearest-neighbor-chain]]  [[agentic_kg_memory]]  [[agentic-harness]]
+<!-- consolidation:see-also:end -->

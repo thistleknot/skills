@@ -645,3 +645,7 @@ Variant Test (from evidence: conditional units require gating)
 | Citation laundering | Claim cites a blog that cites a paper — blog is the `source_id` | Upgrade: fetch the original paper; use it as source_id instead |
 | Saturation fraud | Reflector claims saturation with < 3 independent domains | `COVERAGE_MIN_DOMAINS=3` is a hard floor; override only with explicit justification |
 | Research-without-validation | Gather evidence but never validate against real implementation | For variant features: implement paired tests + link validation back to research report |
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic-harness]]  [[react-agent]]  [[agentic_kg_memory]]
+<!-- consolidation:see-also:end -->

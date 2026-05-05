@@ -311,5 +311,5 @@ class DAGEdge(BaseModel):
 - CoALA taxonomy — procedural memory as a cognitive architecture primitive
 <!-- consolidation:see-also:start -->
 ## See Also
-[[memory-architecture]]
+[[memory-architecture]]  [[cognitive-taxonomy]]  [[agentic_kg_memory]]
 <!-- consolidation:see-also:end -->

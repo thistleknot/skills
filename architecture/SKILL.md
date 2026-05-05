@@ -54,5 +54,5 @@ Hyperparams ≠ infrastructure vars — batch size is a system variable, not a m
 - Gather real requirements, not assumptions
 <!-- consolidation:see-also:start -->
 ## See Also
-[[design-patterns]]
+[[design-patterns]]  [[code]]  [[react-agent]]
 <!-- consolidation:see-also:end -->

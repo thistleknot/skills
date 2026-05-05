@@ -296,5 +296,5 @@ When this skill is used, the final answer should report:
 - artifact location for inspection
 <!-- consolidation:see-also:start -->
 ## See Also
-[[optuna-nested-cv]]
+[[optuna-nested-cv]]  [[hyper-parm_tuning]]  [[agentic-hyperparm]]
 <!-- consolidation:see-also:end -->

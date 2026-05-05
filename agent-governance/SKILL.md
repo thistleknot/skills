@@ -382,3 +382,7 @@ workflow fails on a blocking check.
 - Anthropic Claude Code documentation: tool-access control and sandboxing patterns (2025)
 - Microsoft Responsible AI Standard: audit trail, intent classification, escalation gates
 - OWASP Top 10 for LLMs (2025): prompt injection, insecure tool use, excessive agency
+<!-- consolidation:see-also:start -->
+## See Also
+[[security-review]]  [[agentic-harness]]  [[checklist]]
+<!-- consolidation:see-also:end -->

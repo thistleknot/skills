@@ -927,3 +927,7 @@ frontend/src/
 Add one `api/`, `hooks/` file per additional domain. Never merge domains into one file.
 Implement stages in topological order. Each file is complete — no partial implementations.
 Run the validation gate for each stage before moving to the next.
+<!-- consolidation:see-also:start -->
+## See Also
+[[git-workflow]]  [[request-intent-resolution]]  [[agentic-harness]]
+<!-- consolidation:see-also:end -->

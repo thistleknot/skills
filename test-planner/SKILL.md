@@ -204,3 +204,7 @@ Regression: None (no changes since last merge)
 | Git diff fails | Not a git repo or invalid refs | Skip regression detection |
 | No subjects found | Empty codebase or detection failure | Report and exit cleanly |
 | Subject mismatch | Tests don't align with subjects | Report coverage as uncertain |
+<!-- consolidation:see-also:start -->
+## See Also
+[[diagnostic-scanner]]  [[code-extraction]]  [[doc-synthesizer]]
+<!-- consolidation:see-also:end -->

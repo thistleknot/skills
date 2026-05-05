@@ -44,3 +44,7 @@ Recommended rule: the manager owns the chatroom state, while each role writes a 
 - Use `substrate-selection` to decide whether the workers should be Aider, OpenCode, claw-code, or another runtime.
 - Use `agentic-harness` when the problem is harness coherence, legality, or self-repair.
 - Use `code` when the task is concrete repo editing rather than workflow design.
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic-harness]]  [[substrate-selection]]  [[multi-agent-coordination]]
+<!-- consolidation:see-also:end -->

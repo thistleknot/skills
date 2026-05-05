@@ -506,5 +506,5 @@ When applying this skill, report:
 - how provenance is preserved without becoming ontology identity
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic_kg_memory]]
+[[agentic_kg_memory]]  [[semantic-search-enrichment]]  [[gist-retriever]]
 <!-- consolidation:see-also:end -->

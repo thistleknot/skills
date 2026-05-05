@@ -368,3 +368,7 @@ Run a library sweep when:
 - `agentic_kg_memory` sqlite + vector infrastructure is available for the pattern store backend
 - Git history is available for dating changes
 - The agent can read existing SKILL.md files before modifying them
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic_kg_memory]]  [[agentic-harness]]  [[react-agent]]
+<!-- consolidation:see-also:end -->

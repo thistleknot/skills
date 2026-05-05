@@ -491,5 +491,5 @@ When using this skill, report:
 - any blocker or decision that future sessions must inherit
 <!-- consolidation:see-also:start -->
 ## See Also
-[[todo]]
+[[todo]]  [[agentic_kg_memory]]  [[auto-ingest]]
 <!-- consolidation:see-also:end -->

@@ -160,3 +160,7 @@ Under heavy-tailed data, calibrate the MAD multiplier empirically.
 | Any PyTorch classifier | Drop-in `CrossEntropyLoss(weight=...)` |
 | Any sklearn estimator | Drop-in `sample_weight=` array |
 | `stratified-quota-sampling` users | Residual class weighting after quota-based subset selection |
+<!-- consolidation:see-also:start -->
+## See Also
+[[stratified-quota-sampling]]  [[mad-dynamic-batching]]  [[optuna-nested-cv]]
+<!-- consolidation:see-also:end -->

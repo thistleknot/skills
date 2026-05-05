@@ -183,3 +183,7 @@ fabro validate workflow.fabro            # validate only
 - `references/example-workflows.md` -- 9 complete example workflows from simple to production-grade
 
 {{user_input}}
+<!-- consolidation:see-also:start -->
+## See Also
+[[openspec-workflow]]  [[agentic-harness]]  [[react-agent]]
+<!-- consolidation:see-also:end -->

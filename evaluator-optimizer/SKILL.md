@@ -203,3 +203,7 @@ vetting (see `skill-wiki`).
 - Self-debugging arXiv:2304.05128: +12% on TransCoder/MBPP with execution feedback loop
 - MBR+DPO arXiv:2410.02902 (ICLR 2025 spotlight): best-of-N selection + offline DPO fine-tuning
 - Devin TDD mode: +9.1pp SWE-bench Verified via iterative test-feedback loop (overlaps `tdd-agent`)
+<!-- consolidation:see-also:start -->
+## See Also
+[[deep-q-rl]]  [[autoresearch]]  [[tdd-agent]]
+<!-- consolidation:see-also:end -->

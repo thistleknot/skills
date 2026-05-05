@@ -114,5 +114,5 @@ All artifacts complete. All tasks complete.
 - If delta specs exist, always run the sync assessment and show the combined summary before prompting
 <!-- consolidation:see-also:start -->
 ## See Also
-[[openspec-apply-change]]  [[openspec-propose]]
+[[openspec-apply-change]]  [[openspec-propose]]  [[openspec-explore]]
 <!-- consolidation:see-also:end -->

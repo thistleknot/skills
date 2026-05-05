@@ -110,5 +110,5 @@ After completing all artifacts, summarize:
 - Verify each artifact file exists after writing before proceeding to next
 <!-- consolidation:see-also:start -->
 ## See Also
-[[openspec-archive-change]]
+[[openspec-archive-change]]  [[openspec-apply-change]]  [[openspec-explore]]
 <!-- consolidation:see-also:end -->

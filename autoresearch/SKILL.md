@@ -290,3 +290,7 @@ The key insight: the proposer learns from the change log. Each iteration's ratio
 - ACE arXiv:2510.04618 — generation→reflection→curation loop, +10.6%
 - SWE-RL arXiv:2502.18449 — execution-feedback RL, 41% SWE-bench Verified
 - Self-debugging arXiv:2304.05128 — execution feedback loop, +12%
+<!-- consolidation:see-also:start -->
+## See Also
+[[deep-q-rl]]  [[evaluator-optimizer]]  [[agentic-harness]]
+<!-- consolidation:see-also:end -->

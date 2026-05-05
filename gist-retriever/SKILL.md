@@ -284,5 +284,5 @@ Avoid:
 - silently hiding dense-store failure behind a low-quality fallback
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic_kg_memory]]
+[[agentic_kg_memory]]  [[kg_ontology]]  [[optuna-nested-cv]]
 <!-- consolidation:see-also:end -->

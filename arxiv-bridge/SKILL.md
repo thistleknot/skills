@@ -229,3 +229,7 @@ If both fail, `bridge_search` returns `[]` with a printed warning.
 
 4. **S2 only indexes papers with abstracts** — very new preprints (< 1 week) may not
    appear. arXiv Atom fallback has better recency coverage.
+<!-- consolidation:see-also:start -->
+## See Also
+[[auto-ingest]]  [[pdf-extraction]]  [[deep-research]]
+<!-- consolidation:see-also:end -->

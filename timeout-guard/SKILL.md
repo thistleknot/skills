@@ -167,3 +167,7 @@ tracking_scope           = per-model
 ```
 
 If implementation changes, update this file to match the live policy.
+<!-- consolidation:see-also:start -->
+## See Also
+[[stratified-quota-sampling]]  [[mad-dynamic-batching]]  [[class-balancing]]
+<!-- consolidation:see-also:end -->
