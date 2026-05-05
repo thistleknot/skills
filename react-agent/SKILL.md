@@ -357,6 +357,33 @@ working before moving to later ones.
 
 **Persona dispatch** — when spawning any subagent (parallel or serial), prefer loading a **persona file** from `.react_agent/personas/` rather than passing inline role instructions. A persona file carries role definition, constraints, output format, and accumulated timestamped lessons from prior runs. Inline instructions are one-shot; personas improve from experience. See `MEMORY.md` for the persona file format.
 
+### Phase Budget and Replan Discipline
+
+The meta-cognitive layer should plan with a bounded phase budget:
+
+- Start with **Phase 1-2 only**.
+- Use the Eisenhower filter to front-load:
+  - foundational work that later phases depend on
+  - easy wins that remove risk or uncertainty quickly
+- By the end of **Phase 2**, decide whether replanning is needed.
+- From **Phase 3 onward**, you may add up to **3 more phases**.
+- **Hard cap: 5 total phases.** Do not keep expanding the plan indefinitely.
+
+Interpret the budget like this:
+
+1. **Phase 1** - foundational setup, triage, unblockers, obvious wins
+2. **Phase 2** - first integrated pass, dependency closure, initial verification
+3. **Phase 3-5** - only if needed; use for replans, deeper integration, and final closure
+
+Replanning is allowed, but it must tighten the task rather than drift it. Each replan
+should answer:
+- what uncertainty was removed
+- what dependency or contradiction was discovered
+- why the next phase is necessary
+
+The agent should aim to close the work **before Phase 5 when possible**, and must
+drive toward closure by Phase 5 rather than opening new exploratory branches.
+
 ### Recursive Decomposition
 
 If a subtask is itself too complex (ambiguous scope, multiple unknowns, or
