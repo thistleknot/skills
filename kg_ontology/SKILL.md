@@ -504,3 +504,7 @@ When applying this skill, report:
 - which layers are hidden/debug only
 - how KG-memory consumers use canonical ids
 - how provenance is preserved without becoming ontology identity
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic_kg_memory]]
+<!-- consolidation:see-also:end -->

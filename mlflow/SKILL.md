@@ -294,3 +294,7 @@ When this skill is used, the final answer should report:
 - scalar objective and component metrics
 - holdout or representative verification result
 - artifact location for inspection
+<!-- consolidation:see-also:start -->
+## See Also
+[[optuna-nested-cv]]
+<!-- consolidation:see-also:end -->

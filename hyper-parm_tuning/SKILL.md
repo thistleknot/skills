@@ -321,3 +321,7 @@ When using this skill, the final answer should report:
 - the best params found
 - the holdout result
 - any remaining uncertainty or overfit risk
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic-hyperparm]]  [[optuna-nested-cv]]
+<!-- consolidation:see-also:end -->

@@ -317,3 +317,7 @@ When this skill completes, report:
 - The holdout scalar for the final config
 - Any tune/holdout gap and its interpretation
 - Remaining uncertainty (e.g., parameters not yet tuned due to missing evaluator)
+<!-- consolidation:see-also:start -->
+## See Also
+[[hyper-parm_tuning]]  [[optuna-nested-cv]]
+<!-- consolidation:see-also:end -->

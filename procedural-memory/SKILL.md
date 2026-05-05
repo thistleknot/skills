@@ -309,3 +309,7 @@ class DAGEdge(BaseModel):
 - PrefixSpan (Pei et al., 2001) sequential pattern mining algorithm
 - Ebbinghaus forgetting curve — biological foundation for EMA-style decay
 - CoALA taxonomy — procedural memory as a cognitive architecture primitive
+<!-- consolidation:see-also:start -->
+## See Also
+[[memory-architecture]]
+<!-- consolidation:see-also:end -->

@@ -328,3 +328,7 @@ When using this skill, report:
 - whether the MCP server was registered
 - which todo action was taken
 - which todo ids changed
+<!-- consolidation:see-also:start -->
+## See Also
+[[memory-bank]]
+<!-- consolidation:see-also:end -->

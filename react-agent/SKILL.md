@@ -650,3 +650,7 @@ START
   │
   └─► DONE
 ```
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic-harness]]
+<!-- consolidation:see-also:end -->

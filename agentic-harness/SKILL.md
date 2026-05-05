@@ -1506,3 +1506,7 @@ deterministic + LLM hybrid pattern. This is settled consensus, not an experiment
 - At least one of: Claude Code, OpenClaw, OpenCode, or GitHub Copilot CLI is the execution backbone
 - A persistent task store (sqlite or equivalent) is available for branch/story/coherence state
 - The pipeline produces artifacts that can be inspected for gate-passing criteria
+<!-- consolidation:see-also:start -->
+## See Also
+[[react-agent]]
+<!-- consolidation:see-also:end -->

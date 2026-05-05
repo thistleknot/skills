@@ -42,3 +42,7 @@ This skill sits under code work. Use it when a change stops being a local edit a
 
 ## Working Rule
 Use this skill with `code`: `code` owns the edit mechanics; `design-patterns` chooses the relationship shape and contract.
+<!-- consolidation:see-also:start -->
+## See Also
+[[architecture]]
+<!-- consolidation:see-also:end -->

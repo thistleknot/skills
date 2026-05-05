@@ -1,3 +1,11 @@
+---
+name: test-planner
+description: Coverage-aware test plan generation. Identifies testable subjects, analyzes existing coverage, proposes scenarios by level (smoke/unit/integration/e2e/regression), and flags coverage status. Use when planning test suites or identifying coverage gaps.
+status: active
+last_validated: 2026-05-04
+supersedes: []
+validation_method: session
+---
 # test-planner Skill
 
 Coverage-aware test plan generation. Identifies testable subjects, analyzes existing test coverage, proposes concrete scenarios by level (smoke/unit/integration/e2e/regression), and flags coverage status (green/yellow/red). Produces markdown artifact with embedded JSON metadata.

@@ -489,3 +489,7 @@ When using this skill, report:
 - what project-state fact changed
 - what the new resume point is
 - any blocker or decision that future sessions must inherit
+<!-- consolidation:see-also:start -->
+## See Also
+[[todo]]
+<!-- consolidation:see-also:end -->

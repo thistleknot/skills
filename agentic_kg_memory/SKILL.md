@@ -84,17 +84,18 @@ The Chroma directory is the dense embedding surface.
 When running setup, do all of the following:
 
 1. Create `C:\Users\user\memory-bank\wiki_memory.sqlite3`
-2. Create or migrate a page table that includes:
+2. Create or migrate the page table:
    - `bm25_text`
    - `triplet_sequence_text`
    - `embedding_ref`
    - `cluster_id`
-3. Create `C:\Users\user\memory-bank\chroma\` as the Chroma persist directory
-4. Build `triplet_sequence_text` from canonicalized extracted triplets in source order
-5. Embed `triplet_sequence_text` and store vectors in Chroma
-6. Cluster the normalized dense vectors
-7. Write the winning `cluster_id` back into SQLite
-8. Persist human-readable cluster outputs to:
+3. Create the graph tables: `kg_nodes`, `kg_edges` (with indexes on `dst_slug` and `edge_type`)
+4. Create `C:\Users\user\memory-bank\chroma\` as the Chroma persist directory
+5. Build `triplet_sequence_text` from canonicalized extracted triplets in source order
+6. Embed `triplet_sequence_text` and store vectors in Chroma
+7. Cluster the normalized dense vectors
+8. Write the winning `cluster_id` back into SQLite
+9. Persist human-readable cluster outputs to:
    - `C:\Users\user\memory-bank\clusters.json`
    - `C:\Users\user\memory-bank\cluster_metrics.json`
 
@@ -131,12 +132,24 @@ The page is not a summary blob. It is a durable memory surface that links:
 it compiles source material into a persistent intermediate layer rather than
 re-reading raw prose from scratch on every query.
 
-The practical split is:
+The practical split maps to a standard folder convention:
 
-1. **Raw sources** — immutable source documents, quotes, spans, or notes
-2. **Pages / wiki entries** — durable synthesized memory surfaces updated as new
+| Layer | Folder | Contents |
+|---|---|---|
+| 1 | `raw/` | Immutable source documents, quotes, spans, notes — never edited |
+| 2 | `wiki/` | Durable synthesized pages updated as new evidence arrives |
+| 3 | `derived/` | KG indexes, cluster outputs, embeddings — rebuildable from `wiki/` |
+
+A `sources.md` file at the wiki root tracks provenance: title, URL/path, date added,
+and what each source contributes. Every claim in `wiki/` must trace back to an entry
+in `sources.md`.
+
+The three layers correspond to:
+
+1. **Raw sources** (`raw/`) — immutable source documents, quotes, spans, or notes
+2. **Pages / wiki entries** (`wiki/`) — durable synthesized memory surfaces updated as new
    evidence arrives
-3. **Throughlines** — the current best abductive or deductive conclusions over
+3. **Throughlines** (`derived/throughlines/`) — the current best abductive or deductive conclusions over
    those pages
 
 KnowledgeWeaver is a useful concretization of this pattern:
@@ -263,6 +276,12 @@ Hook fidelity scales with implementation maturity:
 - **Partial**: session-boundary hooks automated (start/end compression)
 - **Full**: all hooks wired; the wiki tends toward health on its own
 
+GBrain (Garry Tan, MIT) is a production reference for "Full" fidelity: 21 cron jobs
+running autonomously, self-wiring entity graph, overnight citation repair and
+consolidation. Its cron job taxonomy is a useful checklist when wiring the `on_schedule`
+hook: `entity_enrichment`, `citation_repair`, `consolidation_pass`, `retention_decay`,
+`backlink_audit`.
+
 ## Human-Readable Operating Surfaces
 
 For small-to-medium corpora, keep two markdown-level navigation aids alongside the
@@ -330,9 +349,97 @@ throughline layer.
 Before retrieval, pages, or throughlines exist, source text must be converted into
 triplets. That preprocessing step belongs to `agentic_kg_memory`.
 
+The ingest pipeline has **two passes**:
+
+### Pass 0 — Entity wiring (zero LLM calls)
+
+Before any LLM extraction, run a fast regex/NER pass that detects known entity names
+(people, organizations, places) and upserts them into the **knowledge graph** as typed
+directed edges.
+
+**Why a graph instead of BM25 for entity relations:**
+
+BM25 over synset lemmas does approximate single-hop entity queries — if
+`Alice works_at Acme` was extracted, the `bm25_index` contains `"alice person works_at
+acme organization"` and "who works at Acme" surfaces it. For single-hop, BM25 is
+competitive.
+
+The graph wins on two axes:
+1. **Scalability**: BM25 IDF weights drift with each new document. A graph adjacency
+   table is `INSERT OR REPLACE` — append-only, no global stats, no recompute ever.
+2. **Multi-hop traversal**: "who funded the companies Alice advises?" requires two hops.
+   BM25 requires both entities to co-occur in a single document. A graph answers it
+   natively via recursive CTE.
+
+Your triplets already ARE edges: subject → predicate → object maps 1:1 to a typed
+directed edge. The graph is a natural structural consequence of triplet extraction, not
+an additional abstraction.
+
+**Graph schema (SQLite):**
+
+```sql
+CREATE TABLE IF NOT EXISTS kg_nodes (
+    slug      TEXT PRIMARY KEY,
+    label     TEXT NOT NULL,
+    node_type TEXT NOT NULL,  -- person|org|concept|event|place|skill
+    page_ref  TEXT,           -- FK to wiki page slug if this node has a full page
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS kg_edges (
+    src_slug  TEXT NOT NULL,
+    dst_slug  TEXT NOT NULL,
+    edge_type TEXT NOT NULL,  -- works_at|attended|invested_in|founded|advises|mentions|implies|contradicts
+    confidence REAL DEFAULT 1.0,
+    polarity   TEXT DEFAULT 'affirmed',  -- affirmed|negated
+    source_page TEXT,                    -- which page created this edge
+    created_at  TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (src_slug, dst_slug, edge_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_kg_edges_dst ON kg_edges(dst_slug, edge_type);
+CREATE INDEX IF NOT EXISTS idx_kg_edges_type ON kg_edges(edge_type);
+```
+
+**Single-hop query (SQLite):**
+```sql
+-- Who works at Acme?
+SELECT n.slug, n.label FROM kg_edges e
+JOIN kg_nodes n ON e.src_slug = n.slug
+WHERE e.dst_slug = 'acme' AND e.edge_type = 'works_at' AND e.polarity = 'affirmed';
+```
+
+**Multi-hop query (recursive CTE):**
+```sql
+-- Who funded companies that Alice advises?
+WITH advised AS (
+    SELECT dst_slug AS company FROM kg_edges
+    WHERE src_slug = 'alice' AND edge_type = 'advises'
+)
+SELECT DISTINCT src_slug AS funder FROM kg_edges
+WHERE dst_slug IN (SELECT company FROM advised)
+  AND edge_type = 'invested_in';
+```
+
+Pass 0 populates this graph from entity co-occurrence alone (no LLM). Pass 1 enriches
+it with semantically extracted predicate types and confidence.
+
+### Pass 1 — LLM triplet extraction
+
+After entity wiring, the LLM extraction pass runs the full semantic layer. Extracted
+triplets are **written to both** the BM25 index (for semantic/fuzzy queries) and the
+graph (`kg_edges`) as typed edges.
+
+**Query routing:**
+| Query type | Use |
+|---|---|
+| Semantic / fuzzy ("what do we know about memory?") | BM25 + vector (Chroma) |
+| Relational / structural ("who works at X?", "what does Y imply?") | Graph traversal (`kg_edges`) |
+| Hybrid ("what did people who work at X say about memory?") | Graph narrows candidates → BM25 re-ranks |
+
 The high-level chain is:
 
-`source text -> LLM extraction (with guidance-resolved synsets) -> normalized triplets -> ontology winner ids -> bm25_index column -> storage`
+`source text -> LLM extraction (with guidance-resolved synsets) -> normalized triplets -> ontology winner ids -> bm25_index column + kg_edges -> storage`
 
 ### Synset/Hypernym Resolution via Guidance
 
@@ -352,7 +459,8 @@ The high-level chain is:
 **Stage 3: BM25 index construction**
 - Extract lemmas from all selected synsets and hypernyms (strip `.pos.##` suffixes)
 - Flatten into space-separated text: `"subject_lemma subject_hypernym_lemma predicate_lemma ... object_lemma object_hypernym_lemma"`
-- Store as `bm25_index` column for layer 2 KG memory retrieval
+- Store as `bm25_index` column for semantic retrieval
+- Also upsert subject and object as `kg_nodes`; upsert the triplet as a `kg_edge` with `edge_type = predicate_lemma`
 
 **Example:**
 ```json
@@ -366,6 +474,7 @@ The high-level chain is:
 }
 ```
 → `bm25_index: "love feeling be exist madness state"`
+→ `kg_edge: (love, be, madness, affirmed)`
 
 ### Source-to-triplet extraction
 
@@ -1697,3 +1806,7 @@ When using this skill, report:
 - whether the action was reinforce, refine, merge, create, reject, or contradict
 - fit-score and q-score changes
 - rationale for the decision
+<!-- consolidation:see-also:start -->
+## See Also
+[[kg_ontology]]  [[gist-retriever]]
+<!-- consolidation:see-also:end -->

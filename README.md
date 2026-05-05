@@ -53,7 +53,9 @@ skills/
 │   ├── timeout-guard                # runaway-task policy; interrupt and recovery rules
 │   ├── git-workflow                 # branch strategy (test→dev→main), push gates, LLM verification protocol with headless-browser checks
 │   ├── validation-artifacts         # mandatory proof protocol: training loss curves, holdout metrics, test logs, visual diffs, API benchmarks, script outputs — "seeing is believing"
-│   └── skill-wiki                   # living skill library lifecycle; intake → staged → active → superseded governance
+│   ├── skill-wiki                   # living skill library lifecycle; intake → staged → active → superseded governance
+│   ├── skill-sync                   # LLM-assisted merge for diverged skill copies across local/remote mirrors; cron-safe
+│   └── consolidation                # triplet-based pairwise correlation + greedy chain decomposition → merge/xref/migrate prescriptions
 │
 ├── memory/                          # persist knowledge across sessions and tasks
 │   ├── memory-bank                  # durable project memory (brief, context, patterns, progress)
@@ -86,6 +88,7 @@ skills/
 │   ├── response-style               # voice preservation, anti-cliche prose, user-facing coherence
 │   ├── business-writing             # professional document writing: resume, cover letter, portfolio; triplet bullets, spice gradient
 │   ├── gist_correlation_matrix      # sorted correlation matrix as complete relational map; two sorting approaches (orthogonal vs coverage)
+│   ├── nearest-neighbor-chain       # greedy path-cover decomposition of a similarity matrix into variable-length semantic chains; τ selection; chaining = semantic thread
 │   └── spiral-radial-clustering-display  # multi-dimensional spiral visualization; GMM+HDBSCAN+ordering→UMAP 2D with Gestalt encoding
 │
 ├── learning/                        # reinforcement learning and policy optimization
@@ -142,6 +145,12 @@ skills/
 39. `memory-architecture` is the **canonical design reference for agent memory systems**. Implements the Meta Context Graph layered stack with 4 concrete templates: (1) factual knowledge base (Implicit→Explicit→Working), (2) personal assistant with memory (adds Episodic), (3) autonomous agent (adds Procedural), (4) research/knowledge synthesis pipeline. Each template includes full 5-layer architecture, entity anchor flow, procedure discovery flow, query routing lifecycle, and anti-patterns. Use when designing a new agent with memory, evaluating existing systems for gaps, onboarding developers. Depends on `cognitive-taxonomy` for classification; feeds into `procedural-memory`, `agentic_kg_memory`, `context-compaction` for implementation.
 
 40. `validation-artifacts` enforces the principle **"seeing is believing"** by making validation proof mandatory, not optional. Before any skill claims "validation passed", this skill demands reproducible artifacts: training loss curves + eval metrics on holdout sets, predictions + confusion matrices, test execution logs with exit codes, before/after screenshots + visual diffs, API request/response samples + latency profiles, script execution examples with outputs. Used by `validation`, `checklist`, `tdd-agent`, `debugging`, `git-workflow` to prevent "trust me" claims. Integrates with `headless-browser-verification` (UI artifacts) and `security-review` (security validation artifacts).
+
+41. `skill-sync` is the **LLM-assisted merge protocol for diverged skill copies** across master and local/remote mirrors. Distinct from `skill-wiki` (governance: intake/staging/lifecycle) — `skill-sync` is operational: when both master and a mirror have independently changed since the last commit, it classifies the case (no-op / fast-forward / conflict), applies deterministic fast-forwards automatically, and routes true conflicts to an LLM merge that incorporates both sets of changes without dropping content from either side. Mechanically executed by `sync_skills.ps1`. MERGE-CONFLICT markers flag unresolved sections for human review before commit.
+
+42. `consolidation` is the **triplet-based document consolidation pipeline** for living knowledge bases and skill libraries. Extracts subject-predicate-object triplets from each document, computes a pairwise Jaccard similarity matrix (or NLI-based soft Jaccard for semantic matching), runs **greedy nearest-neighbor chain decomposition** (single-linkage chaining) to group related documents, and emits a sorted report with prescriptions: MERGE (≥0.8), migrate (0.5–0.8), xref (0.3–0.5). Groups are sorted by chain length descending — largest clusters first. Sits above `gist_correlation_matrix` (matrix builder) and feeds prescriptions into `skill-wiki` (governance) and `skill-sync` (mechanical merge). Use when the library has grown by ≥5 new entries, semantic search returns contradictory results, or a scheduled consolidation run is due.
+
+43. `nearest-neighbor-chain` is the **greedy path-cover chain decomposition sub-skill** shared by `consolidation` and any other consumer that needs to partition a similarity matrix into semantic groups. It walks pairs sorted by descending score, extends only chain endpoints (no branching), and emits variable-length chains sorted by length descending. Singletons are docs with no above-τ neighbours. The "chaining effect" of single-linkage is intentional: each chain is a semantic thread; a chain break is a topic boundary. `gist_correlation_matrix` produces the matrix; `nearest-neighbor-chain` decomposes it; `consolidation` adds triplet extraction and MERGE/migrate/xref prescriptions on top.
 
 ## MCG Foundation — The Conceptual Backbone
 

@@ -190,3 +190,7 @@ This is the single most impactful design decision for any memory-augmented agent
 - Memory in the Age of AI Agents (2512.13564) forms/functions/dynamics taxonomy, 46 authors
 - AI Meets Brain (2512.23343) biological-artificial crosswalk, cognitive neuroscience bridge
 - NS-Mem (2603.15280) neuro-symbolic dual-process, +4.35% accuracy gain, code available
+<!-- consolidation:see-also:start -->
+## See Also
+[[memory-architecture]]
+<!-- consolidation:see-also:end -->

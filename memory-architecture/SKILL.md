@@ -337,3 +337,7 @@ Extraction   Pattern mining    Neural +      EMA decay
 - AI Meets Brain (2512.23343) biological-artificial crosswalk, lifecycle
 - NS-Mem (2603.15280) neuro-symbolic dual-process architecture, +4.35% empirical gain
 - MemGPT (arXiv:2310.08560) tiered memory architecture foundation
+<!-- consolidation:see-also:start -->
+## See Also
+[[cognitive-taxonomy]]  [[procedural-memory]]
+<!-- consolidation:see-also:end -->

@@ -374,4 +374,7 @@ The sorted correlation matrix is not a means to retrieval. It IS the complete re
 - No hidden relationships
 - Human-legible patterns
 - The true "masterpiece artifact" 🏰
-
+<!-- consolidation:see-also:start -->
+## See Also
+[[siamese_from_correlation_matrix]]
+<!-- consolidation:see-also:end -->

@@ -1,3 +1,11 @@
+---
+name: code-extraction
+description: Extract source files and configs into a normalized, copy-paste-ready artifact for LLM consumption. Use when preparing a codebase for LLM context, generating documentation from live source, or creating a project snapshot.
+status: active
+last_validated: 2026-05-04
+supersedes: []
+validation_method: session
+---
 # code-extraction Skill
 
 Extract source files + configs into a normalized, copy-paste-ready artifact for LLM consumption. Follows docling extraction philosophy: recursive file collection → semantic grouping → markdown + JSON metadata output.
@@ -152,3 +160,7 @@ Metadata: language=go, file_count=12, test_count=2
 | File not readable | Permission denied or symlink loop | Skip file, log warning |
 | Large file truncated | Exceeds --max-file-bytes | Adjust limit or review truncated version |
 | Invalid markdown | Unclosed code block | Report and halt; user reviews output |
+<!-- consolidation:see-also:start -->
+## See Also
+[[diagnostic-scanner]]  [[doc-synthesizer]]
+<!-- consolidation:see-also:end -->

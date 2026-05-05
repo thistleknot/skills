@@ -331,3 +331,7 @@ Avoid:
 - Running the bootstrap loop beyond convergence
 - Adding layers without defining input/output contracts first
 - Tuning all layers jointly before layerwise baselines exist
+<!-- consolidation:see-also:start -->
+## See Also
+[[optuna-nested-cv]]
+<!-- consolidation:see-also:end -->

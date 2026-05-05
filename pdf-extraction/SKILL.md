@@ -408,3 +408,7 @@ relevant if moving to a chunked/page-level retrieval architecture later.
 | `class-balancing` | Box-Cox log-ratio weighting used by layout classifier |
 | `deep-research` | consumer: calls convert_pdf + get_methods via MCP |
 | `mcp-tool-registry` | pattern reference for FastMCP server design |
+<!-- consolidation:see-also:start -->
+## See Also
+[[auto-ingest]]
+<!-- consolidation:see-also:end -->
