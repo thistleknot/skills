@@ -70,6 +70,51 @@ When enabled, the harness will:
 
 This protocol is recommended for ambiguous, high-impact, or novel tasks where single-critic evaluation may be insufficient.
 
+### Meta-Cognition Layer
+
+Above the leaf workers and local critics, the harness should maintain a
+meta-cognitive layer.
+
+Its job is to:
+- anticipate the user's likely intent or underlying need, not just the literal request
+- roll up ideas from agentic leaf nodes bottom-up, similar to map-reduce
+- cluster local findings into branch-level themes
+- produce a qualitative synthesis at the top of the stack that can steer routing,
+  retries, and escalation
+
+Think of the flow as:
+
+```text
+leaf findings -> branch groupings -> top-level qualitative synthesis
+```
+
+This layer sits on top of the workers. It does not replace them. It reconciles
+what they are discovering into a steering view.
+
+### Stuck-State Divergence Protocol
+
+When the harness is stuck, cycling, or receiving conflicting signals:
+
+1. Widen the search with `reasoning` primitives:
+   - TRIZ reframing
+   - de Bono's Six Hats
+2. Generate **5 plausible responses / repair strategies** from the broader distribution.
+3. Downselect to **3 materially distinct candidates** for deeper evaluation:
+   - conservative
+   - balanced
+   - creative
+4. Run critique or verification over those three.
+5. Synthesize a qualitative steering note:
+   - what the harness thinks the user most likely needs
+   - which path is recommended
+   - what risk or tradeoff remains
+
+Emit this qualitative synthesis at crucial periods:
+- before irreversible actions
+- after repeated failures
+- when leaf nodes disagree materially
+- when the likely user need is drifting away from the literal request
+
 Extra planners, evaluators, memory layers, or multi-agent rooms can sit on top
 of this backbone, but they should not replace it.
 

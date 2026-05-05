@@ -97,6 +97,26 @@ The architecture draws from five research patterns:
 - **Progressive disclosure** — load context incrementally, not all at once
 - **Planner-executor separation** — reason about *what* at plan level, handle *how* at execution level
 
+## Intent Anticipation
+
+Do not optimize for the literal wording alone. Try to anticipate the user's likely
+intent or underlying need before locking the plan.
+
+At minimum, distinguish:
+- the stated request
+- the likely success condition the user actually cares about
+- the failure mode they are probably trying to avoid
+- the hidden constraint implied by prior context
+
+If the request is underspecified, choose the interpretation that best satisfies
+the likely need, record the assumption in `task.md`, and proceed. This skill should
+strive to help the user **before** they have to restate the same need in clearer words.
+
+This meta-cognitive layer also acts as the **LLM judge** for editorial rollups:
+when several wiki/skill candidates look correlated, it should decide whether they
+should be merged, cross-referenced, updated together, or kept separate rather than
+letting similarity alone make that decision.
+
 ## Relation to Agentic Harness
 
 Keep `react-agent` and `agentic-harness` separate.
@@ -262,6 +282,12 @@ Add a `contingencies:` field to the Execution Contract in `task.md`:
 - contingencies: [branch → fallback for each major if/then/else node]
 ```
 
+At crucial periods, surface **qualitative feedback**, not just status:
+- before irreversible actions
+- after repeated failure signals
+- when the likely user need diverges from the literal request
+- when evidence splits the task into materially different paths
+
 ### Phase 1: Reconnaissance
 
 Survey before you act. Do not propose solutions yet.
@@ -415,10 +441,13 @@ After observing:
 2. **Failure** — Diagnose:
    - Is this the same error type as a previous attempt? Check `.react_agent/memory.jsonl`
    - If yes: you are going in circles. Stop. Reframe the problem. Try a different
-     approach. Read TROUBLESHOOTING below.
+      approach. Read TROUBLESHOOTING below.
    - If no: log the failure with diagnosis, attempt a fix, re-enter the loop
 3. **Unexpected result** — Something worked but not as predicted. Investigate
    before proceeding — unexpected success can mask latent bugs.
+4. **Critical inflection point** — If the task is at a pivot, blocker, or irreversible
+   step, summarize the qualitative state of the work: what seems to be working,
+   what appears structurally wrong, and what path now looks most plausible.
 
 Log reflections to `.react_agent/memory.jsonl`:
 ```json
@@ -544,6 +573,23 @@ If the same approach has failed twice:
 - Propose an alternative approach that avoids the failure mode
 - If multiple alternatives exist, pick the simplest one
 - Do NOT retry the same approach with minor variations
+
+### Level 3.5: Diverge -> Downselect -> Synthesize
+
+If you are still stuck, widen the search before narrowing it:
+
+1. Use `reasoning`-style **TRIZ** and **de Bono's Six Hats** to force alternative framings.
+2. Generate **5 plausible responses or next-step strategies** from the wider distribution.
+3. Reduce them to **3 materially distinct candidates**:
+   - conservative
+   - balanced
+   - creative
+4. Compare those three for feasibility, risk, and fit to likely user intent.
+5. Synthesize one recommended path plus brief qualitative feedback on why the other
+   candidates were not selected.
+
+The goal is not variety for its own sake. The goal is to break out of local minima
+without losing the thread of the task.
 
 ### Level 4: Escalate
 

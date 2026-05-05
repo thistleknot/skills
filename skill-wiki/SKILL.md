@@ -278,6 +278,72 @@ At the end of any session where a skill was invoked and produced a notable outco
 deliberate subsequent act. This gate prevents invocation-count-based drift: a skill
 used many times incorrectly must not self-canonize its failure mode.
 
+## Correlation Map-Reduce for Wiki Maintenance
+
+Use this when deciding whether skill/wiki content should be:
+- merged
+- cross-referenced
+- updated together
+- kept separate
+
+### Step 1: Gather leaves
+
+Start with the smallest candidate units:
+- skill sections
+- staged notes
+- sidecar entries
+- pattern-store candidates
+- evidence clusters
+
+### Step 2: Measure correlation candidates
+
+Treat items as merge or cross-reference candidates when they show **significant
+correlation** across one or more of these dimensions:
+- shared entities or terms
+- repeated co-invocation in the same workflow
+- overlapping contract clauses or applicability envelopes
+- shared evidence or citation clusters
+- repeated tendency to be edited together
+
+Correlation only surfaces candidates. It does **not** decide the action.
+
+### Step 3: Reduce bottom-up
+
+Roll the leaves upward:
+
+```text
+leaf items -> correlated groups -> branch themes -> editorial synthesis
+```
+
+This is a map-reduce step for wiki governance:
+- map = identify local overlaps and correlations
+- reduce = cluster them into larger editorial decisions
+
+### Step 4: Judge the editorial action
+
+The final action is decided by an **LLM-as-judge layer** (typically `react-agent`
+in its meta-cognitive role), not by correlation alone.
+
+Possible dispositions:
+- **Merge** — same behavioral contract, same applicability envelope, separation adds noise
+- **Cross-reference** — strongly related but distinct ownership or exit conditions
+- **Update together** — separate contracts, but lifecycle or evidence should stay synchronized
+- **Keep separate** — overlap is incidental, unstable, or would collapse useful distinctions
+
+### Judge questions
+
+Before disposition, ask:
+1. Are these actually the same protocol, or just adjacent?
+2. Would merging increase clarity or erase a useful boundary?
+3. If kept separate, do they need explicit cross-links?
+4. Is the correlation structural and durable, or temporary and anecdotal?
+5. Will users invoke these together often enough that synchronized maintenance matters?
+
+### Invariant
+
+**Do not auto-merge from similarity alone.** Correlation is a retrieval and routing
+signal. Editorial synthesis is a judgment call.
+
 ---
 
 ## Supersession Protocol
