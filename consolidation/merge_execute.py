@@ -43,11 +43,11 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-
-sys.path.insert(0, str(Path(__file__).parent))
-from consolidate import strip_boilerplate
+from skill_similarity import (
+    build_similarity_matrix,
+    build_skill_documents,
+    derive_skill_corpus,
+)
 
 TAU = 0.30
 
@@ -94,42 +94,15 @@ Rules:
 
 
 # ---------------------------------------------------------------------------
-# Similarity + chain decomposition (mirrors consolidate.py logic exactly)
+# Similarity + chain decomposition
 # ---------------------------------------------------------------------------
 
-def load_skills(root: Path) -> tuple[list[Path], list[str], dict[str, str]]:
+def compute_chains(M: np.ndarray, tau: float = TAU) -> list[list[int]]:
     """
-    Require:  root contains */SKILL.md files; none under disabled/
-    Guarantee: returns parallel (skill_files, names, raw_texts) with no disabled entries
+    Require:  M is a symmetric similarity matrix; tau > 0
+    Guarantee: returns greedy nearest-neighbor chains at threshold tau
     """
-    skill_files = sorted(
-        p for p in root.glob("*/SKILL.md")
-        if "disabled" not in str(p)
-    )
-    names = [p.parent.name for p in skill_files]
-    raw_texts = {
-        p.parent.name: p.read_text(encoding="utf-8", errors="ignore")
-        for p in skill_files
-    }
-    return skill_files, names, raw_texts
-
-
-def compute_chains(names: list[str], raw_texts: dict[str, str],
-                   tau: float = TAU) -> tuple[np.ndarray, list[list[int]]]:
-    """
-    Require:  names and raw_texts are parallel; tau > 0
-    Guarantee: returns (M, chains) where M[i,j] is cosine similarity and
-               chains is greedy nearest-neighbor decomposition at threshold tau
-    """
-    texts = [strip_boilerplate(raw_texts[n]) for n in names]
-    vec = TfidfVectorizer(
-        stop_words="english", ngram_range=(1, 2),
-        min_df=2, max_df=0.80, sublinear_tf=True,
-    )
-    X = vec.fit_transform(texts)
-    M = cosine_similarity(X)
-    np.fill_diagonal(M, 0.0)
-    N = len(names)
+    N = M.shape[0]
 
     pairs = sorted(
         ((M[i, j], i, j) for i in range(N) for j in range(i + 1, N)),
@@ -172,7 +145,7 @@ def compute_chains(names: list[str], raw_texts: dict[str, str],
             chains.append([idx])
             doc_to_chain[idx] = cidx
 
-    return M, chains
+    return chains
 
 
 # ---------------------------------------------------------------------------
@@ -313,15 +286,20 @@ def main() -> None:
     args = parser.parse_args()
 
     root: Path = args.root
+    db_path = Path(__file__).resolve().parent / ".checkpoint.db"
 
     print(f"Skills root: {root}")
     print(f"Tau: {args.tau}  |  Dry-run: {args.dry_run}")
     print(f"LLM: {os.environ.get('LLM_BASE_URL','http://localhost:11434/v1')} / "
-          f"{os.environ.get('LLM_MODEL','qwen3.5:2b')}")
+          f"{os.environ.get('LLM_MODEL_LIST', os.environ.get('LLM_MODEL', 'qwen3.5:0.8b,qwen2.5-coder:1.5b,qwen3.5:2b,granite-1b:latest'))}")
     print()
 
-    skill_files, names, raw_texts = load_skills(root)
-    M, chains = compute_chains(names, raw_texts, tau=args.tau)
+    documents = build_skill_documents(root)
+    names = [document.name for document in documents]
+    raw_texts = {document.name: document.source_text for document in documents}
+    derivations = derive_skill_corpus(documents, db_path)
+    M = build_similarity_matrix(documents, derivations, db_path=db_path)
+    chains = compute_chains(M, tau=args.tau)
 
     real_groups = [c for c in chains if len(c) > 1]
     singletons  = [c for c in chains if len(c) == 1]

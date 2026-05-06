@@ -17,7 +17,6 @@ Usage:
 """
 
 import argparse
-import hashlib
 import re
 import sqlite3
 import sys
@@ -25,35 +24,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+
+from skill_similarity import (
+    build_similarity_matrix,
+    build_skill_documents,
+    derive_skill_corpus,
+)
 
 TAU = 0.30          # semantic floor: minimum xref-worthy overlap
 MIN_CHANGED = 2     # minimum skills changed to trigger a re-run
 
 SEE_ALSO_START = "<!-- consolidation:see-also:start -->"
 SEE_ALSO_END   = "<!-- consolidation:see-also:end -->"
-
-
-# -- helpers ------------------------------------------------------------------
-
-def strip_boilerplate(text: str) -> str:
-    """Remove structural scaffolding that inflates shared vocabulary.
-
-    Require:  text is raw SKILL.md content
-    Guarantee: returns prose only -- YAML, headers, tables, code fences removed
-    """
-    text = re.sub(r'^---.*?---\s*', '', text, flags=re.DOTALL)
-    text = re.sub(r'^#{1,6}\s+.*$', '', text, flags=re.MULTILINE)
-    text = re.sub(r'^\|.*\|$', '', text, flags=re.MULTILINE)
-    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-    text = re.sub(r'^\s*[-*]\s*\*\*[^*]+\*\*\s*$', '', text, flags=re.MULTILINE)
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    return text.strip()
-
-
-def content_hash(text: str) -> str:
-    return hashlib.sha256(text.encode()).hexdigest()
 
 
 def load_checkpoint(db_path: Path) -> dict:
@@ -210,17 +192,13 @@ def main() -> None:
     db_path: Path = Path(__file__).resolve().parent / ".checkpoint.db"
 
     # -- collect skill files ---------------------------------------------------
-    skill_files = sorted(
-        p for p in root.glob("*/SKILL.md")
-        if "disabled" not in str(p)
-    )
-    if not skill_files:
+    documents = build_skill_documents(root)
+    if not documents:
         sys.exit(f"No SKILL.md files found under {root}")
 
-    names = [p.parent.name for p in skill_files]
-    raw_texts = {p.parent.name: p.read_text(encoding="utf-8", errors="ignore")
-                 for p in skill_files}
-    current_hashes = {name: content_hash(text) for name, text in raw_texts.items()}
+    skill_files = [document.skill_file for document in documents]
+    names = [document.name for document in documents]
+    current_hashes = {document.name: document.content_hash for document in documents}
 
     # -- idempotency check -----------------------------------------------------
     prev_hashes = load_checkpoint(db_path)
@@ -249,19 +227,8 @@ def main() -> None:
     else:
         print("[--force: running unconditionally]")
 
-    # -- vectorise -------------------------------------------------------------
-    texts = [strip_boilerplate(raw_texts[n]) for n in names]
-
-    vec = TfidfVectorizer(
-        stop_words="english",
-        ngram_range=(1, 2),
-        min_df=2,
-        max_df=0.80,
-        sublinear_tf=True,
-    )
-    X = vec.fit_transform(texts)
-    M = cosine_similarity(X)
-    np.fill_diagonal(M, 0.0)
+    derivations = derive_skill_corpus(documents, db_path)
+    M = build_similarity_matrix(documents, derivations, db_path=db_path)
     N = len(names)
 
     pairs = sorted(
