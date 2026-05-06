@@ -1,3 +1,11 @@
+---
+name: doc-synthesizer
+description: Code analysis, dependency visualization, and optional URI fetch/crawl. Produces AST-based documentation with Mermaid diagrams for module dependencies and data flow. Use when generating project docs, architecture diagrams, or onboarding artifacts.
+status: active
+last_validated: 2026-05-04
+supersedes: []
+validation_method: session
+---
 # doc-synthesizer Skill
 
 Code analysis + dependency visualization + optional URI fetch/crawl. Produces AST-based documentation with Mermaid diagrams showing module dependencies, data flow, and external integrations. Outputs markdown artifact with embedded JSON metadata.
@@ -223,3 +231,7 @@ Diagrams: Pure dependency graph (no data flow to external services)
 | Circular dependency detected | Modules import each other | Flag in artifact, document cycle |
 | URI fetch fails | Network error or invalid URL | Log warning, continue with local analysis |
 | Mermaid syntax error | Too many nodes or malformed deps | Reduce max_nodes or simplify diagram |
+<!-- consolidation:see-also:start -->
+## See Also
+[[code-extraction]]  [[diagnostic-scanner]]  [[test-planner]]  [[security-review]]  [[agentic-harness]]
+<!-- consolidation:see-also:end -->

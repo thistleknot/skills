@@ -206,3 +206,7 @@ For PR reviews, scope the analysis to the diff:
 - STRIDE threat model: Microsoft SDL (2002), widely adopted
 - awesome-copilot: `security-review` skill + `threat-model-analyst` skill
 - Anthropic Claude Code: sandboxing and tool-access controls documentation (2025)
+<!-- consolidation:see-also:start -->
+## See Also
+[[agent-governance]]  [[agentic-harness]]  [[openspec-workflow]]  [[debugging]]  [[checklist]]
+<!-- consolidation:see-also:end -->

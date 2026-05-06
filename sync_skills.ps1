@@ -18,14 +18,27 @@
 .PARAMETER DryRun
     Report what would be done without making any changes.
 
+.PARAMETER Username
+    SSH username to use for the remote WinSCP launch step.
+
+.PARAMETER Password
+    SSH password to use for the remote WinSCP launch step.
+
+.PARAMETER Yes
+    Auto-confirm interactive yes/no prompts so the script can be re-run non-interactively.
+
 .EXAMPLE
     .\sync_skills.ps1
     .\sync_skills.ps1 -DryRun
     .\sync_skills.ps1 -Force
+    .\sync_skills.ps1 -Username root -Password hunter2 -y
 #>
 param(
     [switch]$Force,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [string]$Username,
+    [string]$Password,
+    [Alias('y')][switch]$Yes
 )
 
 Set-StrictMode -Version Latest
@@ -40,6 +53,10 @@ $Mirrors = @(
 $RemoteUser = "root"
 $RemoteHost = "192.168.3.17"
 $RemotePath = "/root/.copilot/skills"
+
+if ($Username) {
+    $RemoteUser = $Username
+}
 
 # Root-level files to track (relative names)
 $RootTracked = @("README.md", "copilot-instructions.md", "MEMORY_SKILLS_PLAN.md", "AGENTS.md")
@@ -87,6 +104,95 @@ function Show-Diff($masterFile, $mirrorFile) {
     } else {
         Write-Host "  (no diff output)" -ForegroundColor DarkGray
     }
+}
+
+# Returns the base content of a tracked file at last commit, or $null if not tracked.
+function Get-BaseContent($relPath) {
+    $base = git -C $Master show "HEAD:$($relPath.Replace('\','/'))" 2>$null
+    if ($LASTEXITCODE -ne 0) { return $null }
+    return ($base -join "`n")
+}
+
+# Classifies a (master, mirror) pair relative to the committed base.
+# Returns: 'no-op' | 'fast-forward-mirror' | 'fast-forward-master' | 'conflict'
+function Get-SyncCase($masterContent, $mirrorContent, $baseContent) {
+    if ($null -eq $baseContent) {
+        # File not in git yet — treat mirror as additive if it differs
+        if ($masterContent -eq $mirrorContent) { return 'no-op' }
+        return 'fast-forward-mirror'
+    }
+    $masterChanged = ($masterContent -ne $baseContent)
+    $mirrorChanged = ($mirrorContent -ne $baseContent)
+    if     (-not $masterChanged -and -not $mirrorChanged) { return 'no-op' }
+    elseif (-not $masterChanged -and      $mirrorChanged) { return 'fast-forward-mirror' }
+    elseif (     $masterChanged -and -not $mirrorChanged) { return 'fast-forward-master' }
+    else                                                   { return 'conflict' }
+}
+
+# Invokes the LLM merge protocol documented in skill-sync/SKILL.md.
+# Writes a temp file with the prompt context and emits it for the agent to process.
+# Returns the merged content string, or $null if the merge should be skipped.
+function Invoke-LlmMerge($relPath, $baseContent, $masterContent, $mirrorContent) {
+    $tmpBase   = [System.IO.Path]::GetTempFileName()
+    $tmpMaster = [System.IO.Path]::GetTempFileName()
+    $tmpMirror = [System.IO.Path]::GetTempFileName()
+    try {
+        Set-Content $tmpBase   $baseContent   -Encoding UTF8 -NoNewline
+        Set-Content $tmpMaster $masterContent -Encoding UTF8 -NoNewline
+        Set-Content $tmpMirror $mirrorContent -Encoding UTF8 -NoNewline
+
+        $diffA = git diff --no-index --unified=5 -- $tmpBase $tmpMaster 2>&1 | Out-String
+        $diffB = git diff --no-index --unified=5 -- $tmpBase $tmpMirror 2>&1 | Out-String
+
+        # Emit the merge context block for the agent (skill-sync protocol)
+        Write-Host ""
+        Write-Host "  ═══ SKILL-SYNC LLM MERGE CONTEXT: $relPath ═══" -ForegroundColor Magenta
+        Write-Host "  ── Base document ──────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host $baseContent -ForegroundColor DarkGray
+        Write-Host "  ── Changes from Side A (master) ───────────────────────" -ForegroundColor Cyan
+        Write-Host $diffA -ForegroundColor Cyan
+        Write-Host "  ── Changes from Side B (mirror) ───────────────────────" -ForegroundColor Yellow
+        Write-Host $diffB -ForegroundColor Yellow
+        Write-Host "  ═══ END MERGE CONTEXT ═════════════════════════════════" -ForegroundColor Magenta
+        Write-Host ""
+        Write-Host "  [skill-sync] Agent: produce the merged file and paste below." -ForegroundColor Magenta
+        Write-Host "  [skill-sync] Paste merged content, then enter a line with only: ###END" -ForegroundColor Magenta
+
+        if ($Yes) {
+            # Autopilot: cannot interactively collect LLM output — flag for follow-up
+            Write-Host "  [AUTO] Conflict flagged for manual LLM merge — skipping auto-copy." -ForegroundColor Yellow
+            return $null
+        }
+
+        $lines = [System.Collections.Generic.List[string]]::new()
+        while ($true) {
+            $line = Read-Host ""
+            if ($line -eq '###END') { break }
+            $lines.Add($line)
+        }
+        $merged = $lines -join "`n"
+        if ([string]::IsNullOrWhiteSpace($merged) -or $merged -eq $baseContent) {
+            Write-Host "  [WARN] Merged output empty or identical to base — skipping." -ForegroundColor Yellow
+            return $null
+        }
+        return $merged
+    } finally {
+        Remove-Item $tmpBase, $tmpMaster, $tmpMirror -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Read-Choice($Prompt, $Default = '', $AutoYesChoice = 'y') {
+    if ($Yes) {
+        Write-Host "  [AUTO] $Prompt -> $AutoYesChoice" -ForegroundColor DarkGray
+        return $AutoYesChoice
+    }
+
+    $response = Read-Host $Prompt
+    if ([string]::IsNullOrWhiteSpace($response)) {
+        return $Default
+    }
+
+    return $response.Trim().ToLowerInvariant()
 }
 
 # ── Step 1: Last commit timestamp ─────────────────────────────────────────────
@@ -168,13 +274,12 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
         foreach ($item in $newFolders) {
             Write-Host "  [$($item.MirrorLabel)] $($item.FolderName)" -ForegroundColor Yellow
         }
-        $resp = Read-Host "`nCopy these new folders to master? [y/n/d=show contents first] (default: d)"
-        if ($resp -eq '') { $resp = 'd' }
+        $resp = Read-Choice "`nCopy these new folders to master? [y/n/d=show contents first] (default: d)" 'd' 'y'
         foreach ($item in $newFolders) {
             if ($resp -eq 'd') {
                 Write-Host "`n  Contents of $($item.FolderName):" -ForegroundColor Cyan
                 Get-ChildItem $item.FullPath | ForEach-Object { Write-Host "    $($_.Name)" }
-                $choice = Read-Host "  Copy '$($item.FolderName)' to master? [y/n]"
+                $choice = Read-Choice "  Copy '$($item.FolderName)' to master? [y/n]" '' 'y'
                 if ($choice -eq 'y') { $pendingFolderCopies += $item }
             } elseif ($resp -eq 'y') {
                 $pendingFolderCopies += $item
@@ -182,40 +287,120 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
         }
     }
 
-    # Handle modified files
+    # Handle modified files — with skill-sync case classification
     if ($needsMerge.Count -gt 0) {
-        Write-Host "`n$($needsMerge.Count) tracked file(s) in mirrors are newer than last commit and differ from master." -ForegroundColor Yellow
-        $resp = Read-Host "How to handle? [y=copy all to master / n=skip all / d=diff each] (default: d)"
-        if ($resp -eq '') { $resp = 'd' }
+
+        # Pre-classify each item so the user sees a summary before deciding
+        $conflicts    = [System.Collections.Generic.List[hashtable]]::new()
+        $fastForwards = [System.Collections.Generic.List[hashtable]]::new()
+        foreach ($item in $needsMerge) {
+            $baseContent   = Get-BaseContent $item.Rel
+            $masterContent = if ($item.MasterExists) { Get-Content $item.MasterFile -Raw } else { $null }
+            $mirrorContent = Get-Content $item.MirrorFile -Raw
+            $case = Get-SyncCase $masterContent $mirrorContent $baseContent
+            $item['SyncCase']    = $case
+            $item['BaseContent'] = $baseContent
+            if ($case -eq 'conflict') { $conflicts.Add($item) } else { $fastForwards.Add($item) }
+        }
+
+        $ffCount  = $fastForwards.Count
+        $cfCount  = $conflicts.Count
+        Write-Host "`n$($needsMerge.Count) tracked file(s) differ from master:" -ForegroundColor Yellow
+        Write-Host "  Fast-forward (mirror additive): $ffCount" -ForegroundColor Cyan
+        Write-Host "  Conflict (both sides diverged): $cfCount" -ForegroundColor Magenta
+
+        $resp = Read-Choice "How to handle? [y=auto-apply all / n=skip all / d=review each] (default: d)" 'd' 'y'
+
+        # Helper: write content to master file
+        function Write-ToMaster($item, $content) {
+            if (-not $DryRun) {
+                $parent = Split-Path $item.MasterFile -Parent
+                if (-not (Test-Path $parent)) { New-Item $parent -ItemType Directory -Force | Out-Null }
+                Set-Content $item.MasterFile $content -Encoding UTF8 -NoNewline
+            }
+        }
 
         foreach ($item in $needsMerge) {
+            if ($resp -eq 'n') {
+                Write-Host "  Skipped all." -ForegroundColor DarkGray
+                break
+            }
+
+            $syncCase      = $item['SyncCase']
+            $baseContent   = $item['BaseContent']
+            $masterContent = if ($item.MasterExists) { Get-Content $item.MasterFile -Raw } else { $null }
+            $mirrorContent = Get-Content $item.MirrorFile -Raw
+
+            $caseLabel = switch ($syncCase) {
+                'fast-forward-mirror'  { '[FAST-FWD]' }
+                'fast-forward-master'  { '[AHEAD]   ' }
+                'conflict'             { '[CONFLICT]' }
+                default                { '[NO-OP]   ' }
+            }
+            $caseColor = if ($syncCase -eq 'conflict') { 'Magenta' } else { 'Cyan' }
+
             if ($resp -eq 'y') {
-                if (-not $DryRun) {
-                    $parent = Split-Path $item.MasterFile -Parent
-                    if (-not (Test-Path $parent)) { New-Item $parent -ItemType Directory -Force | Out-Null }
-                    Copy-Item $item.MirrorFile $item.MasterFile -Force
-                }
-                Write-Host "  Copied : $($item.Rel)" -ForegroundColor Green
-            } elseif ($resp -eq 'd') {
-                Write-Host "`n[$($item.MirrorLabel)] $($item.Rel)  (mirror: $($item.MirrorTime.ToString('yyyy-MM-dd HH:mm')))" -ForegroundColor Cyan
-                if (-not $item.MasterExists) {
-                    Write-Host "  [NEW FILE -- does not exist in master]" -ForegroundColor Magenta
-                }
-                Show-Diff $item.MasterFile $item.MirrorFile
-                $choice = Read-Host "  Copy to master? [y/n]"
-                if ($choice -eq 'y') {
-                    if (-not $DryRun) {
-                        $parent = Split-Path $item.MasterFile -Parent
-                        if (-not (Test-Path $parent)) { New-Item $parent -ItemType Directory -Force | Out-Null }
-                        Copy-Item $item.MirrorFile $item.MasterFile -Force
+                # Auto-apply: fast-forwards are deterministic; conflicts need LLM merge
+                if ($syncCase -eq 'fast-forward-mirror') {
+                    Write-ToMaster $item $mirrorContent
+                    Write-Host "  $caseLabel Copied  : $($item.Rel)" -ForegroundColor Green
+                } elseif ($syncCase -eq 'fast-forward-master') {
+                    Write-Host "  $caseLabel Skipped : $($item.Rel) (master already ahead)" -ForegroundColor DarkGray
+                } elseif ($syncCase -eq 'conflict') {
+                    Write-Host "  $caseLabel $($item.Rel) -- invoking LLM merge" -ForegroundColor Magenta
+                    $merged = Invoke-LlmMerge $item.Rel $baseContent $masterContent $mirrorContent
+                    if ($null -ne $merged) {
+                        Write-ToMaster $item $merged
+                        Write-Host "  $caseLabel Merged  : $($item.Rel)" -ForegroundColor Green
+                        if ($merged -match '<!--\s*MERGE-CONFLICT') {
+                            Write-Host "  [WARN] MERGE-CONFLICT marker present — flag for human review before commit." -ForegroundColor Yellow
+                        }
+                    } else {
+                        Write-Host "  $caseLabel Skipped : $($item.Rel) (LLM merge not available in autopilot)" -ForegroundColor Yellow
                     }
-                    Write-Host "  Copied : $($item.Rel)" -ForegroundColor Green
+                }
+                continue
+            }
+
+            # Review mode (d): show case, then offer appropriate choices
+            Write-Host "`n$caseLabel [$($item.MirrorLabel)] $($item.Rel)  (mirror: $($item.MirrorTime.ToString('yyyy-MM-dd HH:mm')))" -ForegroundColor $caseColor
+            if (-not $item.MasterExists) {
+                Write-Host "  [NEW FILE -- does not exist in master]" -ForegroundColor Magenta
+            }
+
+            if ($syncCase -eq 'conflict') {
+                Write-Host "  Both master and mirror have changed since last commit." -ForegroundColor Magenta
+                Show-Diff $item.MasterFile $item.MirrorFile
+                $choice = Read-Choice "  Action? [y=copy mirror / m=llm-merge / n=skip / d=show full diff] (default: m)" 'm' 'm'
+                if ($choice -eq 'd') {
+                    Show-Diff $item.MasterFile $item.MirrorFile
+                    $choice = Read-Choice "  Action? [y=copy mirror / m=llm-merge / n=skip] (default: m)" 'm' 'm'
+                }
+                if ($choice -eq 'y') {
+                    Write-ToMaster $item $mirrorContent
+                    Write-Host "  Copied mirror -> master (no merge): $($item.Rel)" -ForegroundColor Green
+                } elseif ($choice -eq 'm') {
+                    $merged = Invoke-LlmMerge $item.Rel $baseContent $masterContent $mirrorContent
+                    if ($null -ne $merged) {
+                        Write-ToMaster $item $merged
+                        Write-Host "  Merged : $($item.Rel)" -ForegroundColor Green
+                        if ($merged -match '<!--\s*MERGE-CONFLICT') {
+                            Write-Host "  [WARN] MERGE-CONFLICT marker present — review before committing." -ForegroundColor Yellow
+                        }
+                    }
                 } else {
                     Write-Host "  Skipped: $($item.Rel)" -ForegroundColor DarkGray
                 }
             } else {
-                Write-Host "  Skipped all." -ForegroundColor DarkGray
-                break
+                # Fast-forward: simple copy prompt
+                Show-Diff $item.MasterFile $item.MirrorFile
+                $choice = Read-Choice "  Copy to master? [y/n]" '' 'y'
+                if ($choice -eq 'y') {
+                    Write-ToMaster $item $mirrorContent
+                    Write-Host "  Copied : $($item.Rel)" -ForegroundColor Green
+                } else {
+                    Write-Host "  Skipped: $($item.Rel)" -ForegroundColor DarkGray
+                }
             }
         }
     }
@@ -235,7 +420,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
         Write-Host "`nMaster has uncommitted changes after merge:" -ForegroundColor Yellow
         Write-Host $masterStatus
         if (-not $DryRun) {
-            $commit = Read-Host "Commit merged changes now? [y/n]"
+            $commit = Read-Choice "Commit merged changes now? [y/n]" '' 'y'
             if ($commit -eq 'y') {
                 git -C $Master add -A
                 git -C $Master commit -m "Merge locally-promoted skills back to master`n`nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
@@ -284,25 +469,46 @@ Write-Host @"
     User    : $RemoteUser
     Remote  : $RemotePath
     Local   : $Master
-    Mode    : Mirror (remote = local, delete extras)
+  Mode    : Mirror (remote = local, delete extras)
 "@ -ForegroundColor DarkGray
 
-$launch = Read-Host "`nLaunch WinSCP now? [y/n]"
+$launch = Read-Choice "`nLaunch WinSCP now? [y/n]" '' 'y'
 if ($launch -eq 'y') {
-    $inputUser = Read-Host "  SSH username (default: $RemoteUser)"
-    if ($inputUser -ne '') { $RemoteUser = $inputUser }
-    $securePwd  = Read-Host "  SSH password" -AsSecureString
-    $plainPwd   = [System.Net.NetworkCredential]::new('', $securePwd).Password
+    if (-not $Username) {
+        $inputUser = Read-Host "  SSH username (default: $RemoteUser)"
+        if ($inputUser -ne '') { $RemoteUser = $inputUser }
+    }
 
-    $wscp = Get-Command "winscp.com" -ErrorAction SilentlyContinue
-    if ($wscp) {
-        Write-Host "  Launching WinSCP..." -ForegroundColor Green
-        & winscp.com /command "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" "synchronize remote -filemask=|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]* ""$Master"" $RemotePath" "exit"
+    if ($Password) {
+        $plainPwd = $Password
     } else {
-        Write-Host "  winscp.com not found on PATH. Open WinSCP manually and sync:" -ForegroundColor Yellow
-        Write-Host "    $Master  -->  $RemoteUser@${RemoteHost}:$RemotePath"
+        $securePwd = Read-Host "  SSH password" -AsSecureString
+        $plainPwd = [System.Net.NetworkCredential]::new('', $securePwd).Password
+    }
+
+    $wscp  = Get-Command "winscp.com" -ErrorAction SilentlyContinue
+    $rsync = Get-Command "rsync"      -ErrorAction SilentlyContinue
+
+    if ($wscp) {
+        Write-Host "  Launching WinSCP (override remote)..." -ForegroundColor Green
+        & winscp.com /command "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" "synchronize remote -filemask=|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]* ""$Master"" $RemotePath" "exit"
+    } elseif ($rsync) {
+        # rsync --delete = override downstream; remote changes are silently discarded (by design)
+        Write-Host "  winscp.com not found -- falling back to rsync (override remote)..." -ForegroundColor Yellow
+        $localFwd = $Master.Replace('\', '/')
+        $sshPass  = "sshpass -p '$plainPwd'"
+        & bash -c "$sshPass rsync -az --delete --exclude='.*' --exclude='*.db' --exclude='*.jsonl' --exclude='*.pyc' '${localFwd}/' '${RemoteUser}@${RemoteHost}:${RemotePath}/'"
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  rsync OK" -ForegroundColor Green
+        } else {
+            Write-Host "  rsync exited $LASTEXITCODE -- check connectivity" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "  Neither winscp.com nor rsync found. Sync manually:" -ForegroundColor Yellow
+        Write-Host "    $Master  -->  $RemoteUser@${RemoteHost}:$RemotePath" -ForegroundColor DarkGray
     }
 }
 
 Write-Header "Done"
 if ($DryRun) { Write-Host "  [DRY RUN - no changes were made]" -ForegroundColor Magenta }
+exit 0

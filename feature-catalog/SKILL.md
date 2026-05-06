@@ -137,3 +137,7 @@ JOIN files f ON ff.file_id=f.file_id WHERE f.file_path LIKE '%cli.py%';
 - `status` — `implemented` | `planned` | `deprecated` | `experimental`
 - Feature IDs are permanent. Never reuse a retired ID.
 - `con.commit()` is never optional.
+<!-- consolidation:see-also:start -->
+## See Also
+[[memory-bank]]  [[mcp-tool-registry]]  [[todo]]  [[auto-ingest]]  [[build-observability]]
+<!-- consolidation:see-also:end -->

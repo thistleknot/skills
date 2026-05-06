@@ -372,3 +372,7 @@ pattern = build_search_pattern(
 - WordNet synsets: 30+ year-old linguistic resource; high quality
 - Hypernym chains: standard ontology approach for semantic expansion
 - Applied in information retrieval literature (Voorhees, 1994; Sanderson, 2000)
+<!-- consolidation:see-also:start -->
+## See Also
+[[kg_ontology]]  [[agentic_kg_memory]]  [[gist-retriever]]  [[deep-q-rl]]  [[agentic-harness]]
+<!-- consolidation:see-also:end -->

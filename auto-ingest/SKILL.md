@@ -492,3 +492,7 @@ working directory changes.
   skip Phase 0 automatically.
 - VLM throughput: ~1-5 min per paper depending on image count.
   Full backlog (~1600 papers) takes 80-160 hours of continuous daemon runtime.
+<!-- consolidation:see-also:start -->
+## See Also
+[[pdf-extraction]]  [[arxiv-bridge]]  [[todo]]  [[memory-bank]]  [[agentic_kg_memory]]
+<!-- consolidation:see-also:end -->

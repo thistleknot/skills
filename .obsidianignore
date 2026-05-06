@@ -1,0 +1,41 @@
+# Obsidian vault ignore — only SKILL.md files and _skill_graph.md appear in graph view
+# Uses explicit exclusions only (no negation — Obsidian support is inconsistent)
+
+# Staging / disabled areas (whole directories)
+integrate/
+disabled/
+.react_agent/
+.github/
+
+# Root-level non-skill docs
+README.md
+MEMORY_SKILLS_PLAN.md
+copilot-instructions.md
+graph_preview.png
+Untitled.canvas
+Untitled.base
+Untitled 1.base
+
+# Skill subfolder companion docs (all depths)
+**/HISTORY.md
+**/EVIDENCE.md
+**/DELIVERABLES.md
+**/MEMORY_ENHANCEMENT.md
+**/ARCHITECTURE.md
+**/DESCRIPTION.md
+**/diagram.md
+**/enhancements/
+**/references/
+
+# react-agent workspace files
+react-agent/HARNESS.md
+react-agent/MEMORY.md
+react-agent/QUALITY.md
+react-agent/README.md
+
+# Legacy per-skill content docs (predated SKILL.md naming)
+code/code.md
+architecture/architecture.md
+debugging/debugging.md
+validation/validation.md
+stratified-quota-sampling/stratified-quota-sampling.md

@@ -173,3 +173,7 @@ material should update or de-duplicate by stable runtime IDs, not fork phantom r
 - The agent system already has an execution backbone such as `agentic-harness`
 - Runtime artifacts exist at known paths or via a known session API
 - A local SQL store is available; shared deployments may additionally provide Postgres
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic-harness]]  [[agentic_kg_memory]]  [[react-agent]]  [[skill-wiki]]  [[memory-bank]]
+<!-- consolidation:see-also:end -->

@@ -383,3 +383,7 @@ python -m pytest tests/api_test.py
 - **Co-author trailer**: GitHub Copilot CLI standardized format
 - **WinSCP filemask**: Excludes .git/, .gitignore, and junk files during sync
 - **Repository**: thistleknot/skills on GitHub
+<!-- consolidation:see-also:start -->
+## See Also
+[[skill-sync]]  [[validation-artifacts]]  [[validation]]  [[openspec-workflow]]  [[documentation]]
+<!-- consolidation:see-also:end -->

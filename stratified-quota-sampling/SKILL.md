@@ -241,3 +241,7 @@ samples = stratified_quota_sample(
 
 **Fibonacci and golden ratio:**
 - Fibonacci ratios naturally appear in growth processes; aesthetically and empirically balanced.
+<!-- consolidation:see-also:start -->
+## See Also
+[[class-balancing]]  [[mad-dynamic-batching]]  [[timeout-guard]]  [[deep-q-rl]]  [[optuna-nested-cv]]
+<!-- consolidation:see-also:end -->
