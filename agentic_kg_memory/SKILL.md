@@ -84,17 +84,18 @@ The Chroma directory is the dense embedding surface.
 When running setup, do all of the following:
 
 1. Create `C:\Users\user\memory-bank\wiki_memory.sqlite3`
-2. Create or migrate a page table that includes:
+2. Create or migrate the page table:
    - `bm25_text`
    - `triplet_sequence_text`
    - `embedding_ref`
    - `cluster_id`
-3. Create `C:\Users\user\memory-bank\chroma\` as the Chroma persist directory
-4. Build `triplet_sequence_text` from canonicalized extracted triplets in source order
-5. Embed `triplet_sequence_text` and store vectors in Chroma
-6. Cluster the normalized dense vectors
-7. Write the winning `cluster_id` back into SQLite
-8. Persist human-readable cluster outputs to:
+3. Create the graph tables: `kg_nodes`, `kg_edges` (with indexes on `dst_slug` and `edge_type`)
+4. Create `C:\Users\user\memory-bank\chroma\` as the Chroma persist directory
+5. Build `triplet_sequence_text` from canonicalized extracted triplets in source order
+6. Embed `triplet_sequence_text` and store vectors in Chroma
+7. Cluster the normalized dense vectors
+8. Write the winning `cluster_id` back into SQLite
+9. Persist human-readable cluster outputs to:
    - `C:\Users\user\memory-bank\clusters.json`
    - `C:\Users\user\memory-bank\cluster_metrics.json`
 
@@ -131,12 +132,24 @@ The page is not a summary blob. It is a durable memory surface that links:
 it compiles source material into a persistent intermediate layer rather than
 re-reading raw prose from scratch on every query.
 
-The practical split is:
+The practical split maps to a standard folder convention:
 
-1. **Raw sources** — immutable source documents, quotes, spans, or notes
-2. **Pages / wiki entries** — durable synthesized memory surfaces updated as new
+| Layer | Folder | Contents |
+|---|---|---|
+| 1 | `raw/` | Immutable source documents, quotes, spans, notes — never edited |
+| 2 | `wiki/` | Durable synthesized pages updated as new evidence arrives |
+| 3 | `derived/` | KG indexes, cluster outputs, embeddings — rebuildable from `wiki/` |
+
+A `sources.md` file at the wiki root tracks provenance: title, URL/path, date added,
+and what each source contributes. Every claim in `wiki/` must trace back to an entry
+in `sources.md`.
+
+The three layers correspond to:
+
+1. **Raw sources** (`raw/`) — immutable source documents, quotes, spans, or notes
+2. **Pages / wiki entries** (`wiki/`) — durable synthesized memory surfaces updated as new
    evidence arrives
-3. **Throughlines** — the current best abductive or deductive conclusions over
+3. **Throughlines** (`derived/throughlines/`) — the current best abductive or deductive conclusions over
    those pages
 
 KnowledgeWeaver is a useful concretization of this pattern:
@@ -263,6 +276,12 @@ Hook fidelity scales with implementation maturity:
 - **Partial**: session-boundary hooks automated (start/end compression)
 - **Full**: all hooks wired; the wiki tends toward health on its own
 
+GBrain (Garry Tan, MIT) is a production reference for "Full" fidelity: 21 cron jobs
+running autonomously, self-wiring entity graph, overnight citation repair and
+consolidation. Its cron job taxonomy is a useful checklist when wiring the `on_schedule`
+hook: `entity_enrichment`, `citation_repair`, `consolidation_pass`, `retention_decay`,
+`backlink_audit`.
+
 ## Human-Readable Operating Surfaces
 
 For small-to-medium corpora, keep two markdown-level navigation aids alongside the
@@ -330,42 +349,116 @@ throughline layer.
 Before retrieval, pages, or throughlines exist, source text must be converted into
 triplets. That preprocessing step belongs to `agentic_kg_memory`.
 
+The ingest pipeline has **two passes**:
+
+### Pass 0 — Entity wiring (zero LLM calls)
+
+Before any LLM extraction, run a fast regex/NER pass that detects known entity names
+(people, organizations, places) and upserts them into the **knowledge graph** as typed
+directed edges.
+
+**Why a graph instead of BM25 for entity relations:**
+
+BM25 over synset lemmas does approximate single-hop entity queries — if
+`Alice works_at Acme` was extracted, the `bm25_index` contains `"alice person works_at
+acme organization"` and "who works at Acme" surfaces it. For single-hop, BM25 is
+competitive.
+
+The graph wins on two axes:
+1. **Scalability**: BM25 IDF weights drift with each new document. A graph adjacency
+   table is `INSERT OR REPLACE` — append-only, no global stats, no recompute ever.
+2. **Multi-hop traversal**: "who funded the companies Alice advises?" requires two hops.
+   BM25 requires both entities to co-occur in a single document. A graph answers it
+   natively via recursive CTE.
+
+**StructMem (2604.21748) middle path**: if full graph construction is too costly, use
+*dual-perspective extraction* + *periodic consolidation* as a lightweight alternative:
+extract both a **factual entry** (what happened) and a **relational entry** (how it
+binds to participants / prior events) from each event, then periodically consolidate
+semantically related events within temporal windows. This achieves structured reasoning
+without explicit entity resolution or graph traversal overhead (see `cognitive-taxonomy`
+§7 for the full flat–structured–graph spectrum).
+
+Your triplets already ARE edges: subject → predicate → object maps 1:1 to a typed
+directed edge. The graph is a natural structural consequence of triplet extraction, not
+an additional abstraction.
+
+**Graph schema (SQLite):**
+
+```sql
+CREATE TABLE IF NOT EXISTS kg_nodes (
+    slug      TEXT PRIMARY KEY,
+    label     TEXT NOT NULL,
+    node_type TEXT NOT NULL,  -- person|org|concept|event|place|skill
+    page_ref  TEXT,           -- FK to wiki page slug if this node has a full page
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS kg_edges (
+    src_slug  TEXT NOT NULL,
+    dst_slug  TEXT NOT NULL,
+    edge_type TEXT NOT NULL,  -- works_at|attended|invested_in|founded|advises|mentions|implies|contradicts
+    confidence REAL DEFAULT 1.0,
+    polarity   TEXT DEFAULT 'affirmed',  -- affirmed|negated
+    source_page TEXT,                    -- which page created this edge
+    created_at  TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (src_slug, dst_slug, edge_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_kg_edges_dst ON kg_edges(dst_slug, edge_type);
+CREATE INDEX IF NOT EXISTS idx_kg_edges_type ON kg_edges(edge_type);
+```
+
+**Single-hop query (SQLite):**
+```sql
+-- Who works at Acme?
+SELECT n.slug, n.label FROM kg_edges e
+JOIN kg_nodes n ON e.src_slug = n.slug
+WHERE e.dst_slug = 'acme' AND e.edge_type = 'works_at' AND e.polarity = 'affirmed';
+```
+
+**Multi-hop query (recursive CTE):**
+```sql
+-- Who funded companies that Alice advises?
+WITH advised AS (
+    SELECT dst_slug AS company FROM kg_edges
+    WHERE src_slug = 'alice' AND edge_type = 'advises'
+)
+SELECT DISTINCT src_slug AS funder FROM kg_edges
+WHERE dst_slug IN (SELECT company FROM advised)
+  AND edge_type = 'invested_in';
+```
+
+Pass 0 populates this graph from entity co-occurrence alone (no LLM). Pass 1 enriches
+it with semantically extracted predicate types and confidence.
+
+### Pass 1 — LLM triplet extraction
+
+After entity wiring, the LLM extraction pass runs the full semantic layer. Extracted
+triplets are **written to both** the BM25 index (for semantic/fuzzy queries) and the
+graph (`kg_edges`) as typed edges.
+
+**Query routing:**
+| Query type | Use |
+|---|---|
+| Semantic / fuzzy ("what do we know about memory?") | BM25 + vector (Chroma) |
+| Relational / structural ("who works at X?", "what does Y imply?") | Graph traversal (`kg_edges`) |
+| Hybrid ("what did people who work at X say about memory?") | Graph narrows candidates → BM25 re-ranks |
+
 The high-level chain is:
 
-`source text -> LLM extraction (with guidance-resolved synsets) -> normalized triplets -> ontology winner ids -> bm25_index column -> storage`
+`source text -> LLM extraction (with guidance-resolved synsets) -> normalized triplets -> ontology winner ids -> bm25_index column + kg_edges -> storage`
 
 ### Synset/Hypernym Resolution via Guidance
 
-**Stage 1: Base triplet extraction**
-- LLM generates: `{ "subject": str, "predicate": str, "object": str, "polarity": "affirmed"|"negated", "inference_type": "observed"|"inferred" }`
+`kg_ontology` owns the synset/hypernym candidate-generation and canonicalization logic.
+At this layer, the contract is only:
 
-**Stage 2: Guidance-driven synset selection**
-- For each word in each element (subject, predicate, object):
-  - Retrieve top-5 word2vec neighbors
-  - Include the word itself as the 6th candidate
-  - Look up first-level hypernym for each synset via NLTK
-  - Format as candidate tuples: `[(synset_id, first_hypernym_id), ...]`
-- Present candidates to LLM with guidance constraints
-- LLM selects best synset + hypernym tuple per word (or abstains if confidence low)
-- Result: `subject_synset_hypernym_tuples`, `predicate_synset_hypernym_tuples`, `object_synset_hypernym_tuples` as lists of `[synset_id, hypernym_id]` pairs
+- extract `(subject, predicate, object, polarity, inference_type)` from source text
+- send the extracted spans to [[kg_ontology]] for candidate narrowing and winner selection
+- consume the returned canonical ids and BM25 enrichment when writing `kg_nodes`, `kg_edges`, and retrieval fields
 
-**Stage 3: BM25 index construction**
-- Extract lemmas from all selected synsets and hypernyms (strip `.pos.##` suffixes)
-- Flatten into space-separated text: `"subject_lemma subject_hypernym_lemma predicate_lemma ... object_lemma object_hypernym_lemma"`
-- Store as `bm25_index` column for layer 2 KG memory retrieval
-
-**Example:**
-```json
-{
-  "subject": "love",
-  "predicate": "be",
-  "object": "madness",
-  "subject_synset_hypernym_tuples": [["love.n.01", "feeling.n.01"]],
-  "predicate_synset_hypernym_tuples": [["be.v.01", "exist.v.01"]],
-  "object_synset_hypernym_tuples": [["madness.n.01", "state.n.01"]]
-}
-```
-→ `bm25_index: "love feeling be exist madness state"`
+See [[kg_ontology]] for the full guidance pipeline, visibility rules, and fallback policy.
 
 ### Source-to-triplet extraction
 
@@ -1606,73 +1699,14 @@ History is for auditability, not ranking.
 
 ## KG Ontology (Sub-skill)
 
-**Scope split:**
-- `kg_ontology` = **what node is this?** (canonical entity identity, canonicalization rules, layer separation)
-- `agentic_kg_memory` = **what does this evidence mean together?** (triplet confidence, page construction, throughline synthesis, retrieval)
+`kg_ontology` owns entity/predicate canonicalization, synset/hypernym candidate narrowing,
+BM25 hypernym injection, layer separation, and ontology anti-patterns.
+`agentic_kg_memory` consumes those ontology winners for triplet storage, retrieval,
+pages, and throughlines.
 
-Do not let pages, objectives, or throughlines invent their own node identities. They should consume the ontology winners produced by the canonicalization step.
-
-### Connection Type Map
-
-Seven distinct connection mechanisms operate in the graph:
-
-| # | Connection | Mechanism | Scope | Visible? |
-|---|---|---|---|---|
-| 1 | S-P-O within sentence | Triplet edge | Intra-sentence | Yes |
-| 2 | Same canonical ID across sentences | Shared node identity | Cross-sentence | Yes (implicit) |
-| 3 | SpaCy named entities across sentences | Named entity preservation → same canonical id | Cross-sentence | Yes (implicit) |
-| 4 | Source string → entailed triplets | Throughline `supporting_fks` | String-to-many | Yes |
-| 5 | Vertical alignment across sentences | BM25 — hypernym tokens injected into `bm25_text` | Cross-sentence | Implicit via retrieval |
-| 6 | Polarity / negation | Stopwords preserved in `bm25_text` (NOT, never, no) | Intra-triplet | Via BM25 term match |
-| 7 | Hypernym scaffolding | `subClassOf` lattice | Ontology layer | **Hidden by default** |
-
-**Vertical alignment rule:** hypernym edges are NOT exposed as explicit cross-sentence graph edges. Inject subject's hypernym chain tokens into `bm25_text` at index time. A query for `animal` then retrieves rows for `dog`, `wolf`, `canine` via shared token `animal.n.01` — no explicit edge required.
-
-**Polarity rule:** do NOT remove stopwords from triplet text fed into `bm25_text`. Negation markers (`NOT`, `never`, `no`, `without`) are load-bearing. Stripping them collapses `dog NOT eat plant` and `dog eat plant` into the same BM25 representation.
-
-### Layer Separation
-
-**Visible default graph:** canonical entity nodes, canonical predicate nodes, quote/document provenance nodes, semantic evidence edges.
-
-**Hidden by default:** `instance_of`, `has_label`, alias links, hypernym/`subClassOf` scaffolding, candidate sense lists, rejected canonicalization candidates, raw extracted phrase nodes. These belong in a debug or ontology view only.
-
-### Canonicalization Rules
-
-**Entities:**
-1. Named entity (`person`, `org`, `location`, `work`) → preserve full normalized span as canonical id.
-2. Otherwise: generate noun/proper-noun head candidates → lemmatize → score with role-aware and corpus-aware signals → choose one deterministic winner.
-3. Store original phrases, rejected candidates, and aliases as provenance only — never as canonical id.
-- Examples: `What Happiness Consists Of` → `happiness`; `Marcus Tullius Cicero` → `marcus_tullius_cicero`
-
-**Predicates:**
-1. Select predicate-head candidates. Prefer `VERB`, then `AUX`, then nominalized relation heads.
-2. Lemmatize the candidate head; use the winning single canonical identity in the visible graph.
-- Examples: `search for` → `search`; `is devoted to` → `devote`
-
-**Role-conditioned selection:** subject/object slots prefer noun/proper-noun identities; predicate slots prefer verb/relation-head identities. Use semantic role to break POS ties.
-
-### Candidate Generation Narrowing
-
-Never make the LLM choose from the whole ontology. Build a tightly scoped candidate set:
-1. Look up the normalized token/span in a first-synset dictionary if available
-2. Retrieve top-21 embedding-near lexical neighbors
-3. For each strong neighbor, retrieve the top-3 first-synset candidates + first-level hypernym
-4. Score using POS priors, role, BM25 fit, and frequency
-5. Present the narrowed shortlist to the LLM for selection or abstention
-
-Same narrowing applies to hypernyms. Hypernyms are ontology scaffolding, not free-floating replacement labels — they must stay coupled to the candidate synset pool that produced them.
-
-**Fallback:** if synset confidence is too low, keep lemma-level identity as canonical winner; preserve the candidate shortlist in provenance for later repair.
-
-### Ontology Anti-Patterns
-
-- Using raw snake_case or extractor phrases as ontology ids
-- Showing `instance_of` / `has_label` in the default graph
-- Mixing hypernym structure into the same view as answer evidence
-- Using multi-word predicate phrases as final visible relation ids
-- Letting pages or throughlines redefine ontology ids
-- Treating lemma collapse as enough when role or POS evidence points elsewhere
-- Treating provenance text as ontology identity
+Do not let pages, objectives, or throughlines invent their own node identities.
+See [[kg_ontology]] for the full connection map, canonicalization contract,
+visibility rules, and fallback policy.
 
 ---
 
@@ -1697,3 +1731,7 @@ When using this skill, report:
 - whether the action was reinforce, refine, merge, create, reject, or contradict
 - fit-score and q-score changes
 - rationale for the decision
+<!-- consolidation:see-also:start -->
+## See Also
+[[kg_ontology]]  [[gist-retriever]]  [[agentic-harness]]  [[memory-bank]]  [[skill-wiki]]
+<!-- consolidation:see-also:end -->

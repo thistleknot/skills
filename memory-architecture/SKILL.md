@@ -22,11 +22,7 @@ layers**, each addressing a distinct cognitive function. The four memory papers
 converge on the same layered structure. This skill codifies that consensus into
 reusable design templates.
 
-**Reference papers:**
-- AI Hippocampus (2601.09113) — implicit/explicit/agentic paradigms
-- Memory in the Age of AI Agents (2512.13564) — forms/functions/dynamics
-- AI Meets Brain (2512.23343) — biological-artificial crosswalk
-- NS-Mem (2603.15280) — neuro-symbolic dual-process memory
+See `cognitive-taxonomy` for the full paradigm definitions, paper-by-paper taxonomy synthesis, and routing taxonomy. This skill assumes that classification layer and focuses on composing those categories into a concrete memory stack.
 
 ## When to Use
 
@@ -294,19 +290,13 @@ prerequisites, and constraint-aware alternatives
 
 ### Query Routing (Layer 4 to Layers 1-3)
 
-```
-Working memory receives query
-        |
-        v
-cognitive-taxonomy: classify query type
-        |
- +----+---+----------+----------+
- v      v          v          v
-Factual Constraint  Procedural  Open-ended
-        |      |          |           |
-        v      v          v           v
-Layer 1  Layer 3    Layer 3     Layers 1+2+3
-```
+Use `cognitive-taxonomy` to classify the query before routing it through this stack.
+This architecture then applies that classification concretely:
+
+- Factual recall -> Layer 1
+- Episodic recall -> Layer 2
+- Procedural or constraint reasoning -> Layer 3
+- Open-ended planning -> Layers 1+2+3 hybrid
 
 ### Memory Lifecycle (All Layers)
 
@@ -332,8 +322,9 @@ Extraction   Pattern mining    Neural +      EMA decay
 
 ## Evidence
 
-- AI Hippocampus (2601.09113) implicit/explicit/agentic paradigm taxonomy
-- Memory in the Age of AI Agents (2512.13564) forms/functions/dynamics
-- AI Meets Brain (2512.23343) biological-artificial crosswalk, lifecycle
-- NS-Mem (2603.15280) neuro-symbolic dual-process architecture, +4.35% empirical gain
+- `cognitive-taxonomy` consolidates the shared four-paper taxonomy foundation used by this stack, including the NS-Mem performance figures referenced by Template C.
 - MemGPT (arXiv:2310.08560) tiered memory architecture foundation
+<!-- consolidation:see-also:start -->
+## See Also
+[[cognitive-taxonomy]]  [[procedural-memory]]  [[agentic_kg_memory]]  [[context-compaction]]  [[continuity-log]]
+<!-- consolidation:see-also:end -->

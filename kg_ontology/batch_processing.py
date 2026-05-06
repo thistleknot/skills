@@ -10,16 +10,28 @@ Handles the complete pipeline:
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
 
-from synset_augmentation import TripletsToAugmentedCandidates, ElementAugmentation
-from synset_selection_schema import (
-    TripletWithChosenSynsets,
-    SynsetSelectionPromptBuilder,
-)
-from triplet_enrichment import (
-    EnrichedTriplet,
-    TripletEnricher,
-    CanonicalityRules,
-)
+try:
+    from .synset_augmentation import TripletsToAugmentedCandidates, ElementAugmentation
+    from .synset_selection_schema import (
+        TripletWithChosenSynsets,
+        SynsetSelectionPromptBuilder,
+    )
+    from .triplet_enrichment import (
+        EnrichedTriplet,
+        TripletEnricher,
+        CanonicalityRules,
+    )
+except ImportError:  # pragma: no cover - fallback for direct module execution
+    from synset_augmentation import TripletsToAugmentedCandidates, ElementAugmentation
+    from synset_selection_schema import (
+        TripletWithChosenSynsets,
+        SynsetSelectionPromptBuilder,
+    )
+    from triplet_enrichment import (
+        EnrichedTriplet,
+        TripletEnricher,
+        CanonicalityRules,
+    )
 
 
 @dataclass

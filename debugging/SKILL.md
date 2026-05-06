@@ -208,3 +208,7 @@ Status:          DONE | DONE_WITH_CONCERNS | BLOCKED
 **Environment assumptions:**
 - Git history is available for regression detection
 - A test runner is present or a manual reproduction path exists
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic-harness]]  [[react-agent]]  [[tdd-agent]]  [[validation-artifacts]]  [[reasoning]]
+<!-- consolidation:see-also:end -->

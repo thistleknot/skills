@@ -12,7 +12,10 @@ from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 import json
 
-from synset_selection_schema import TripletWithChosenSynsets, ElementSynsetChoices
+try:
+    from .synset_selection_schema import TripletWithChosenSynsets, ElementSynsetChoices
+except ImportError:  # pragma: no cover - fallback for direct module execution
+    from synset_selection_schema import TripletWithChosenSynsets, ElementSynsetChoices
 
 
 @dataclass

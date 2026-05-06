@@ -13,18 +13,30 @@ Public API:
 - SynsetSelectionPromptBuilder: LLM prompt formatter
 """
 
-from synset_augmentation import (
-    TripletsToAugmentedCandidates,
-    SynsetCandidate,
-    WordWithCandidates,
-    ElementAugmentation,
-)
-
-from synset_selection_schema import (
-    ElementSynsetChoices,
-    TripletWithChosenSynsets,
-    SynsetSelectionPromptBuilder,
-)
+try:
+    from .synset_augmentation import (
+        TripletsToAugmentedCandidates,
+        SynsetCandidate,
+        WordWithCandidates,
+        ElementAugmentation,
+    )
+    from .synset_selection_schema import (
+        ElementSynsetChoices,
+        TripletWithChosenSynsets,
+        SynsetSelectionPromptBuilder,
+    )
+except ImportError:  # pragma: no cover - fallback for direct module execution
+    from synset_augmentation import (
+        TripletsToAugmentedCandidates,
+        SynsetCandidate,
+        WordWithCandidates,
+        ElementAugmentation,
+    )
+    from synset_selection_schema import (
+        ElementSynsetChoices,
+        TripletWithChosenSynsets,
+        SynsetSelectionPromptBuilder,
+    )
 
 __version__ = "0.1.0"
 __all__ = [

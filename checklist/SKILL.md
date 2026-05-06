@@ -456,3 +456,7 @@ eval/
 **Updating baseline:**
 - Only update after a deliberate quality improvement (not after fixing a regression)
 - Baseline update requires explicit commit message: `eval: update baseline (pass_rate: X → Y)`
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic-harness]]  [[agent-governance]]  [[deep-research]]  [[validation-artifacts]]  [[react-agent]]
+<!-- consolidation:see-also:end -->

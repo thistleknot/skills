@@ -282,3 +282,7 @@ Avoid:
 - reconstructing documents too early before expansion completes
 - treating chunk scores as final answer evidence without reconstruction
 - silently hiding dense-store failure behind a low-quality fallback
+<!-- consolidation:see-also:start -->
+## See Also
+[[agentic_kg_memory]]  [[kg_ontology]]  [[hyper-parm_tuning]]  [[optuna-nested-cv]]  [[memory-bank]]
+<!-- consolidation:see-also:end -->

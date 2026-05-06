@@ -1,0 +1,6 @@
+{
+  "name": "model-router",
+  "description": "Routes task work to gpt-5.4-mini",
+  "version": "1.0.0",
+  "agents": "agents/"
+}

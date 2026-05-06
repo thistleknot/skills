@@ -200,3 +200,7 @@ pager, and `continuity-log` is the programmer deciding what to write to disk.
 - MemGPT arXiv:2310.08560: OS-inspired hierarchical memory (fast/slow/archive) with paging semantics
 - Claude Code: PreCompact/PostCompact hook lifecycle documented in Claude Code CLAUDE.md conventions
 - CoALA arXiv:2309.02427: working memory eviction to episodic store as a cognitive architecture primitive
+<!-- consolidation:see-also:start -->
+## See Also
+[[memory-architecture]]  [[memory-bank]]  [[continuity-log]]  [[agentic_kg_memory]]  [[agentic-harness]]
+<!-- consolidation:see-also:end -->

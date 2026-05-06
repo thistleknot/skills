@@ -276,3 +276,7 @@ from collections import Counter
 - Iglewicz & Hoaglin (1993). *How to Detect and Handle Outliers*.
 - MAD → sigma conversion: `sigma ≈ MAD × 1.4826` for normal distributions.
 - 95% CI: `median ± 1.96 × sigma_est`
+<!-- consolidation:see-also:start -->
+## See Also
+[[stratified-quota-sampling]]  [[class-balancing]]  [[timeout-guard]]  [[optuna-nested-cv]]  [[code]]
+<!-- consolidation:see-also:end -->

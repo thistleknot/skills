@@ -1,3 +1,11 @@
+---
+name: diagnostic-scanner
+description: Language-aware diagnostic scanning. Invokes compilers/linters, captures errors and warnings, groups by severity, and generates fix prompts. Use for automated code quality checks, diagnostic summaries, or CI/CD quality gates.
+status: active
+last_validated: 2026-05-04
+supersedes: []
+validation_method: session
+---
 # diagnostic-scanner Skill
 
 Language-aware diagnostic scanning. Invokes appropriate compilers/linters, captures errors and warnings, groups by severity/category, and generates fix prompts. Produces normalized markdown artifact with embedded JSON metadata.
@@ -173,3 +181,7 @@ Fix Prompt: Ready for go vet recommendations
 | Parse error | Unexpected tool output format | Log and continue with partial results |
 | Test compilation fails | Missing dependencies or broken tests | Report separately; don't fail entire scan |
 | Permission denied | Read access denied | Skip file, log warning |
+<!-- consolidation:see-also:start -->
+## See Also
+[[code-extraction]]  [[test-planner]]  [[doc-synthesizer]]  [[agentic-harness]]  [[debugging]]
+<!-- consolidation:see-also:end -->

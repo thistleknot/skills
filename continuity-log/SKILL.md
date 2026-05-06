@@ -154,3 +154,7 @@ When using this skill, the final answer should make clear:
 - where the continuity packet was written
 - what decision or state it preserves
 - what the next turn should read first
+<!-- consolidation:see-also:start -->
+## See Also
+[[react-agent]]  [[memory-bank]]  [[memory-architecture]]  [[agentic-harness]]  [[agentic_kg_memory]]
+<!-- consolidation:see-also:end -->

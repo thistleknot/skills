@@ -1,3 +1,11 @@
+---
+name: test-planner
+description: Coverage-aware test plan generation. Identifies testable subjects, analyzes existing coverage, proposes scenarios by level (smoke/unit/integration/e2e/regression), and flags coverage status. Use when planning test suites or identifying coverage gaps.
+status: active
+last_validated: 2026-05-04
+supersedes: []
+validation_method: session
+---
 # test-planner Skill
 
 Coverage-aware test plan generation. Identifies testable subjects, analyzes existing test coverage, proposes concrete scenarios by level (smoke/unit/integration/e2e/regression), and flags coverage status (green/yellow/red). Produces markdown artifact with embedded JSON metadata.
@@ -196,3 +204,7 @@ Regression: None (no changes since last merge)
 | Git diff fails | Not a git repo or invalid refs | Skip regression detection |
 | No subjects found | Empty codebase or detection failure | Report and exit cleanly |
 | Subject mismatch | Tests don't align with subjects | Report coverage as uncertain |
+<!-- consolidation:see-also:start -->
+## See Also
+[[diagnostic-scanner]]  [[code-extraction]]  [[doc-synthesizer]]  [[tdd-agent]]  [[validation-artifacts]]
+<!-- consolidation:see-also:end -->
