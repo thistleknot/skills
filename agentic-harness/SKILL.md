@@ -54,6 +54,7 @@ Minimum backbone behaviors:
 - artifact and evidence production at known paths
 - checkpointed plan / todo / state tracking
 - critic-gated completion rather than "looks good" completion
+- structured responses as the default wire format across planner / router / worker / critic / verifier boundaries
 - **Critic agent ensemble option:** For difficult problems, the harness can launch an autogen set of critic agents at three sampler settings (conservative, balanced, creative). Each critic independently evaluates the candidate solution. Their feedback is aggregated and compared before finalizing changes. This option is configurable and should be enabled for high-stakes or ambiguous tasks.
 
 ### Critic Agent Ensemble Protocol
@@ -77,6 +78,68 @@ The intended stance is **dark for a specific task**: once a story or work item i
 well-scoped, the harness should be able to run that task end-to-end with minimal
 human interruption. The darkness is scoped to the assigned task, not treated as a
 blanket license for unrestricted repo-wide autonomy.
+
+## Structured Responses Are the Default Wire Format
+
+Treat prose as the explanation layer, not the control plane.
+
+Operational rule:
+
+- every harness node should emit **one primary structured payload**
+- downstream nodes should consume structured fields first and free-text summaries second
+- if a node cannot satisfy the schema, return a typed error object or fail fast; do not continue on prose-shaped salvage
+- bound list sizes and enum spaces in the prompt so structured outputs stay within token limits
+
+Minimum structured surfaces:
+
+- intake -> `TaskSpec` / task packet
+- planner -> plan envelope
+- router -> route decision
+- worker -> action proposal or work result
+- legality gate -> legality verdict
+- critic -> critic verdict / checklist artifact
+- verifier -> verification result
+- recovery -> retry or escalation decision
+
+The default goal is **no downstream reparsing of upstream prose** when the same
+information can be carried as typed fields.
+
+### Structured response design rules
+
+1. use `pydantic` or an equivalent schema validator at every machine-to-machine boundary
+2. keep one canonical field for the decision (`status`, `route`, `passed`, `allowed`) instead of inferring it from prose
+3. carry stable identifiers (`task_id`, `story_id`, `artifact_path`, `rule_key`, `fingerprint`) rather than re-describing them
+4. cap high-variance arrays explicitly (`max_structured_items`, top-k routes, top-n violations)
+5. keep optional human explanation in `summary`, `reasoning`, or `notes`, but never make that the only machine-readable field
+
+### Canonical response packet examples
+
+```python
+class ActionProposal(BaseModel):
+    action_type: str
+    target_path: str | None = None
+    command: str | None = None
+    expected_artifact: str | None = None
+    confidence: float = Field(ge=0.0, le=1.0)
+    reasoning: str = ""
+
+
+class LegalityVerdict(BaseModel):
+    allowed: bool
+    violated_rules: list[str] = []
+    reason: str = ""
+
+
+class CriticVerdict(BaseModel):
+    passed: bool
+    severity: Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+    findings: list[str] = []
+    artifact_refs: list[str] = []
+    summary: str = ""
+```
+
+These do not have to be the exact class names used in code. They define the
+shape discipline the harness should preserve.
 
 ## Core Contract — The Coherence Flag
 
@@ -177,7 +240,10 @@ baseline and override only what diverges from the defaults.
   "temperature": 0.0,
   "top_p": 0.9,
   "frequency_penalty": 0.7,
-  "abstention_policy": "exclude_if_low"
+  "abstention_policy": "exclude_if_low",
+  "response_format": "structured",
+  "schema_strict": true,
+  "max_structured_items": 10
 }
 ```
 
@@ -192,6 +258,9 @@ baseline and override only what diverges from the defaults.
 | `top_p` | 0.9 | Nucleus sampling cutoff; prunes the bottom 10% probability mass |
 | `frequency_penalty` | 0.7 | Suppresses token repetition; prevents re-selecting the same tokens across steps |
 | `abstention_policy` | `exclude_if_low` | Low-confidence picks are dropped from the final selection rather than included |
+| `response_format` | `structured` | Default response mode for node-to-node handoffs; prose may accompany it but should not replace the schema |
+| `schema_strict` | `true` | Reject or retry malformed structured outputs instead of silently salvaging partial content |
+| `max_structured_items` | 10 | Prompt-side cap for high-variance arrays such as findings, routes, or proposals |
 
 ### Choosing `retrieval_depth`
 
@@ -468,19 +537,20 @@ The point of a chat room is perspective separation, not theatrical dialogue.
 Treat a harness as three separable responsibilities:
 
 ```python
-def propose_action(state) -> object:
+def propose_action(state) -> ActionProposal:
     ...
 
-def is_legal_action(state, action) -> bool:
+def is_legal_action(state, action: ActionProposal) -> LegalityVerdict:
     ...
 
-def critique_transition(state, action, env_feedback) -> dict:
+def critique_transition(state, action: ActionProposal, env_feedback) -> CriticVerdict:
     ...
 ```
 
 - `propose_action` picks a candidate move / patch / command
 - `is_legal_action` enforces rule validity before commitment
 - `critique_transition` consolidates environment failure into a repair signal
+- all three should exchange typed payloads, not freeform prose blobs
 
 For software harnesses, "action" can mean:
 - shell command
@@ -934,6 +1004,11 @@ of the real implementation requires a separate integration pass.
 
 **Structured TaskSpec input**: `regression_run.py` accepts a JSON file path or inline JSON object in place of a plain idea string.  `_resolve_input()` detects format in order: `.json` file path → inline `{...}` string → plain idea string.  When a `TaskSpec` is detected it is parsed with pydantic and serialised to a Markdown requirements document via `task_spec_to_idea()` before entering the pipeline — all downstream nodes see the enriched Markdown.  The raw JSON is preserved in `state["task_requirements"]` for programmatic inspection.
 
+Treat `TaskSpec` as the intake example of a broader rule: once a task enters the
+harness, planner, router, critic, verifier, and recovery nodes should keep
+passing schema-bound payloads in state rather than forcing later nodes to
+reconstruct intent from prose summaries.
+
 `TaskSpec` fields:
 - `title` / `project_name` — human label vs directory slug
 - `datasets`, `data_fields` — HuggingFace or local datasets to use
@@ -1300,6 +1375,7 @@ surfaces what is wrong and what rule would catch it next time.
 - Set `review_required: true` in output; never auto-apply proposals
 - Use `schema_model=ChecklistOutput` in the LLM call for constrained output
 - Feed confirmed proposals back into the harness rule set after human approval
+- treat the checklist pattern as the default for all other harness judge nodes too: schema first, prose second
 
 **Cross-run persistence:** repeated findings from multiple runs compound evidence.
 Use the `agentic_kg_memory` throughline Q-score update to track fingerprinted

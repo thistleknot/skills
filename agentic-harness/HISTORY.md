@@ -5,6 +5,23 @@ Current version of the contract is always in SKILL.md; this file records what ch
 
 ---
 
+## 2026-05-06 — Structured responses promoted to the default harness contract
+**Changed:** Added a new `Structured Responses Are the Default Wire Format` section to
+`SKILL.md`. Updated the backbone behaviors, canonical split, TaskSpec discussion, and
+checklist integration points so schema-bound payloads are now the expected default across
+planner, router, worker, critic, verifier, and recovery nodes. Extended
+`default_agent_settings.json` with `response_format`, `schema_strict`, and
+`max_structured_items` to make the policy part of the baseline settings contract.
+**Reason:** The skill already had islands of structure (`TaskSpec`, `ChecklistOutput`,
+critic verdicts), but it did not state clearly that the harness should avoid reparsing
+prose whenever a typed payload can cross the boundary instead. That gap left the contract
+too permissive around truncation-prone, ambiguity-heavy freeform outputs.
+**Evidence:** User request to "make copius use of structured responses"; existing
+`TaskSpec` and `checklist` schema patterns in the same skill family.
+**Supersedes:** Ad hoc "structured when convenient" interpretation.
+
+---
+
 ## 2026-05-02 — DSPy + TextGrad grounded the evaluation lane
 **Changed:** Added explicit evaluation-stack guidance to `SKILL.md`: `checklist`
 for structured audit artifacts, DSPy-style metric/reward compile-refine loops
