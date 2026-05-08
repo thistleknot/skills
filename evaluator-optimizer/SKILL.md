@@ -143,6 +143,40 @@ class CriterionResult(BaseModel):
 
 ---
 
+## Judge Model Capability Rule
+
+**The judge must always be more capable than the model being evaluated.**
+
+A model cannot validate its own sufficiency. If you are testing whether a smaller or
+cheaper model handles a task well enough, the verdict must come from a model that is
+demonstrably stronger — not a peer, and never the model under test.
+
+```
+valid:     GPT-4o judges Qwen-3.5-0.8b output            ✓
+valid:     Claude Sonnet judges Haiku output              ✓
+invalid:   Qwen-3.5-0.8b judges its own output           ✗
+invalid:   Haiku judges Haiku output                      ✗
+invalid:   equal-capability model used as judge           ✗ (marginal — avoid)
+```
+
+This applies everywhere a model output is being scored for sufficiency:
+
+- Harness qualification: before routing a task to a cheap model, a stronger model
+  confirms its output meets the quality bar on a representative sample
+- Eval pipeline: the judge LLM in the `llm_judge` scorer must outrank the system under eval
+- MBR selection: if using an LLM to pick best-of-N from a cheap generator, the selector
+  must be the stronger model
+- `checklist` audit passes: judge model tier ≥ generator model tier + 1 capability level
+
+**Practical implication for model routing:**
+Using `qwen3.5:0.8b` for a task in production means a stronger model (e.g., Sonnet,
+GPT-4o, or qwen2.5-coder:7b+) previously confirmed that `qwen3.5:0.8b` produced
+sufficient quality on that task class. That confirmation is the prerequisite, not the
+current run. Store the qualifying verdict in the harness checkpoint so it doesn't need
+to be re-run on every invocation.
+
+---
+
 ## Stopping Criteria
 
 Stop iterating when **any** of:

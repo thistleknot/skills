@@ -15,6 +15,10 @@
 .PARAMETER Force
     Skip reconciliation, just sync master -> mirrors.
 
+.PARAMETER OverwriteDownstream
+    Require a clean master worktree, skip mirror->master reconciliation, and
+    treat master as the source of truth when syncing downstream targets.
+
 .PARAMETER DryRun
     Report what would be done without making any changes.
 
@@ -31,10 +35,12 @@
     .\sync_skills.ps1
     .\sync_skills.ps1 -DryRun
     .\sync_skills.ps1 -Force
+    .\sync_skills.ps1 -OverwriteDownstream -y
     .\sync_skills.ps1 -Username root -Password hunter2 -y
 #>
 param(
     [switch]$Force,
+    [switch]$OverwriteDownstream,
     [switch]$DryRun,
     [string]$Username,
     [string]$Password,
@@ -111,6 +117,12 @@ function Get-BaseContent($relPath) {
     $base = git -C $Master show "HEAD:$($relPath.Replace('\','/'))" 2>$null
     if ($LASTEXITCODE -ne 0) { return $null }
     return ($base -join "`n")
+}
+
+function Test-PathEverTracked($relPath) {
+    $gitRelPath = $relPath.Replace('\', '/')
+    $history = git -C $Master log --format="%H" -1 -- $gitRelPath 2>$null
+    return -not [string]::IsNullOrWhiteSpace(($history -join '').Trim())
 }
 
 # Classifies a (master, mirror) pair relative to the committed base.
@@ -195,6 +207,15 @@ function Read-Choice($Prompt, $Default = '', $AutoYesChoice = 'y') {
     return $response.Trim().ToLowerInvariant()
 }
 
+function Get-GitStatusLines($repoPath) {
+    $status = git -C $repoPath status --porcelain 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        return [string[]]@()
+    }
+
+    return [string[]]@($status | Where-Object { $_ -match '\S' })
+}
+
 # ── Step 1: Last commit timestamp ─────────────────────────────────────────────
 Write-Header "Reading last commit timestamp"
 $lastCommitStr = git -C $Master log -1 --format="%ci" 2>$null
@@ -204,71 +225,133 @@ if (-not $lastCommitStr) {
 } else {
     $lastCommit = [datetime]::Parse($lastCommitStr.Trim())
 }
+$masterStatusAtStart = @(Get-GitStatusLines $Master)
+$masterIsClean = ($masterStatusAtStart.Length -eq 0)
+$skipReconciliation = ($Force -or $OverwriteDownstream)
+
+if ($OverwriteDownstream -and -not $masterIsClean) {
+    throw "OverwriteDownstream requires a clean master worktree. Commit, stash, or discard local changes first."
+}
+
 Write-Host "  Last commit : $lastCommit"
 Write-Host "  Master      : $Master"
+Write-Host "  Master clean: $(if ($masterIsClean) { 'yes' } else { 'no' })"
+if ($Force) {
+    Write-Host "  Mode        : force (skip reconciliation; sync master -> mirrors)" -ForegroundColor Yellow
+}
+if ($OverwriteDownstream) {
+    Write-Host "  Mode        : overwrite downstream (clean master is source of truth)" -ForegroundColor Yellow
+}
 if ($DryRun) { Write-Host "  [DRY RUN -- no changes will be made]" -ForegroundColor Magenta }
 
 # ── Step 2: Detect new skill folders in mirrors not in master ─────────────────
 Write-Header "Checking for skill folders missing from master"
 $newFolders = [System.Collections.Generic.List[hashtable]]::new()
+$staleFolders = [System.Collections.Generic.List[hashtable]]::new()
+$seenFolderNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
-foreach ($mirror in $Mirrors) {
-    if (-not (Test-Path $mirror)) { continue }
-    Get-ChildItem $mirror -Directory | ForEach-Object {
-        $rel = $_.Name
-        $masterCounterpart = Join-Path $Master $rel
-        if (-not (Test-Path $masterCounterpart)) {
-            $newFolders.Add(@{ Mirror = $mirror; MirrorLabel = (Split-Path $mirror -Leaf); FolderName = $rel; FullPath = $_.FullName })
-            Write-Host "  [NEW FOLDER] $rel  <- $mirror" -ForegroundColor Yellow
+if ($skipReconciliation) {
+    Write-Host "  [SKIP] Reconciliation disabled in current mode; master will be pushed downstream." -ForegroundColor DarkGray
+} else {
+    foreach ($mirror in $Mirrors) {
+        if (-not (Test-Path $mirror)) { continue }
+        Get-ChildItem $mirror -Directory | ForEach-Object {
+            $rel = $_.Name
+            $masterCounterpart = Join-Path $Master $rel
+            if (-not (Test-Path $masterCounterpart)) {
+                if (-not $seenFolderNames.Add($rel)) {
+                    Write-Host "  [DUPLICATE MIRROR] $rel  <- $mirror (already recorded from another mirror)" -ForegroundColor DarkGray
+                    return
+                }
+
+                $entry = @{
+                    Mirror = $mirror
+                    MirrorLabel = (Split-Path $mirror -Leaf)
+                    FolderName = $rel
+                    FullPath = $_.FullName
+                }
+
+                if (Test-PathEverTracked $rel) {
+                    $staleFolders.Add($entry)
+                    Write-Host "  [STALE MIRROR] $rel  <- $mirror (path exists in git history but is absent in master)" -ForegroundColor Magenta
+                } else {
+                    $newFolders.Add($entry)
+                    Write-Host "  [NEW FOLDER] $rel  <- $mirror" -ForegroundColor Yellow
+                }
+            }
         }
     }
+    if ($newFolders.Count -eq 0 -and $staleFolders.Count -eq 0) { Write-Host "  None." -ForegroundColor Green }
 }
-if ($newFolders.Count -eq 0) { Write-Host "  None." -ForegroundColor Green }
 
 # ── Step 3: Detect locally-modified tracked files ─────────────────────────────
 Write-Header "Checking tracked .md files newer than last commit"
 $needsMerge = [System.Collections.Generic.List[hashtable]]::new()
 
-foreach ($mirror in $Mirrors) {
-    if (-not (Test-Path $mirror)) {
-        Write-Host "  [MISSING] $mirror" -ForegroundColor DarkGray
-        continue
-    }
-    $mirrorFiles = Get-TrackedFiles $mirror
-    $count = 0
-    foreach ($mf in $mirrorFiles) {
-        $rel          = Get-RelPath $mf $mirror
-        $masterFile   = Join-Path $Master $rel
-        $mfTime       = (Get-Item $mf).LastWriteTime
+if ($skipReconciliation) {
+    Write-Host "  [SKIP] Reconciliation disabled in current mode; downstream edits will not be promoted." -ForegroundColor DarkGray
+} else {
+    foreach ($mirror in $Mirrors) {
+        if (-not (Test-Path $mirror)) {
+            Write-Host "  [MISSING] $mirror" -ForegroundColor DarkGray
+            continue
+        }
+        $mirrorFiles = Get-TrackedFiles $mirror
+        $count = 0
+        foreach ($mf in $mirrorFiles) {
+            $rel          = Get-RelPath $mf $mirror
+            $masterFile   = Join-Path $Master $rel
+            $mfTime       = (Get-Item $mf).LastWriteTime
 
-        if ($mfTime -gt $lastCommit) {
-            $masterContent = if (Test-Path $masterFile) { Get-Content $masterFile -Raw } else { $null }
-            $mirrorContent = Get-Content $mf -Raw
-            if ($masterContent -ne $mirrorContent) {
-                $count++
-                Write-Host ("  [NEWER] {0,-55} {1}" -f $rel, $mfTime.ToString("yyyy-MM-dd HH:mm")) -ForegroundColor Yellow
-                $needsMerge.Add(@{
-                    Mirror      = $mirror
-                    MirrorLabel = Split-Path $mirror -Leaf
-                    Rel         = $rel
-                    MirrorFile  = $mf
-                    MasterFile  = $masterFile
-                    MirrorTime  = $mfTime
-                    MasterExists = (Test-Path $masterFile)
-                })
+            if ($mfTime -gt $lastCommit) {
+                $masterContent = if (Test-Path $masterFile) { Get-Content $masterFile -Raw } else { $null }
+                $mirrorContent = Get-Content $mf -Raw
+                if ($masterContent -ne $mirrorContent) {
+                    $count++
+                    Write-Host ("  [NEWER] {0,-55} {1}" -f $rel, $mfTime.ToString("yyyy-MM-dd HH:mm")) -ForegroundColor Yellow
+                    $needsMerge.Add(@{
+                        Mirror      = $mirror
+                        MirrorLabel = Split-Path $mirror -Leaf
+                        Rel         = $rel
+                        MirrorFile  = $mf
+                        MasterFile  = $masterFile
+                        MirrorTime  = $mfTime
+                        MasterExists = (Test-Path $masterFile)
+                    })
+                }
             }
         }
+        if ($count -eq 0) { Write-Host "  [OK] $mirror -- no locally-modified files" -ForegroundColor Green }
     }
-    if ($count -eq 0) { Write-Host "  [OK] $mirror -- no locally-modified files" -ForegroundColor Green }
 }
 
 # ── Step 4: Reconciliation ────────────────────────────────────────────────────
 $pendingFolderCopies = @()
+$touchedPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
-if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
+if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count -gt 0) -and -not $skipReconciliation) {
     Write-Header "Reconciliation"
 
-    # Handle new folders first
+    # Handle stale mirror folders first
+    if ($staleFolders.Count -gt 0) {
+        Write-Host "`nMirror-only skill folders with prior git history (likely stale, not new):" -ForegroundColor Magenta
+        foreach ($item in $staleFolders) {
+            Write-Host "  [$($item.MirrorLabel)] $($item.FolderName)" -ForegroundColor Magenta
+        }
+        $resp = Read-Choice "`nRestore these stale mirror folders into master? [y/n/d=show contents first] (default: n)" 'n' 'y'
+        foreach ($item in $staleFolders) {
+            if ($resp -eq 'd') {
+                Write-Host "`n  Contents of stale mirror folder $($item.FolderName):" -ForegroundColor Cyan
+                Get-ChildItem $item.FullPath | ForEach-Object { Write-Host "    $($_.Name)" }
+                $choice = Read-Choice "  Restore '$($item.FolderName)' to master? [y/n]" '' 'y'
+                if ($choice -eq 'y') { $pendingFolderCopies += $item }
+            } elseif ($resp -eq 'y') {
+                $pendingFolderCopies += $item
+            }
+        }
+    }
+
+    # Handle truly new folders next
     if ($newFolders.Count -gt 0) {
         Write-Host "`nNew skill folders found in mirrors (not in master):" -ForegroundColor Yellow
         foreach ($item in $newFolders) {
@@ -317,6 +400,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
                 $parent = Split-Path $item.MasterFile -Parent
                 if (-not (Test-Path $parent)) { New-Item $parent -ItemType Directory -Force | Out-Null }
                 Set-Content $item.MasterFile $content -Encoding UTF8 -NoNewline
+                [void]$touchedPaths.Add($item.MasterFile)
             }
         }
 
@@ -410,6 +494,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
         $dest = Join-Path $Master $item.FolderName
         if (-not $DryRun) {
             robocopy $item.FullPath $dest /E /NJH /NJS /NDL /NC /NS | Out-Null
+            [void]$touchedPaths.Add($dest)
         }
         Write-Host "  Copied folder: $($item.FolderName) -> master" -ForegroundColor Green
     }
@@ -422,14 +507,25 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0) -and -not $Force) {
         if (-not $DryRun) {
             $commit = Read-Choice "Commit merged changes now? [y/n]" '' 'y'
             if ($commit -eq 'y') {
-                git -C $Master add -A
-                git -C $Master commit -m "Merge locally-promoted skills back to master`n`nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
-                Write-Host "  Committed." -ForegroundColor Green
+                if ($touchedPaths.Count -eq 0) {
+                    Write-Host "  No reconciliation changes were applied; nothing to commit." -ForegroundColor DarkGray
+                } else {
+                    $pathsToStage = @($touchedPaths)
+                    Write-Host "  Staging only reconciliation paths (unrelated worktree changes are left alone)." -ForegroundColor DarkGray
+                    git -C $Master add -- $pathsToStage
+                    $stagedPaths = git -C $Master diff --cached --name-only 2>$null
+                    if ($stagedPaths) {
+                        git -C $Master commit -m "Merge locally-promoted skills back to master`n`nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+                        Write-Host "  Committed." -ForegroundColor Green
+                    } else {
+                        Write-Host "  No reconciliation changes were staged; skipped commit." -ForegroundColor DarkGray
+                    }
+                }
             }
         }
     }
-} elseif ($needsMerge.Count -gt 0 -and $Force) {
-    Write-Host "`n[Force] Skipping reconciliation for $($needsMerge.Count) newer file(s)." -ForegroundColor Yellow
+} elseif (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count -gt 0) -and $skipReconciliation) {
+    Write-Host "`n[Skip] Reconciliation bypassed; master will overwrite downstream targets." -ForegroundColor Yellow
 }
 
 # ── Step 5: Sync master -> local mirrors ──────────────────────────────────────

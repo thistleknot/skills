@@ -17,6 +17,7 @@ skills/
 ├── execution/                       # plan, implement, verify
 │   ├── react-agent                  # outer execution OS; drives all other skills
 │   ├── reasoning                    # open-ended problem decomposition + multi-perspective analysis
+│   │   └── causal-inference         # LLM→DoWhy→LLM architecture; Pearl's ladder (association/intervention/counterfactual); causal discovery, do-calculus, SCM via DoWhy + causal-learn
 │   ├── codebase-knowledge-graph     # current-repo whole-system map; foundational vs incidental code; ripple analysis before edits
 │   ├── code                         # implementation standards, naming, refactor sequence
 │   │   └── design-patterns          # GoF / contract / relationship-shape companion to code
@@ -26,8 +27,10 @@ skills/
 │   ├── doc-synthesizer              # AST-based documentation with Mermaid dependency/data-flow diagrams
 │   ├── debugging                    # error isolation, salience tiers, diagnostic strategy, self-repair loop
 │   ├── validation                   # test design, verification protocol, behavior contracts
+│   │   └── uncertainty-quantification  # 3-tier UQ protocol (fast/standard/thorough); semantic entropy, SelfCheckGPT, conformal prediction, LM-Polygraph; abstain/escalate table
 │   ├── architecture                 # system design, abstract-class planning, domain → code mapping
 │   ├── tdd-agent                    # Red→Green→Refactor as distinct agentic phases; test-first design contract
+│   │   └── program-synthesis        # LLM-assisted formal verification + proof-assisted coding; AutoVerus 3-phase loop; escalation from tdd-agent for unbounded/security properties
 │   ├── autoresearch                 # autonomous iterative hill-climbing: scorer + proposer + git/sqlite checkpoint loop
 │   ├── cua-desktop-agent            # autonomous desktop automation via VLM perception loop; vision-based retry for legacy/API-less applications
 │   └── react-fastapi-sqlite         # full-stack scaffold: React (TanStack Query) + FastAPI (SQLModel ORM) + SQLite; SPA + REST backend
@@ -46,6 +49,7 @@ skills/
 │   ├── fabro-create-workflow        # author Fabro `.fabro` + `.toml` workflows from natural-language requirements
 │   ├── substrate-selection          # runtime substrate policy: OpenCode / claw-code / aider / provider boundary
 │   ├── evaluator-optimizer          # LLM-generates→LLM-critiques→LLM-regenerates loop; MBR selection; stopping criteria
+│   │   └── prompt-optimization      # automatic prompt self-improvement; DSPy (MIPROv2), TextGrad (text-space gradients), OPRO, APE; labeled-trainset → MIPROv2 vs no-trainset → TextGrad decision tree
 │   ├── multi-agent-coordination     # peer messaging, plan-approval gates, task ownership, dynamic spawning
 │   ├── agent-governance             # safety rails, tool-access policy, audit trail, trust tiers, secrets scan
 │   ├── security-review              # STRIDE-A, OWASP Top 10, data-flow tracing, secret/CVE detection
@@ -78,6 +82,7 @@ skills/
 │   ├── agentic-hyperparm            # behavioral knob tuning for agentic systems; instantiates Stage Allocation for L1-L4 layers
 │   ├── class-balancing              # log inverse freq → Box-Cox normalize → ratio weights for imbalanced classifiers
 │   ├── stratified-quota-sampling    # coverage-bounded no-replacement sampler; Box-Cox tiers + quota allocation
+│   │   └── synthetic-data           # LLM-generated training data; 8 paradigms (Self-Instruct/Evol-Instruct/GLAN/Magpie/UltraFeedback/FireAct/distilabel); 6 mandatory quality gates; handoff to stratified-quota-sampling + class-balancing
 │   ├── cluster-quantized-knn        # O(1) approximate distance for KNN via cluster-quantization; fast interactive retrieval
 │   ├── mad-dynamic-batching         # MAD-gated token-aware dynamic batching for variable-length training data; quantile partitioning
 │   ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
@@ -93,6 +98,8 @@ skills/
 │
 ├── learning/                        # reinforcement learning and policy optimization
 │   ├── deep-q-rl                    # DQN + Russian Doll MCTS for any scored discrete-action framework; code-rl extension
+│   ├── active-inference             # Bayesian POMDP agents via Free Energy Principle; EFE-driven tool selection; pymdp; use when no reward function + partial observability
+│   ├── continual-learning           # non-forgetting agents; EWC, GEM/A-GEM, PackNet, O-LoRA/InfLoRA, DARE, LwF, MemRL; absorbs integrate/MemRL
 │   └── siamese_from_correlation_matrix  # derive metric-learning pairs directly from embedding/correlation structure
 │
 └── pipelines/                       # end-to-end domain workflows (invoke sub-skills as needed)
@@ -122,7 +129,7 @@ skills/
 18. `spiral-radial-clustering-display` is the multi-dimensional hierarchical clustering visualization skill. Maps four layers (macro GMM + micro HDBSCAN + decorrelated ordering + hubness) into 3D feature space, projects via UMAP to 2D, encodes layers via Gestalt (position = spiral topology, color = macro, opacity = micro, size = centrality). Preserves topological structure and produces interactive Plotly HTML with full zoom/pan/hover metadata.
 19. `feature-catalog` is the local implementation ledger: a SQLite feature catalog for tracking what the project already ships and where it lives.
 20. `siamese_from_correlation_matrix` is the metric-learning companion to the embedding-analysis branch: it turns correlation structure into contrastive supervision.
-21. `skill-wiki` is the meta-skill governing the living skill library lifecycle. It owns the intake pipeline, promotion gates, crystallization protocol, supersession rules, sidecar conventions (EVIDENCE.md, HISTORY.md), and the periodic sweep that keeps skills consistent over time. It is NOT memory storage (→ `agentic_kg_memory`) and NOT project state (→ `memory-bank`).
+21. `skill-wiki` is the meta-skill governing the living skill library lifecycle. It owns the intake pipeline, promotion gates, crystallization protocol, supersession rules, sidecar conventions (EVIDENCE.md, HISTORY.md, scripts/ examples), and the periodic sweep that keeps skills consistent over time. It treats skills as model-agnostic, combinatorial primitives rather than prose docs. It is NOT memory storage (→ `agentic_kg_memory`) and NOT project state (→ `memory-bank`).
 22. `documentation` decides which durable doc artifact to update: canonical README/spec, cumulative changelog, or a timestamped fixes-applied note.
 23. `response-style` governs user-facing prose: voice preservation, anti-cliche writing, and answer coherence. Harness-state coherence remains with `agentic-harness`.
 24. `class-balancing` is a general-purpose class weight protocol. It computes log inverse frequency per class, applies Box-Cox normalization to tame the distribution tail, clips negatives, and normalizes to ratios for use as `class_weight` in sklearn or `weight` in PyTorch CrossEntropyLoss. Used anywhere labeled data has heavy class imbalance — layout element classification, NER, retrieval judgment labeling.
@@ -152,6 +159,20 @@ skills/
 
 43. `nearest-neighbor-chain` is the **greedy path-cover chain decomposition sub-skill** shared by `consolidation` and any other consumer that needs to partition a similarity matrix into semantic groups. It walks pairs sorted by descending score, extends only chain endpoints (no branching), and emits variable-length chains sorted by length descending. Singletons are docs with no above-τ neighbours. The "chaining effect" of single-linkage is intentional: each chain is a semantic thread; a chain break is a topic boundary. `gist_correlation_matrix` produces the matrix; `nearest-neighbor-chain` decomposes it; `consolidation` adds triplet extraction and MERGE/migrate/xref prescriptions on top.
 
+44. `prompt-optimization` is the **automatic prompt self-improvement skill**. A child of `evaluator-optimizer` that applies optimization algorithms — not manual rewriting. Labeled trainset + multi-step → DSPy MIPROv2 (Bayesian joint instruction+demo search). No trainset + differentiable loss → TextGrad (text-space gradient descent). Demos only → APE. Single instruction → OPRO. `agentic-harness` invokes this when a module's loss metric is stable but prompt quality is the bottleneck. Absorbs `integrate/dspy.md` and `integrate/textgrad.md`.
+
+45. `uncertainty-quantification` is the **LLM output confidence protocol**. A child of `validation` for measuring when a model knows vs. doesn't know. Three-tier protocol: Tier 1 = fast (logprobs/verbal, <0.1s), Tier 2 = standard (N=3–5 consistency samples), Tier 3 = thorough (N≥10 + conformal prediction). Semantic entropy (arXiv:2302.09664) outperforms token-level entropy. Always use Tier 3 minimum for irreversible actions. Libraries: `selfcheckgpt`, `lm-polygraph`. Feeds `checklist` for audit trails and `uncertainty-quantification` threshold gates in `agent-governance`.
+
+46. `causal-inference` is the **LLM→DoWhy→LLM causal reasoning chain**. A child of `reasoning`. LLMs hallucinate on formal do-calculus (near-random; arXiv:2306.05836) — all estimation routes through DoWhy, not the LLM. Three-phase protocol: LLM proposes DAG → causal-learn validates (PC/FCI/GES) → DoWhy identifies+estimates. LLM only interprets results. Counterfactual queries use `dowhy.counterfactual_outcomes`. Libraries: `dowhy`, `causal-learn`, `econml`, `pywhy-llm` (experimental).
+
+47. `synthetic-data` is the **LLM-generated training data pipeline**. A child of `stratified-quota-sampling`. Eight paradigms ordered by fidelity: Self-Instruct → Evol-Instruct → GLAN → Magpie → Self-Play → Persona-driven → Task-specific → Preference. Six mandatory quality gates in order: dedup → schema → LLM judge → IFD → coverage → safety. Model collapse risk (arXiv:2305.17493): requires a strong fixed teacher (GPT-4/Llama-3-70B), never train-on-own-outputs without mixing real data. Clean three-stage handoff: `synthetic-data` → `stratified-quota-sampling` → `class-balancing`. Library: `argilla-io/distilabel`.
+
+48. `continual-learning` is the **non-forgetting agent training protocol**. Sits in `learning/` alongside `deep-q-rl`. Prevents catastrophic forgetting when a model must learn a new task without erasing prior skills. Six approaches by compute budget: EWC (regularization, cheapest) → LwF (distillation) → GEM/A-GEM (episodic memory constraint) → PackNet (parameter isolation) → O-LoRA/InfLoRA (LoRA orthogonalization) → MemRL (frozen backbone + episodic Q-value memory, ICML 2026). `procedural-memory` EMA (β=0.9) is intentionally aligned with single-sample EWC. Absorbs `integrate/MemRL` (arXiv:2601.03192). Libraries: Avalanche, Mammoth, HuggingFace PEFT.
+
+49. `program-synthesis` is the **formal verification + proof-assisted coding skill**. A child of `tdd-agent` — `tdd-agent` escalates here when the property is unbounded, security-critical, or requires exhaustive correctness guarantees. AutoVerus (arXiv:2409.13082): 91.3% on 150 Verus tasks using GPT-4o + Rust ghost code, ~$37 total. EvalPlus (arXiv:2305.01210): pass@k drops 19–28% with exhaustive testing vs. HumanEval — all `tdd-agent` benchmarks should use EvalPlus. Three-phase loop: generate → verify (formal checker) → repair (RLEF feedback). Integration: `tdd-agent` handles empirical tests; `program-synthesis` handles formal properties.
+
+50. `active-inference` is the **Bayesian POMDP agent skill** based on the Free Energy Principle. Sits in `learning/` as a complement to `deep-q-rl`, not a replacement. Use when: partial observability (can't see full state), no clean scalar reward (prefer EFE preferences), principled tool selection (epistemic value drives info-gathering before committing to action). EFE decomposes into epistemic value (info gain) + pragmatic value (reach preferred obs) — no reward design needed. Russian Doll MCTS ≈ Sophisticated Inference: both use tree search; EFE replaces Q-value as node score. Library: `inferactively-pymdp`. Use `deep-q-rl` when full observability + `evaluate(state)` exists.
+
 ## MCG Foundation — The Conceptual Backbone
 
 The skill library is an implementation of the **Meta Context Graph (MCG)** architecture
@@ -169,7 +190,7 @@ The full MCG system comprises two complementary graphs:
 | Context Graph — decision traces (episodic) | learnings.jsonl, per-task rationale | `agentic-harness` |
 | CG patterns (semantic) | Pattern Store pending → tenure | `skill-wiki` |
 | CG tribal knowledge (semantic) | Pattern Store promoted entries | `skill-wiki` → skill files |
-| CG procedural schemas | **The SKILL.md files themselves** | This whole library |
+| CG procedural schemas | **The SKILL.md files themselves** — model-agnostic, slot-in primitives | This whole library |
 | L4 Runtime state | Session / active context | `continuity-log`, `memory-bank` |
 | L3 Organisation conventions | Team / project norms | `memory-bank` project brief |
 | L2 Industry / domain | Domain KG per project | `agentic_kg_memory` |

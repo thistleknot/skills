@@ -19,6 +19,7 @@ validation_method: session
 ## Core Thesis
 
 **Stop re-deriving behavioral contracts. Skills should compound.**
+They are model-agnostic, slot-in primitives: closer to feats or plugins than prose.
 
 Every session, every research aggregation, every production failure is evidence.
 Evidence strengthens or weakens existing contracts and occasionally promotes new ones.
@@ -84,6 +85,16 @@ validation_method: benchmark | production | community | session | theoretical
 
 Skills are **conditional protocols, not universal facts**. Without this envelope
 the agent cannot self-correct when a skill misfires in an out-of-envelope context.
+
+### Concrete Examples
+
+Keep `SKILL.md` evocative rather than conclusive. When you need a concrete
+instantiation for one environment, move it into `scripts/` as a few-shot example
+instead of folding it into the procedure text.
+
+Use an `## Example` section in the skill body to point at the script and explain
+what it demonstrates. The example should show a specific implementation path
+without pretending that path is the only valid one.
 
 ---
 
@@ -221,6 +232,28 @@ SELECT top-3 patterns WHERE skill_context = current_skill
 Surface as: `"Candidate pattern (confidence N/10, used M times): [pattern text]"`
 Agent decides whether to apply. Application must be explicit — record `was_applied: true`
 if used, `was_applied: false` if retrieved but not applied.
+
+---
+
+## New Skill Draft Template
+
+Copy `skill-wiki/TEMPLATE.md` into `integrate/staged/<skill-name>/SKILL.md` and fill it in.
+
+The template IS the crystallization report. Not a prospective spec — a retrospective
+distillation. You fill it out *after* doing the thing, not before. The purpose is
+to get at the **Ousia**: the essential, repeatable substrate stripped of all accident.
+
+Three sections are mandatory:
+
+- **Context** — why you end up here; what prior paths fail
+- **Steps** — numbered, commands exact, outcomes named
+- **Dead Ends** — what seemed right but broke, and why
+
+A skill without dead ends was not triage'd. Dead ends are load-bearing: they prevent
+the next agent from re-walking the same broken paths.
+
+If you cannot write concrete steps from memory, the experience hasn't crystallized yet.
+Come back after the next application.
 
 ---
 
