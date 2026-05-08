@@ -5,6 +5,7 @@ Tests for the whole-skill consolidation backend.
 from __future__ import annotations
 
 import sqlite3
+import subprocess
 import sys
 from pathlib import Path
 
@@ -15,11 +16,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from skill_similarity import (
     DENSE_SIMILARITY_WEIGHT,
     ExtractedTriplet,
+    OpenAITripletExtractor,
     SkillDerivation,
     SkillDocument,
     build_similarity_matrix,
     build_skill_documents,
     build_triplet_with_choices,
+    derive_skill_corpus,
     load_cached_derivations,
     save_derivations,
 )
@@ -249,3 +252,146 @@ def test_build_similarity_matrix_blends_dense_embeddings_when_present(tmp_path: 
         con.close()
 
     assert row == (DENSE_SIMILARITY_WEIGHT, 0.0, 1.0)
+
+
+def test_triplet_extractor_skips_runtime_error_and_uses_next_model(monkeypatch) -> None:
+    """Missing or broken fallback models should not abort extraction if a later model works."""
+    calls: list[str] = []
+
+    def fake_call_chat_completion(base_url: str, model: str, api_key: str, prompt: str) -> str:
+        calls.append(model)
+        if model == "missing-model":
+            raise RuntimeError("model not found")
+        return '[{"subject":"skill","predicate":"uses","object":"memory"}]'
+
+    monkeypatch.setattr("skill_similarity.call_chat_completion", fake_call_chat_completion)
+
+    extractor = OpenAITripletExtractor()
+    extractor.models = ("missing-model", "working-model")
+    document = SkillDocument(
+        name="alpha",
+        folder=Path("."),
+        skill_file=Path("SKILL.md"),
+        markdown_files=tuple(),
+        source_text="alpha",
+        derivation_text="alpha",
+        content_hash="alpha-hash",
+    )
+
+    triplets = extractor.extract(document)
+
+    assert calls == ["missing-model", "working-model"]
+    assert triplets[0].subject == "skill"
+
+
+def test_call_embedding_completion_accepts_ollama_embedding_shape(monkeypatch) -> None:
+    """The embedding client should accept Ollama native payloads as well as OpenAI-style data."""
+    payload = '{"embedding":[0.1,0.2,0.3]}'
+
+    monkeypatch.setattr(
+        "skill_similarity.subprocess.run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, stdout=payload, stderr=""),
+    )
+
+    from skill_similarity import call_embedding_completion
+
+    embedding = call_embedding_completion(
+        base_url="http://localhost:11434/api",
+        model="nomic-embed-text:latest",
+        api_key="ollama",
+        input_text="hello world",
+    )
+
+    assert embedding == (0.1, 0.2, 0.3)
+
+
+def test_call_chat_completion_uses_reasoning_when_content_is_empty(monkeypatch) -> None:
+    """Reasoning-only Ollama responses should still surface usable model text."""
+    payload = (
+        '{"choices":[{"message":{"content":"","reasoning":"'
+        '[{\\"subject\\":\\"skill\\",\\"predicate\\":\\"uses\\",\\"object\\":\\"memory\\"}]'
+        '"}}]}'
+    )
+
+    monkeypatch.setattr(
+        "skill_similarity.subprocess.run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, stdout=payload, stderr=""),
+    )
+
+    from skill_similarity import call_chat_completion
+
+    raw = call_chat_completion(
+        base_url="http://localhost:11434/v1",
+        model="qwen3.5:0.8b",
+        api_key="ollama",
+        prompt="extract claims",
+    )
+
+    assert raw.startswith('[{"subject":"skill"')
+
+
+def test_parse_triplet_payload_skips_malformed_items() -> None:
+    """One bad triplet should not discard the entire extraction payload."""
+    from skill_similarity import parse_triplet_payload
+
+    payload = """
+    [
+      {"subject": "skill", "predicate": "uses", "object": "memory"},
+      {"subject": "broken", "predicate": "misses object"},
+      {"subject": "tool", "predicate": "writes", "object": "report"}
+    ]
+    """
+
+    parsed = parse_triplet_payload(payload)
+
+    assert len(parsed) == 2
+    assert parsed[0]["subject"] == "skill"
+    assert parsed[1]["object"] == "report"
+
+
+def test_derive_skill_corpus_continues_after_per_skill_failure(tmp_path: Path) -> None:
+    """One extraction failure should degrade that skill to an empty singleton, not abort the run."""
+
+    class StubDeriver:
+        embedding_model = "nomic-embed-text:latest"
+
+        def derive(self, document: SkillDocument) -> SkillDerivation:
+            if document.name == "broken":
+                raise ValueError("no parseable JSON")
+            return SkillDerivation.from_triplets(
+                document,
+                [ExtractedTriplet("skill", "uses", "memory")],
+                embedding_model=self.embedding_model,
+                embedding_vector=(0.1, 0.2),
+            )
+
+    broken = SkillDocument(
+        name="broken",
+        folder=tmp_path / "broken",
+        skill_file=tmp_path / "broken" / "SKILL.md",
+        markdown_files=tuple(),
+        source_text="broken",
+        derivation_text="broken",
+        content_hash="broken-hash",
+    )
+    working = SkillDocument(
+        name="working",
+        folder=tmp_path / "working",
+        skill_file=tmp_path / "working" / "SKILL.md",
+        markdown_files=tuple(),
+        source_text="working",
+        derivation_text="working",
+        content_hash="working-hash",
+    )
+
+    derivations = derive_skill_corpus(
+        [broken, working],
+        db_path=tmp_path / ".checkpoint.db",
+        deriver=StubDeriver(),
+    )
+
+    assert len(derivations) == 2
+    assert derivations[0].name == "broken"
+    assert derivations[0].triplets == ()
+    assert derivations[1].name == "working"
+    assert derivations[1].triplets[0].object == "memory"

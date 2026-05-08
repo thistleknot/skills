@@ -433,11 +433,18 @@ def call_chat_completion(base_url: str, model: str, api_key: str, prompt: str) -
         return "".join(part.get("text", "") for part in content if isinstance(part, dict)).strip()
     if not isinstance(content, str):
         raise RuntimeError(f"LLM endpoint returned unexpected content payload: {body}")
-    return content.strip()
+    content = content.strip()
+    if content:
+        return content
+
+    reasoning = message.get("reasoning", "")
+    if isinstance(reasoning, str) and reasoning.strip():
+        return reasoning.strip()
+    return content
 
 
 def call_embedding_completion(base_url: str, model: str, api_key: str, input_text: str) -> tuple[float, ...]:
-    """Call an OpenAI-compatible embeddings endpoint through the stable curl transport."""
+    """Call an embeddings endpoint through the stable curl transport."""
     endpoint = f"{base_url.rstrip('/')}/embeddings"
     payload = json.dumps({"model": model, "input": input_text})
     curl_bin = shutil.which("curl.exe") or shutil.which("curl")
@@ -468,9 +475,17 @@ def call_embedding_completion(base_url: str, model: str, api_key: str, input_tex
 
     body = json.loads(result.stdout)
     data = body.get("data", [])
-    if not data or "embedding" not in data[0]:
-        raise RuntimeError(f"Embedding endpoint returned unexpected payload: {body}")
-    return tuple(float(value) for value in data[0]["embedding"])
+    if data and "embedding" in data[0]:
+        return tuple(float(value) for value in data[0]["embedding"])
+
+    if isinstance(body.get("embedding"), list):
+        return tuple(float(value) for value in body["embedding"])
+
+    embeddings = body.get("embeddings", [])
+    if embeddings and isinstance(embeddings[0], list):
+        return tuple(float(value) for value in embeddings[0])
+
+    raise RuntimeError(f"Embedding endpoint returned unexpected payload: {body}")
 
 
 def configured_models() -> tuple[str, ...]:
@@ -504,12 +519,16 @@ class OpenAITripletExtractor:
         last_error: Exception | None = None
         payload: list[dict] | None = None
         for model in self.models:
-            raw = call_chat_completion(
-                base_url=self.base_url,
-                model=model,
-                api_key=self.api_key,
-                prompt=prompt,
-            )
+            try:
+                raw = call_chat_completion(
+                    base_url=self.base_url,
+                    model=model,
+                    api_key=self.api_key,
+                    prompt=prompt,
+                )
+            except RuntimeError as exc:
+                last_error = exc
+                continue
             raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
             try:
                 payload = parse_triplet_payload(raw)
@@ -564,12 +583,16 @@ class OpenAISynsetSelector:
         last_error: Exception | None = None
         selections: list[dict] | None = None
         for model in self.models:
-            raw = call_chat_completion(
-                base_url=self.base_url,
-                model=model,
-                api_key=self.api_key,
-                prompt=prompt,
-            )
+            try:
+                raw = call_chat_completion(
+                    base_url=self.base_url,
+                    model=model,
+                    api_key=self.api_key,
+                    prompt=prompt,
+                )
+            except RuntimeError as exc:
+                last_error = exc
+                continue
             raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
             try:
                 selections = parse_synset_selection_payload(raw)
@@ -609,6 +632,8 @@ class KgOntologySkillDeriver:
         self.orchestrator = BatchSynsetOrchestrator(word2vec_model=None, k_neighbors=5)
         self.base_url = os.environ.get("LLM_BASE_URL", "http://localhost:11434/v1")
         self.api_key = os.environ.get("LLM_API_KEY", "ollama")
+        self.embedding_base_url = os.environ.get("LLM_EMBED_BASE_URL", self.base_url)
+        self.embedding_api_key = os.environ.get("LLM_EMBED_API_KEY", self.api_key)
         self.embedding_model = embedding_model
 
     def derive(self, document: SkillDocument) -> SkillDerivation:
@@ -631,9 +656,9 @@ class KgOntologySkillDeriver:
             embedding_model=self.embedding_model,
         )
         embedding_vector = call_embedding_completion(
-            base_url=self.base_url,
+            base_url=self.embedding_base_url,
             model=self.embedding_model,
-            api_key=self.api_key,
+            api_key=self.embedding_api_key,
             input_text=provisional.triplet_sequence_text,
         )
         return SkillDerivation.from_triplets(
@@ -667,7 +692,7 @@ def parse_triplet_payload(raw: str) -> list[dict]:
     sanitized: list[dict] = []
     for item in payload:
         if not isinstance(item, dict) or not required.issubset(item):
-            raise ValueError(f"Triplet extractor item missing required fields: {item}")
+            continue
         subject = str(item["subject"]).strip()
         predicate = str(item["predicate"]).strip()
         obj = str(item["object"]).strip()
@@ -681,6 +706,8 @@ def parse_triplet_payload(raw: str) -> list[dict]:
                 "object": obj,
             }
         )
+    if not sanitized:
+        raise ValueError(f"Triplet extractor returned no valid triplets: {raw[:400]}")
     return sanitized
 
 
@@ -925,7 +952,18 @@ def derive_skill_corpus(
             derivations.append(cached_item)
             continue
 
-        derivation = deriver.derive(document)
+        try:
+            derivation = deriver.derive(document)
+        except Exception as exc:
+            derivation = SkillDerivation.from_triplets(
+                document,
+                (),
+                embedding_model=getattr(deriver, "embedding_model", ""),
+            )
+            print(f"[{index}/{len(documents)}] failed     {document.name}  {exc.__class__.__name__}: {exc}")
+            derivations.append(derivation)
+            continue
+
         print(f"[{index}/{len(documents)}] derived    {document.name}  triplets={len(derivation.triplets)}")
         derivations.append(derivation)
         save_derivations(db_path, [derivation])
