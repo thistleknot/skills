@@ -86,6 +86,16 @@ validation_method: benchmark | production | community | session | theoretical
 Skills are **conditional protocols, not universal facts**. Without this envelope
 the agent cannot self-correct when a skill misfires in an out-of-envelope context.
 
+### Concrete Examples
+
+Keep `SKILL.md` evocative rather than conclusive. When you need a concrete
+instantiation for one environment, move it into `scripts/` as a few-shot example
+instead of folding it into the procedure text.
+
+Use an `## Example` section in the skill body to point at the script and explain
+what it demonstrates. The example should show a specific implementation path
+without pretending that path is the only valid one.
+
 ---
 
 ## Lifecycle Stages

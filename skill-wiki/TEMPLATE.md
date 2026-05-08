@@ -3,6 +3,8 @@ Canonical example: rocky10-gnome-rdp/SKILL.md
 Model your skill after that one. Born from triage, not theory.
 Treat the skill as a model-agnostic, combinatorial plugin: discrete, slot-in,
 and reusable across agents.
+Keep the prose evocative, not conclusive. Put concrete, environment-specific
+examples in `scripts/` and reference them from an `## Example` section.
 Steps verified end-to-end. Dead Ends named with exact broken syntax.
 No hedging language. Commands copy-pasteable.
 -->
@@ -41,6 +43,17 @@ description: >
 ```bash
 # commands
 ```
+
+---
+
+## Example
+
+*One concrete instantiation for a specific environment. If the code is long,
+move it to `scripts/{skill-name}-example.md` and reference it here.*
+
+~~~
+# example command block or fenced snippet
+~~~
 
 ---
 
