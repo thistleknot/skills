@@ -185,6 +185,10 @@ Invariants:
 
 ## 5. Judge Prompt Design
 
+> **Model capability rule:** The LLM used to run the checklist judge must be more capable
+> than any model whose output it is evaluating. See `evaluator-optimizer` § Judge Model
+> Capability Rule. Never use the model-under-test as its own judge.
+
 Structure the judge prompt so the LLM cannot skip novelty proof:
 
 ```text
