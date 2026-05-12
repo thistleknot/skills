@@ -2,12 +2,12 @@
 name: skill-wiki
 description: >
   Living skill library lifecycle governor. Invoke when: authoring a new skill
-  from integrate/ intake; updating a skill with new evidence; crystallizing
-  session learnings into a staged draft; promoting a staged concept to an
-  active skill; marking a skill or section as superseded; or running a
-  periodic library health sweep. NOT for project state (→ memory-bank) or
-  evidence storage (→ agentic_kg_memory). This is the editorial pipeline,
-  not the storage layer.
+  from integrate/ intake; updating a skill with new evidence; routing verified
+  work chains into `crystallization`; promoting a staged concept to an active
+  skill; marking a skill or section as superseded; or running a periodic
+  library health sweep. NOT for project state (→ memory-bank) or evidence
+  storage (→ agentic_kg_memory). This is the editorial pipeline, not the
+  storage layer.
 status: active
 last_validated: 2026-04-28
 supersedes: []
@@ -35,7 +35,8 @@ compiled skill library accumulates and compounds. The bottleneck is maintenance 
 
 | Concern | Skill |
 |---|---|
-| Skill promotion, supersession, crystallization routing | `skill-wiki` (this skill) |
+| Skill promotion, supersession, and staged contract changes | `skill-wiki` (this skill) |
+| Completed work-chain distillation | `crystallization` |
 | Evidence storage in semantic graph | `agentic_kg_memory` |
 | Session / project continuity | `memory-bank` |
 | Distilled reasoning between compactions | `continuity-log` |
@@ -239,9 +240,12 @@ if used, `was_applied: false` if retrieved but not applied.
 
 Copy `skill-wiki/TEMPLATE.md` into `integrate/staged/<skill-name>/SKILL.md` and fill it in.
 
-The template IS the crystallization report. Not a prospective spec — a retrospective
-distillation. You fill it out *after* doing the thing, not before. The purpose is
-to get at the **Ousia**: the essential, repeatable substrate stripped of all accident.
+The template is the **skill-library crystallization report**, not the general
+work-chain distillation protocol. For completed work chains that should become
+memory digests, invoke `crystallization`; use this template when the output is a
+staged skill draft. It is still retrospective distillation: you fill it out
+*after* doing the thing, not before. The purpose is to get at the **Ousia**:
+the essential, repeatable substrate stripped of all accident.
 
 Three sections are mandatory:
 
@@ -299,17 +303,21 @@ in specific claims.
 At the end of any session where a skill was invoked and produced a notable outcome:
 
 1. **Was the outcome verified?** If not, do not crystallize. Invocation count ≠ evidence.
-2. **What new behavioral pattern emerged?** Capture the specific rule, not the instance.
-3. **What failed?** Capture failure conditions for the Applicability Envelope update.
-4. **Does this contradict the existing contract?** If yes, flag as supersession candidate.
-5. **Where does this land?**
+2. **Is the durable output a work-chain digest or a skill-library contract change?**
+   - Work-chain digest / reusable lesson bundle → invoke `crystallization`
+   - Skill-library delta → continue here in `skill-wiki`
+3. **What new behavioral pattern emerged?** Capture the specific rule, not the instance.
+4. **What failed?** Capture failure conditions for the Applicability Envelope update.
+5. **Does this contradict the existing contract?** If yes, flag as supersession candidate.
+6. **Where does the skill-library delta land?**
    - New pattern for existing skill → `integrate/staged/<skill-name>-YYYYMMDD.md`
    - New pattern needing a new skill → `integrate/staged/<new-skill-name>/`
    - Contradiction of existing contract → same as above, with explicit `supersedes:` marker
 
-**Crystallization always writes to `staged/` first.** Promotion to a live skill is a
-deliberate subsequent act. This gate prevents invocation-count-based drift: a skill
-used many times incorrectly must not self-canonize its failure mode.
+`skill-wiki` crystallization writes to `staged/` first because its output is an
+editorial skill draft. The standalone `crystallization` skill may instead emit
+digest pages and facts for `agentic_kg_memory` when the goal is memory distillation
+rather than skill promotion.
 
 ---
 
