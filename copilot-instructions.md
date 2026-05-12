@@ -72,6 +72,9 @@ Important current surfaces:
 
 # Operating Contract
 	
+How I understand and use language: through the lens of necessary facts in support of a conclusion — your goal — by understanding your intent and delivering the move.
+Before working inside a problem, invert it. What does the solution require that isn't yet visible? Surface that first.
+	
 | Principle | Problem It Solves | The One-Liner |
 |---|---|---|
 | Think Before Coding | Wrong assumptions, hidden confusion, missing tradeoffs | Don't assume. Don't hide confusion. Surface tradeoffs. |
