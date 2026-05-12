@@ -1150,55 +1150,42 @@ retrieved evidence rather than treated as a source in isolation.
 - the throughline/conclusion is the current synthesis over that evidence
 - score updates and merges happen on the throughline record, not on the cited sources
 
-## Crystallization
+## Crystallization Handoff
 
-Crystallization is the process of taking a completed chain of work — a research
-thread, a debugging session, a multi-step analysis — and automatically distilling
-it into a structured digest that becomes a first-class wiki artifact.
+`crystallization` now owns the **distillation protocol** for completed work chains.
+`agentic_kg_memory` owns what happens after that distillation is handed off into the
+semantic memory surface.
 
-This is distinct from the query write-back pattern. Write-back files a single
-answer. Crystallization distills an **entire session or work chain** into its
-durable essence.
+This remains distinct from the query write-back pattern. Write-back files a single
+answer. Crystallization hands this skill an **entire work-chain digest** plus any
+standalone facts or lessons extracted from it.
 
-### Crystallization contract
+### Expected digest shape
 
-A crystallization digest should capture:
+When ingesting a crystallized work chain, expect:
 
-1. **Question** — what was the original intent or driving question?
-2. **Findings** — what did we learn? (as normalized triplets or semantic memory entries)
-3. **Entities involved** — which files, concepts, people, systems were relevant?
-4. **Lessons** — what decision rules or patterns emerged that should be reused?
-5. **Open questions** — what remains unresolved?
+1. **Question** — the original intent or driving question
+2. **Findings** — normalized triplets or semantic memory entries
+3. **Entities involved** — files, concepts, people, systems, or tools
+4. **Lessons** — reusable decision rules or patterns
+5. **Open questions** — what remains unresolved
 
-### Output artifacts
+### Ingested artifact types
 
-A crystallization pass produces two types of artifacts:
+The `crystallization` handoff may produce:
 
-- **Digest page** — a first-class wiki page with intent, objective, and the
-  structured findings above; ingested and indexed like any other page
-- **Standalone facts** — individual lessons and patterns extracted from the digest,
-  filed directly as triplets or semantic memory entries that reinforce or update
-  existing knowledge
-
-### When to crystallize
-
-Crystallize at the end of:
-- a completed research thread
-- a resolved debugging session
-- a completed analysis or comparison task
-- any multi-turn chain where the conclusions should outlive the session
+- **Digest page** — a first-class wiki page with intent, objective, and structured findings; ingest and index it like any other page
+- **Standalone facts** — individual lessons and patterns extracted from the digest, filed directly as triplets or semantic memory entries that reinforce or update existing knowledge
 
 Explorations are a source, just like an article or a paper. The wiki should treat
 them that way: ingest the results, update the graph, strengthen or challenge existing claims.
 
 ### Crystallization vs. session compression
 
-- **Session compression** (episodic tier) — compress raw observations from the
-  current session into episodic entries; runs at session end automatically
-- **Crystallization** — distill a purposeful work chain into a structured, high-quality
-  digest; requires intent and judgment; produces a named, referenceable wiki artifact
+- **Session compression** (episodic tier) — compress raw observations from the current session into episodic entries; runs at session end automatically
+- **Crystallization** — distill a purposeful work chain into a structured, high-quality digest via `crystallization`; ingest the resulting artifact here
 
-Use crystallization for work chains that have a clear question and answer.
+Use `crystallization` for work chains that have a clear question and answer.
 Use session compression for general activity logs.
 
 ---
