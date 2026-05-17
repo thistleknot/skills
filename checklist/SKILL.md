@@ -22,6 +22,13 @@ Use this skill when a harness node must:
 - gate a pipeline stage on a structured quality verdict (pass/fail/warn per criterion)
 - produce proposals that require human review before being applied
 
+**Lessons-Learned Register (Debugging Fast-Path):** A checklist maintained as a project-level file
+(e.g., `HARNESS.md`) of past root causes indexed by symptom signature. Used as the **first step** in
+the Subtractive Git-Walk Protocol (see `debugging` § Subtractive Git-Walk Protocol). Every confirmed
+root cause must be appended. Its value compounds: each new entry reduces the expected walk length for
+future debugging sessions. The register and the git-walk are two halves of the same protocol —
+register lookup is the O(1) fast-path; the git-walk is the O(n) fallback.
+
 **Not** for tracking work in progress. That is the `todo` skill. A checklist item is
 a finding about an artifact, not a task with a lifecycle.
 

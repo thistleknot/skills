@@ -199,7 +199,7 @@ class TripletEnricher:
             errors.append("Subject has empty canonical identity")
         if not enriched.predicate_canonical:
             errors.append("Predicate has empty canonical identity")
-        if not enriched.object_canonical:
+        if enriched.object and not enriched.object_canonical:
             errors.append("Object has empty canonical identity")
         
         return errors

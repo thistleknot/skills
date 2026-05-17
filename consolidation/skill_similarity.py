@@ -69,6 +69,7 @@ Rules:
 - Prefer 10-40 high-value claims over exhaustive low-value trivia.
 - If a skill states what it owns, when to use it, or what it does not own, those are valid claims.
 - Do not wrap the JSON in markdown fences.
+- The "object" field must NEVER be blank. Every triplet needs a concrete noun phrase as the object. If the verb phrase already contains the target concept, move it: e.g. "predicate": "is used for", "object": "loss weighting" rather than "predicate": "is used for loss weighting", "object": "".
 
 === SKILL NAME ===
 {skill_name}
@@ -496,8 +497,6 @@ def configured_models() -> tuple[str, ...]:
     ordered = [
         os.environ.get("LLM_MODEL", "qwen3.5:0.8b"),
         "qwen2.5-coder:1.5b",
-        "qwen3.5:2b",
-        "granite-1b:latest",
     ]
     return tuple(dict.fromkeys(model for model in ordered if model))
 
@@ -696,8 +695,10 @@ def parse_triplet_payload(raw: str) -> list[dict]:
         subject = str(item["subject"]).strip()
         predicate = str(item["predicate"]).strip()
         obj = str(item["object"]).strip()
-        if not normalize_phrase(subject) or not normalize_phrase(predicate) or not normalize_phrase(obj):
+        if not normalize_phrase(subject) or not normalize_phrase(predicate):
             continue
+        # Allow empty objects — small LLMs embed the object in the predicate phrase.
+        # Accept the triplet; BM25/sequence fragments skip empty fields automatically.
         sanitized.append(
             {
                 **item,
@@ -722,8 +723,31 @@ def parse_synset_selection_payload(raw: str) -> list[dict]:
     return payload
 
 
+def _extract_objects_from_truncated_array(fragment: str, decoder: json.JSONDecoder) -> list[dict]:
+    """Extract all complete JSON objects from a potentially truncated array string."""
+    objects: list[dict] = []
+    pos = 0
+    while pos < len(fragment):
+        idx = fragment.find("{", pos)
+        if idx == -1:
+            break
+        try:
+            obj, consumed = decoder.raw_decode(fragment[idx:])
+            if isinstance(obj, dict):
+                objects.append(obj)
+            pos = idx + consumed
+        except json.JSONDecodeError:
+            pos = idx + 1
+    return objects
+
+
 def decode_first_json_value(raw: str) -> object | None:
-    """Decode the first JSON object or array from a noisy model response."""
+    """Decode the first JSON object or array from a noisy model response.
+
+    When an array is syntactically incomplete (LLM truncation), falls back to
+    extracting every complete ``{...}`` object found inside the fragment so the
+    caller still receives as many triplets as the model managed to emit.
+    """
     decoder = json.JSONDecoder()
     for start_index, character in enumerate(raw):
         if character not in "[{":
@@ -732,6 +756,11 @@ def decode_first_json_value(raw: str) -> object | None:
             parsed, _ = decoder.raw_decode(raw[start_index:])
             return parsed
         except json.JSONDecodeError:
+            if character == "[":
+                # Array is truncated — salvage every complete object inside it
+                objects = _extract_objects_from_truncated_array(raw[start_index:], decoder)
+                if objects:
+                    return objects
             continue
     return None
 

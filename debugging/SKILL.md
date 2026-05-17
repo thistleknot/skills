@@ -110,6 +110,69 @@ Reproduce the original bug scenario and confirm it's fixed. This is not optional
 
 ---
 
+## Subtractive Git-Walk Protocol
+
+**Trigger:** silent crash or no-stack-trace regression where (a) a last-known-good commit exists,
+(b) multiple changes have landed since then, and (c) the symptom has no direct error output to anchor
+standard Phase 1 investigation.
+
+The O(n) git-walk and the O(1) lessons-learned register lookup are two halves of the same protocol.
+Always attempt the register lookup first — it converts the walk into a constant-time operation when
+the symptom class has been seen before.
+
+### Step 1 — Get the Diff Set
+
+```bash
+git log --oneline <last-known-good>..HEAD
+```
+
+Produces an ordered list of candidate commits, most recent first.
+
+### Step 2 — Fast-Path: Lessons-Learned Register First
+
+Before walking any commit, scan the project's lessons-learned register
+(e.g., `HARNESS.md` gotcha list, or equivalent) for the symptom signature.
+
+- **Match found** → go directly to that fix. Skip the walk entirely.
+- **No match** → proceed to Step 3.
+
+The register converts O(n commits) investigation into O(1) lookup.
+
+### Step 3 — Rank Commits by Subsystem Overlap
+
+For each commit, ask: does this change touch the subsystem where the symptom manifests?
+Sort by overlap. Higher overlap = higher prior probability of cause.
+
+### Step 4 — Negative Inference Walk (highest overlap first)
+
+For each candidate commit, apply the negative inference question:
+
+> *"If this commit were reverted, would the symptom disappear?"*
+
+Not: *"could this be the cause?"* — that accepts too many candidates.
+The negative framing forces elimination, not confirmation.
+
+### Step 5 — Stop at First Confirmed Causal Commit
+
+Do not continue walking back once root cause is confirmed.
+Reverting subsequent commits is scope creep, not debugging.
+
+### Step 6 — Register the Pattern (mandatory)
+
+After fixing, append the root cause as a new entry in the lessons-learned register:
+
+```
+symptom signature:  <what was observed, not what was expected>
+root cause:         <the specific commit / code change>
+fix applied:        <what was changed to resolve it>
+subsystem:          <which area of the codebase / pipeline>
+```
+
+This is **not optional cleanup**. The register is the accelerant for the next agent or developer
+facing the same symptom class. Each entry reduces the expected walk length of all future sessions.
+
+---
+
 ## Self-Repair (Autonomous Fix-Run-Retry)
 
 Self-repair is the execution-feedback loop that closes the debugging cycle without human

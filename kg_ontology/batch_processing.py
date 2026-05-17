@@ -7,7 +7,10 @@ Handles the complete pipeline:
 3. Select synsets for all triplets (LLM call 2)
 """
 
+import logging
 from typing import List, Dict, Tuple
+
+logger = logging.getLogger(__name__)
 from dataclasses import dataclass
 
 try:
@@ -160,10 +163,14 @@ class BatchSynsetOrchestrator:
                 extracted, llm_response
             )
             
-            # Validate
+            # Validate — skip invalid triplets rather than aborting the batch
             errors = TripletEnricher.validate_enrichment(enriched)
             if errors:
-                raise ValueError(f"Enrichment validation failed: {errors}")
+                logger.warning(
+                    "Skipping triplet (%r, %r, %r) — enrichment validation: %s",
+                    enriched.subject, enriched.predicate, enriched.object, errors,
+                )
+                continue
             
             # Get canonical
             canonical = CanonicalityRules.canonical_triplet(enriched)

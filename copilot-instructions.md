@@ -67,14 +67,16 @@ Important current surfaces:
 - `agentic-hyperparm` is the agent-specific behavioral tuning skill.
 - `hyper-parm_tuning` retains the broader Weighted Stage Allocation pattern.
 - `class-balancing` is the class-weighting protocol for imbalanced classifiers.
+- `median-bifurcation` is the universal median-cut pattern: baked-in hard negatives, ANOVA-inspired, data-level contrastive learning.
 - `pdf-extraction` is the standalone PDF -> enriched-Markdown workflow and uses
   `class-balancing` for its layout-classifier training path.
 
 # Operating Contract
-	
+
 How I understand and use language: through the lens of necessary facts in support of a conclusion — by understanding user intent/goal - formulating one or more hypothesis, identifying testable conditions that would negate those premises, identify observed premises (articulate inferred), and delivering the move towards the objective.
 Before working inside a problem, invert it. What does the solution require that isn't yet visible? Surface that first.
 Solving problems isn't necessarily achieving objectives. but also includes eliminating the need for a particular objective.
+Don't overthink, simply review your hypothesis, contrary evidence, collected evidence, evaluate premises, form conclusion.
 	
 | Principle | Problem It Solves | The One-Liner |
 |---|---|---|
@@ -220,6 +222,7 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | README / changelog / release-note / fixes-applied updates | `documentation` |
 | Behavioral hyperparameter tuning for agentic systems | `agentic-hyperparm` |
 | Imbalanced classifier class weighting | `class-balancing` |
+| Splitting a problem/data along median boundaries; baked-in contrastive signal | `median-bifurcation` |
 | PDF to enriched-Markdown extraction workflow | `pdf-extraction` |
 | Test-driven implementation (Red→Green→Refactor) | `tdd-agent` |
 | Autonomous hill-climbing on a measurable objective | `autoresearch` |
@@ -250,3 +253,40 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | LLM-as-judge findings, structured artifact critique | `checklist` |
 
 **In automated/spawned sessions** (`SPAWNED_SESSION=true`): auto-choose the recommended option on any AskUserQuestion analog. End with a completion report (what shipped, decisions made, anything uncertain). No interactive prompts.
+
+## Starting Servers via Subagents
+
+**Rule:** Never start a server, daemon, or long-lived process inline in the main agent thread.
+
+Always launch via a background subagent or detached shell:
+
+```python
+# BAD — blocks the agent, dies when session ends
+powershell("uvicorn app:app --port 8000", mode="sync")
+
+# GOOD — detached: process persists after agent shutdown
+powershell("uvicorn app:app --port 8000", mode="async", detach=True)
+```
+
+Why this matters:
+- Inline server calls block the agent or get killed on session teardown
+- `detach=True` (PowerShell) / `detach: true` (tool JSON) fully decouples the process
+- To stop: use `Stop-Process -Id <PID>` with the explicit PID — never name-based kills
+- Verify the server is responsive after launch (e.g., `curl http://localhost:PORT/health`) before proceeding
+
+When to use a **background task agent** instead:
+- The server needs initial setup commands before it's ready (install deps, migrate DB, etc.)
+- You want the startup logs isolated from the main context
+- Launch with `mode="background"` and wait for the "server ready" signal before continuing
+
+```
+task("start-api", "Start FastAPI server and verify health", mode="background")
+# wait for completion notification, then verify with curl
+```
+
+**Checklist before marking "server started":**
+- [ ] Process launched with `detach: true` or via background task agent
+- [ ] Health-check response confirmed (don't assume; verify)
+- [ ] PID recorded if manual teardown may be needed
+
+---

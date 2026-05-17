@@ -86,6 +86,7 @@ skills/
 │   │   └── synthetic-data           # LLM-generated training data; 8 paradigms (Self-Instruct/Evol-Instruct/GLAN/Magpie/UltraFeedback/FireAct/distilabel); 6 mandatory quality gates; handoff to stratified-quota-sampling + class-balancing
 │   ├── cluster-quantized-knn        # O(1) approximate distance for KNN via cluster-quantization; fast interactive retrieval
 │   ├── mad-dynamic-batching         # MAD-gated token-aware dynamic batching for variable-length training data; quantile partitioning
+│   ├── median-bifurcation           # universal median-cut pattern: choose axis → produce both sides → drop unwanted half; 2^n epistemic cells at zero labeling cost; data-level contrastive learning
 │   ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
 │   ├── model-size-reduction         # checkpoint slimming for HF models: dtype cast, layer drop, LoRA extraction, DARE/TIES/DELLA; architecture-agnostic state_dict path
 │   ├── generalization-theory        # signal-vs-noise training-dynamics lens via eNTK; diagnose memorization, grokking, and noisy-preference fine-tunes
@@ -177,6 +178,8 @@ skills/
 51. `program-synthesis` is the **formal verification + proof-assisted coding skill**. A child of `tdd-agent` — `tdd-agent` escalates here when the property is unbounded, security-critical, or requires exhaustive correctness guarantees. AutoVerus (arXiv:2409.13082): 91.3% on 150 Verus tasks using GPT-4o + Rust ghost code, ~$37 total. EvalPlus (arXiv:2305.01210): pass@k drops 19–28% with exhaustive testing vs. HumanEval — all `tdd-agent` benchmarks should use EvalPlus. Three-phase loop: generate → verify (formal checker) → repair (RLEF feedback). Integration: `tdd-agent` handles empirical tests; `program-synthesis` handles formal properties.
 
 52. `active-inference` is the **Bayesian POMDP agent skill** based on the Free Energy Principle. Sits in `learning/` as a complement to `deep-q-rl`, not a replacement. Use when: partial observability (can't see full state), no clean scalar reward (prefer EFE preferences), principled tool selection (epistemic value drives info-gathering before committing to action). EFE decomposes into epistemic value (info gain) + pragmatic value (reach preferred obs) — no reward design needed. Russian Doll MCTS ≈ Sophisticated Inference: both use tree search; EFE replaces Q-value as node score. Library: `inferactively-pymdp`. Use `deep-q-rl` when full observability + `evaluate(state)` exists.
+
+53. `median-bifurcation` is the **universal median-cut discriminative signal skill**. Any useful distinction a model or system must learn is a binary median cut. Three-step protocol: choose partition axis → produce both sides explicitly (hard negatives baked in, not mined post-hoc) → drop unwanted partition at inference. Applied recursively, n bifurcations yield 2^n epistemic cells at zero additional labeling cost. This is data-level contrastive learning: the loss sees ordinary cross-entropy; discriminative pressure comes from the data layout. Inspired by ANOVA factorial designs and k-means via median divisions. `mad-dynamic-batching` is a concrete instantiation for token-length distributions.
 
 ## MCG Foundation — The Conceptual Backbone
 
