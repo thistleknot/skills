@@ -19,8 +19,23 @@ Red flags that mean you're guessing:
 - Proposing a fix before tracing data flow.
 - Each fix reveals a new problem elsewhere — wrong layer, not wrong code.
 
+## Canonical Axioms
+
+> *"Most bugs are a result of the execution state not being exactly what you think it is."*
+> — John Carmack
+
+> *"Debugging is twice as hard as writing the code in the first place. Therefore, if you write the code as cleverly as possible, you are, by definition, not smart enough to debug it."*
+> — Kernighan's Law
+
+> **McDonald's First Law:** The number of ways code can fail is theoretically infinite.
+> Corollary: Assume your code is the problem until quantifiably proven otherwise. For every bug found in a library, find a hundred in your own code first.
+
+> **MCVE principle:** When hitting a difficult problem, replicate it in a fresh environment with as little code and as few dependencies as possible. Add details back in until it fails. Whatever you last added is almost certainly part of the cause.
+
 ## Stance
 Objective third-party observer. What is the objective? What contributes to unexpected results? Think through the code's original intent before suggesting changes.
+
+**Assume nothing.** Nine times out of ten, the bug hides in the one area you think you can take for granted. Check the values of all variables involved. Read stack traces completely. Never withhold evidence from anyone helping you debug.
 
 ## #1 Rule
 If the same class of error repeats: stop patching, revisit the approach. Don't fix symptoms — fix the core issue. If quick fixes aren't working, pivot to an alternative rather than chasing the stray problem endlessly.
@@ -76,6 +91,18 @@ Collect context before forming any hypothesis.
 4. Reproduce deterministically before proceeding. If you can't reproduce, gather more evidence first.
 5. Search prior investigations for the same files. Recurring bugs in the same area are an architectural smell.
 
+**Multi-component systems:** when the error traverses multiple layers (CI→build→signing, API→service→DB),
+add diagnostic instrumentation at EACH component boundary before forming any hypothesis:
+```
+for each boundary:
+  - log what enters the component
+  - log what exits the component
+  - verify env/config propagation
+  - check state at that layer
+run once to learn WHERE it breaks, then investigate that specific layer
+```
+This reveals the failing layer precisely instead of thrashing across all of them.
+
 Output: **"Root cause hypothesis: ..."** — a specific, testable claim.
 
 ### Phase 2 — Pattern Recognition
@@ -96,6 +123,7 @@ Before writing ANY fix, verify the hypothesis.
 1. Add a temporary log or assertion at the suspected root cause. Run the reproduction. Does the evidence match?
 2. If wrong: gather more evidence. Do not guess. Return to Phase 1.
 3. **3-strike rule:** Three failed hypotheses → STOP. Question whether this is an architectural issue, not a bug.
+   Signals it's architectural: each fix reveals new coupling in a different place; fixes require massive refactoring; symptoms migrate but don't resolve. If this pattern appears, discuss architecture before attempting fix #4.
 
 ### Phase 4 — Implementation
 Once root cause is confirmed:
