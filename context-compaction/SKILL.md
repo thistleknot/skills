@@ -70,6 +70,15 @@ before proceeding.
 
 ---
 
+## Context as Pressure Gauge
+
+The context window is a **pressure gauge, not a resource to consume**.
+
+- If it fills during normal work, something upstream is structurally wrong — not a trigger to compact, a trigger to investigate
+- Anthropic's guidance: clear context at **~20% window usage**, not at the limit
+- Hitting the context limit is a diagnostic: the session design is broken (too much irrelevant context, no sub-agent isolation, or the orchestrator is doing leaf work it should delegate)
+- Healthy sessions: orchestrator stays lean; sub-agents burn tokens on actual work and then disappear — their context evaporates, the orchestrator never sees it
+
 ## Compaction Triggers
 
 | Trigger | Threshold | Action |

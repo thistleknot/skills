@@ -36,6 +36,21 @@ validation_method: session
 - Each lane should bind through the model registry to a concrete endpoint/model pair, then serialize that binding into state, logs, or CLI output so the active stack is inspectable.
 - Runtime choice remains configurable, but the default split should be explicit rather than implied.
 
+## Model Sizing by Reasoning Load
+
+Assign models by **reasoning load**, not task importance.
+
+| Phase | Model size | Rationale |
+|---|---|---|
+| Planning, architecture, ambiguous requirements | Large model | Reasoning-heavy; context matters; errors here cascade |
+| Implementation after plan is locked | Smaller / cheaper model | Pattern-completion task; thinking is already done |
+| Leaf code edits (manager-directed) | Open-source / local (Ollama, Qwen) | Viable for execution steps; not validated for planning |
+
+Rules:
+- Once a plan exists, the implementation sub-agent needs to fill in a known shape — not reason about trade-offs
+- Local models (e.g., `qwen2.5-coder`, `qwen3.5`) are cost-effective for leaf tasks; not validated for planning decisions
+- Never route planning work to the cheap model to save tokens; the cascade cost of a bad plan exceeds the token savings
+
 ## Default Recommendation
 - Use `opencode` / `claw-code` when you need orchestration
 - Use `aider` when a manager needs a leaf code executor

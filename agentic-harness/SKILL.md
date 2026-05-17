@@ -165,6 +165,38 @@ UPDATE todos SET status = 'done' WHERE id = 'coherence';
 
 ---
 
+## Compiler Mindset — State Machine Over Conversation
+
+**Core claim:** The failure mode is not the model — it's the workflow. Treating an LLM as a chatbot invites non-deterministic sprawl. Treating it as a compiler collapses that into a single valid path.
+
+Replace the conversational loop with: strict input → validated process → deterministic output.
+
+Rules:
+- State transitions require **external tool validation**, not AI self-assessment
+- Each gate is **binary** (pass/fail), not a question posed to the model
+- The AI never decides what work remains — a tool does: `while tool_says_work_remains: do_next_item`
+- Concrete gates: file existence checks, linting, test presence, git diffs on protected files
+
+### Three Compounding Failure Patterns to Design Against
+
+| Failure | Mechanism | Countermeasure |
+|---|---|---|
+| Context accumulation | Output quality degrades monotonically as session grows | Sub-agents with isolated contexts; clear orchestrator regularly |
+| Ambiguous directives | "fix this" / "make it better" = multiple valid interpretations; model picks arbitrarily | Every directive has a specific, verifiable target |
+| AI-maintained to-do lists | Agent declares completion without proof; skips steps under context pressure | **External task tracker only** — agent marks items done via tool, tool decides what's left |
+
+All three compound: a long session with vague prompts and self-tracked todos is near-guaranteed to drift.
+
+### Orchestrator Context Budget
+
+Keep the orchestrator below **50–100K tokens**. Sub-agents burn tokens on actual work and then disappear — their context evaporates; the orchestrator stays lean. If the orchestrator context is filling, the architecture is wrong, not the context limit.
+
+### PRD Phase Discipline
+
+The requirements/PRD step may be exploratory and conversational. Everything after it should not be. Once you know what to build, lock it down: narrow prompts, binary gates, no open-ended iteration in the execution pipeline.
+
+---
+
 ## Relation to React Agent
 
 Keep `agentic-harness` and `react-agent` as **adjacent but separate** skills.

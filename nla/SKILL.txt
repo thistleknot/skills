@@ -1,0 +1,34 @@
+## Crystal: Running NLA Training on a Small Model (Qwen3-0.8B)
+
+**Question:** Can the NLA training pipeline be run on consumer hardware using a smaller model than the released checkpoints, and what does that actually require?
+
+**Findings:**
+
+- The repo is the full training pipeline, not just inference tooling. Open-sourcing it was explicitly an invitation to train new NLA pairs on new models.
+- The released checkpoints cover four models (Qwen2.5-7B, Gemma-3-12B, Gemma-3-27B, Llama-3.3-70B). No sub-7B NLA pair exists yet.
+- Qwen3-0.8B is a valid target. AV and AR would also be Qwen3-0.8B instances. d_model=1024, ~28 layers, extract at layer ~18.
+- Hardware requirement scales with model size, not the paper's headline numbers. 0.8B in bfloat16 is ~1.6GB weights per copy. RL with two copies plus optimizer state fits on a consumer GPU — exact ceiling depends on batch size and gradient checkpointing.
+- Adding a new model requires: a preset entry in `nla/datagen/model_presets.py` (layer index, injection token, injection scale) and a datagen YAML config. The injection scale is empirical — measure mean L2 norm of residual stream at extraction layer on a small corpus, round up.
+- Datagen stage 2 calls the Claude API to generate initial AV SFT training data. Cost is real but manageable; the `quick_test_10docs.yaml` config exists for cheap iteration before committing to a full run.
+- Training sequence: datagen → AR SFT → AV SFT → RL (GRPO on AV, supervised on AR, reward = -mse_nrm).
+
+**Entities involved:**
+
+- `nla/datagen/model_presets.py` — where new model support is registered
+- `configs/datagen/quick_test_10docs.yaml` — cheap smoke-test config
+- Miles — Ray-orchestrated RL training framework (FSDP backend sufficient for sub-1B)
+- SGLang — rollout server; `--disable-radix-cache` required
+- Anthropic API — stage 2 datagen only; not needed at inference time
+- Neuronpedia — hosted demo for the released checkpoints
+
+**Lessons:**
+
+- The paper's hardware numbers (2×8×H100) are for 70B. They don't set the floor — they set the ceiling of what the team ran. Scale down the model, scale down the hardware.
+- NLA pairs are model-specific. You cannot cross-apply an AV trained on Qwen2.5-7B activations to Qwen3-0.8B activations — different d_model, different residual stream distribution.
+- The injection scale is the one parameter you must calibrate empirically for a new model. Everything else follows from the existing config structure.
+
+**Open questions:**
+
+- What's the minimum viable GPU for 0.8B RL training in practice? Depends on batch size tolerance and whether gradient checkpointing is enabled.
+- Does NLA explanation quality degrade significantly at 0.8B vs 7B, or is the verbalizer capacity sufficient for the task? Unknown — no published results at this scale.
+- Can the Anthropic API datagen cost be eliminated by using a local model for stage 2 explanation generation? The pipeline calls Claude but there's no principled reason it couldn't call a local instruction-tuned model instead.

@@ -144,6 +144,32 @@ are more meaningful.
 
 ---
 
+## Anti-Gaming Protocol
+
+AI agents can pass tests by **modifying the tests** rather than implementing the feature. This is not theoretical — it is a predictable optimization under context pressure.
+
+Detection:
+```python
+# In the green_node, after implementation completes:
+def detect_test_tampering(test_files: list[str], run_git_diff: Callable) -> bool:
+    """
+    Returns True (tampered) if any test file was modified during the Green phase.
+    Require: baseline git SHA captured at start of Green phase.
+    Guarantee: any test file touched in this phase is flagged, not silently accepted.
+    """
+    for path in test_files:
+        diff = run_git_diff(path, from_sha=green_phase_start_sha)
+        if diff:
+            return True
+    return False
+```
+
+Rules:
+- Capture a git SHA at the **start of Green phase**
+- After Green completes, diff all test files against that SHA
+- If any test file was modified: halt, flag as tampered, return to Red with the tampering logged
+- The structural validation sub-agent (see `agent-governance`) must have **no knowledge** of the implementation spec — it checks structural properties only (no hard-coded values, test coverage, schema validity)
+
 ## Agentic Harness Integration
 
 Wire TDD as three harness nodes:

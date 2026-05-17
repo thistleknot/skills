@@ -21,6 +21,8 @@ Use multi-agent coordination — not a single agent with more context — when:
 - **Context would overflow** a single agent's window for the full task
 - **Verification by a peer** is required before a sub-result is accepted (reviewer != author)
 
+**Sub-agents are context hygiene, not just parallelism.** The primary benefit is not speed — it is that each sub-agent starts with a clean context window, without the accumulated bias of failed prior attempts in the orchestrator. A sub-agent spawned after five failed iterations has no knowledge of those failures and approaches the task fresh.
+
 Do **not** use when:
 - Tasks are sequentially dependent and benefit from shared context → use `agentic-harness` pipeline
 - A single agent with tool access is sufficient → cheaper and simpler

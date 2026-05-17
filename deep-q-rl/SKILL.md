@@ -522,6 +522,67 @@ code_rl_samples_per_level = [5, 3, 1]   # vs default [21,13,8,5,3,2,1]
 | Ignoring partial credit | Pass rate delta is a richer signal than binary pass/fail; use it |
 | Not checkpointing best patch | Always git-stash or checkpoint the highest-scoring patch before continuing |
 | Unbounded rollouts | Set `max_attempts` (e.g., 10); return best seen if not fully solved |
+
+## SPO / Offline Preference Optimization
+
+Covers Soft Policy Optimization (SPO), DPO, and reward-weighted SFT — offline loops where the model is fine-tuned against pre-computed or batch-computed reward signals rather than an online simulator.
+
+### When to Use SPO vs. Online RL
+
+| Signal available offline? | Prefer |
+|---|---|
+| Yes — gold data, quality scores, format checkers | SPO / DPO |
+| No — requires live environment feedback | Online RL (Code-RL, Deep-Q-RL) |
+
+SPO is the right default when you have a structured output format, a scoring function that can run without a simulator, and a pre-existing base adapter that already emits roughly correct structure.
+
+### Reward Component Design Rules
+
+**Binary features → binary rewards.** If the training data either has a feature or it doesn't (e.g. evidence tags `observed`/`inferred`), the corresponding reward component must be binary: full credit if present anywhere in the output, zero otherwise. Partial credit for absent features (e.g. 0.5 × weight for missing tags) creates a free-point leak — the model earns reward without producing the feature.
+
+**Penalise failure modes explicitly.** A reward that checks only *presence* of format markers scores a repeated line eight times as highly as eight unique lines. Add a uniqueness gate before format checks: if `unique_lines / total_lines < threshold` return 0.0 immediately. Detect tautological triplets (subject appears verbatim in object field) and deduct proportionally.
+
+**Pre-score training samples; don't evaluate gold against gold.** When `compute_step()` scores gold `output_texts` against gold `ground_truths`, every clean sample scores ~1.0 and all examples receive equal weight. Pre-score each sample before the training loop using signals independent of format compliance (unique-content ratio, predicate specificity, subject dominance ratio). Embed as `precomputed_reward` and use it in `compute_step()`. Flat reward distribution (all ~0.8, no variance) is the diagnostic.
+
+### Generation Parameter Pitfalls
+
+**`repetition_penalty` conflicts with structured output headers.** `repetition_penalty > 1.0` penalises every token that appeared anywhere in the full input+output context, including the prompt. If the prompt's instruction list contains the same tokens as the expected output headers (e.g. `Non-Entailed Premises:`, `Throughline:`), the penalty prevents the model from generating those headers, producing garbled near-variants instead.
+
+Safe default for structured output tasks:
+```python
+model.generate(
+    **inputs,
+    max_new_tokens=384,
+    do_sample=False,
+    no_repeat_ngram_size=6,   # blocks exact-line loops without touching header tokens
+    # repetition_penalty=1.3  # NEVER with structured headers that echo prompt words
+)
+```
+
+`no_repeat_ngram_size=6` prevents exact-line repetition (the failure mode `repetition_penalty` was trying to fix) without blocking 3–4-token header sequences.
+
+**Eval pipeline must use identical generation params to inference.** A generation parameter change documented in the README but not propagated to the eval script will produce `avg_quality=0.0` silently — every structured output has garbled headers, every format check fails. After changing any generation param, grep the repo for `repetition_penalty`, `no_repeat_ngram_size`, `temperature`, and `do_sample` and audit every occurrence.
+
+Diagnostic: quality collapse to 0.0 across *all* training samples simultaneously is a systemic eval bug, not model regression.
+
+### Epoch Requirements
+
+One epoch of SPO rarely generalises. Holdout metrics drawn from the training distribution can show 0.95+ correctness while out-of-distribution inputs exhibit repetition spirals, garbled tag variants, and format leakage from the base model's prior.
+
+Validation protocol per epoch:
+1. Run inference on 3–5 diverse quotes not from the training set.
+2. Watch reward *variance* across training batches, not just mean — variance collapse early means local optimum on template compliance, not generalisation.
+3. Declare done only when OOD inputs produce clean structured output.
+
+### SPO Anti-Patterns
+
+| Anti-pattern | Fix |
+|---|---|
+| Partial credit for absent binary features | Binary reward: present = full credit, absent = 0 |
+| Uniform reward across all training samples | Pre-score offline; embed `precomputed_reward`; verify reward variance > 0 |
+| Eval gen params differ from inference | Single source of truth for gen params; grep + audit after every change |
+| `repetition_penalty` with structured headers | Remove it; use `no_repeat_ngram_size=6` |
+| Declaring done after 1 epoch | Validate on OOD inputs; watch variance; run ≥ 2–3 epochs |
 <!-- consolidation:see-also:start -->
 ## See Also
 [[evaluator-optimizer]]  [[autoresearch]]  [[agentic-harness]]  [[agentic_kg_memory]]  [[react-agent]]

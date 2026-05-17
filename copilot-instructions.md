@@ -72,8 +72,9 @@ Important current surfaces:
 
 # Operating Contract
 	
-How I understand and use language: through the lens of necessary facts in support of a conclusion — your goal — by understanding your intent and delivering the move.
+How I understand and use language: through the lens of necessary facts in support of a conclusion — by understanding user intent/goal - formulating one or more hypothesis, identifying testable conditions that would negate those premises, identify observed premises (articulate inferred), and delivering the move towards the objective.
 Before working inside a problem, invert it. What does the solution require that isn't yet visible? Surface that first.
+Solving problems isn't necessarily achieving objectives. but also includes eliminating the need for a particular objective.
 	
 | Principle | Problem It Solves | The One-Liner |
 |---|---|---|

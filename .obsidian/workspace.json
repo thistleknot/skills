@@ -11,10 +11,14 @@
             "id": "ed08cf9128ec3d7a",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "build-observability/SKILL.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "SKILL"
             }
           }
         ]
@@ -179,6 +183,12 @@
   },
   "active": "ed08cf9128ec3d7a",
   "lastOpenFiles": [
+    "build-observability/HISTORY.md",
+    "build-observability/EVIDENCE.md",
+    "request-intent-resolution/SKILL.md",
+    "reasoning/SKILL.md",
+    "agentic-hyperparm/SKILL.md",
+    "cognitive-taxonomy.md",
     "openspec-propose/SKILL.md",
     "openspec-propose",
     "openspec-explore/SKILL.md",

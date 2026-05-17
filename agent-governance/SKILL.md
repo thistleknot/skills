@@ -118,6 +118,29 @@ use an LLM classifier with a structured output schema.
 
 ---
 
+## Self-Validation Isolation
+
+**Self-validation is structurally broken.** If the agent writes the code, runs the tests, and decides it's done — all in one context — it can rationalize its way to false completion. The model that produced the work cannot objectively assess whether the work satisfies requirements it may have misunderstood.
+
+Rule: the agent that writes never also validates. Always use a separate agent, script, or pipeline node.
+
+Two tiers of validation:
+1. **Structural validator** — a sub-agent or script with no knowledge of what was supposed to be implemented. It checks only observable properties: hard-coded values, test coverage, file presence, schema validity, git diff bounds. No reasoning required — it either passes or fails.
+2. **Semantic validator** — a *more capable* model that evaluates correctness against the original spec. The judge model must be at least as capable as the model being evaluated; a model cannot validate its own sufficiency.
+
+## Enforcement Hierarchy
+
+Prompts are suggestions. Gates are enforcement.
+
+| Layer | Mechanism | Strength |
+|---|---|---|
+| Prompt instruction | "do not create mock implementations" | Weak — model can rationalize past it |
+| Structured output schema | Required fields, enum constraints | Moderate — fails on schema violation |
+| External validation script | Detects hard-coded values, blocks next state | Strong — binary, not interpretable |
+| Git diff gate | Flags unauthorized file changes | Strong — file-system ground truth |
+
+Design governance as **gates**, not as prompts. A gate that detects hard-coded values and blocks the next state transition beats any instruction prompt.
+
 ## Trust Tiers
 
 Not all agents deserve the same access level. Trust is earned, not granted by default.

@@ -46,6 +46,17 @@ Hyperparams ≠ infrastructure vars — batch size is a system variable, not a m
 - **Structural** (Adapter, Decorator, Facade): legacy code or interface mismatches
 - **Behavioral** (Observer, Strategy, Command, Template Method, State): algorithms or interactions are complex
 
+## Requirements Phase Discipline
+
+The PRD / requirements step may be **exploratory and conversational** — this is appropriate while figuring out what to build.
+
+Once requirements are locked:
+- Narrow every subsequent prompt to a specific, verifiable target
+- Replace open-ended iteration with binary gates (exists / doesn't exist, passes / fails)
+- Ambiguity at input multiplies error at output — every "fix this" without a specific target is a branch point in a non-deterministic system
+
+Lock the spec before starting implementation. Reopening requirements mid-implementation is a scope-change event, not a continuation of the same task.
+
 ## Pragmatic Principles
 - DRY / Orthogonality — eliminate duplication; design independent components
 - Tracer bullets — implement end-to-end skeleton first, then flesh out

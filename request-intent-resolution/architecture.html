@@ -1,0 +1,258 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>arXiv Orchestrator — Entity-Anchored Pipeline Architecture</title>
+<style>
+body { margin: 0; padding: 24px; background: #faf9f5; font-family: sans-serif; }
+h2 { font-size: 15px; font-weight: 500; color: #3d3d3a; margin: 0 0 16px 0; }
+svg text { font-family: sans-serif; }
+.ts { font-size: 12px; fill: #73726c; }
+.th { font-size: 14px; font-weight: 500; fill: #3d3d3a; }
+@media (prefers-color-scheme: dark) {
+  body { background: #1e1e1c; }
+  h2   { color: #c2c0b6; }
+  .th  { fill: #c2c0b6; }
+  .ts  { fill: #9c9a92; }
+}
+.c-gray   rect { fill: #F1EFE8; stroke: #888780; }
+.c-teal   rect { fill: #E1F5EE; stroke: #0F6E56; }
+.c-purple rect { fill: #EEEDFE; stroke: #534AB7; }
+.c-amber  rect { fill: #FAEEDA; stroke: #854F0B; }
+.c-teal   circle  { fill: #E1F5EE; stroke: #0F6E56; }
+.c-teal   ellipse { fill: none;   stroke: #0F6E56; }
+.c-gray   text { fill: #2C2C2A; }
+.c-teal   text { fill: #085041; }
+.c-purple text { fill: #26215C; }
+.c-amber  text { fill: #412402; }
+@media (prefers-color-scheme: dark) {
+  .c-gray   rect { fill: #444441; stroke: #B4B2A9; }
+  .c-teal   rect { fill: #085041; stroke: #5DCAA5; }
+  .c-purple rect { fill: #3C3489; stroke: #AFA9EC; }
+  .c-amber  rect { fill: #633806; stroke: #EF9F27; }
+  .c-teal   circle  { fill: #085041; stroke: #5DCAA5; }
+  .c-teal   ellipse { stroke: #5DCAA5; }
+  .c-gray   text { fill: #D3D1C7; }
+  .c-teal   text { fill: #9FE1CB; }
+  .c-purple text { fill: #CECBF6; }
+  .c-amber  text { fill: #FAC775; }
+}
+.node { cursor: default; }
+.arr  { stroke: #B4B2A9; stroke-width: 1.5; fill: none; }
+.dash { stroke: #B4B2A9; stroke-width: 1;   fill: none; stroke-dasharray: 5 3; }
+.div  { stroke: #D3D1C7; stroke-width: 0.5; stroke-dasharray: 4 4; }
+@media (prefers-color-scheme: dark) {
+  .arr,.dash { stroke: #5F5E5A; }
+  .div       { stroke: #444441; }
+}
+</style>
+</head>
+<body>
+<h2>arXiv Orchestrator — Entity-Anchored Pipeline (request-intent-resolution)</h2>
+<svg width="100%" viewBox="0 0 980 530" role="img">
+<title>arXiv Orchestrator: offline abstract indexing, entity-anchored KG, HyDE anchor routing, on-demand pseudocode extraction, wiki solution</title>
+<desc>
+  Offline: abstracts to LLM extract (BM25+semantic RRF) yielding value_proposition (use case + novel utility),
+  SPO+entities, and HyDE anchors (question · end-state). HyDE anchors feed anchor index. SPO becomes
+  entity_set fingerprint, then throughline (entity-anchored, q_score), stored as wiki solutions in ingredient KG.
+  Query: anchor match tries HyDE fast path first (question or end-state anchor). On confident hit → entity-set
+  match directly. Fallback: intent → problem·objective → entity-set match. Query expansion always runs in
+  parallel. On entity match: retrieve full paper, extract pseudocode (crystallized lessons, _methods.md).
+  Throughlines from matched wiki solutions feed group synthesis. Pseudocode + group throughline land in wiki
+  solution (IS the solution): stored in KG with q_score update.
+</desc>
+<defs>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<!-- Phase labels + divider -->
+<text class="ts" x="40" y="42">offline indexing</text>
+<text class="ts" x="40" y="294">query time</text>
+<line x1="40" y1="282" x2="950" y2="282" class="div"/>
+
+<!-- ══════════════════════  OFFLINE  ══════════════════════ -->
+
+<g class="node c-gray">
+  <rect x="30" y="52" width="130" height="44" rx="8" stroke-width="0.5"/>
+  <text class="th" x="95" y="74" text-anchor="middle" dominant-baseline="central">paper abstracts</text>
+</g>
+
+<line x1="160" y1="74" x2="180" y2="74" class="arr" marker-end="url(#arr)"/>
+
+<g class="node c-teal">
+  <rect x="180" y="52" width="170" height="52" rx="8" stroke-width="0.5"/>
+  <text class="th" x="265" y="70" text-anchor="middle" dominant-baseline="central">LLM extract</text>
+  <text class="ts" x="265" y="89" text-anchor="middle" dominant-baseline="central">BM25 ⊕ semantic · RRF</text>
+</g>
+
+<!-- Three forks from LLM extract: value_proposition (left), HyDE anchors (centre), SPO+entities (right) -->
+<path d="M 265,104 L 265,122 L 95,122 L 95,136" class="arr" marker-end="url(#arr)"/>
+<text class="ts" x="172" y="116" text-anchor="middle">use case · obj fn</text>
+<line x1="227" y1="122" x2="227" y2="136" class="arr" marker-end="url(#arr)"/>
+<path d="M 265,104 L 265,122 L 378,122 L 378,136" class="arr" marker-end="url(#arr)"/>
+<text class="ts" x="321" y="116" text-anchor="middle">SPO + entities</text>
+
+<g class="node c-purple">
+  <rect x="30" y="136" width="130" height="46" rx="8" stroke-width="0.5"/>
+  <text class="th" x="95" y="153" text-anchor="middle" dominant-baseline="central">value_proposition</text>
+  <text class="ts" x="95" y="171" text-anchor="middle" dominant-baseline="central">use case · novel utility</text>
+</g>
+
+<!-- HyDE anchors (new) -->
+<g class="node c-purple">
+  <rect x="168" y="136" width="118" height="46" rx="8" stroke-width="0.5"/>
+  <text class="th" x="227" y="153" text-anchor="middle" dominant-baseline="central">HyDE anchors</text>
+  <text class="ts" x="227" y="171" text-anchor="middle" dominant-baseline="central">question · end-state</text>
+</g>
+
+<g class="node c-gray">
+  <rect x="294" y="136" width="168" height="46" rx="8" stroke-width="0.5"/>
+  <text class="th" x="378" y="153" text-anchor="middle" dominant-baseline="central">SPO + entities</text>
+  <text class="ts" x="378" y="171" text-anchor="middle" dominant-baseline="central">subjects ∪ objects</text>
+</g>
+
+<line x1="95" y1="182" x2="95" y2="202" class="arr" marker-end="url(#arr)"/>
+<line x1="227" y1="182" x2="227" y2="202" class="arr" marker-end="url(#arr)"/>
+<line x1="378" y1="182" x2="378" y2="202" class="arr" marker-end="url(#arr)"/>
+
+<g class="node c-purple">
+  <rect x="30" y="202" width="130" height="40" rx="8" stroke-width="0.5"/>
+  <text class="th" x="95" y="222" text-anchor="middle" dominant-baseline="central">utility fn index</text>
+</g>
+
+<!-- anchor index (new) -->
+<g class="node c-purple">
+  <rect x="168" y="202" width="118" height="40" rx="8" stroke-width="0.5"/>
+  <text class="th" x="227" y="222" text-anchor="middle" dominant-baseline="central">anchor index</text>
+</g>
+
+<g class="node c-gray">
+  <rect x="294" y="202" width="140" height="40" rx="8" stroke-width="0.5"/>
+  <text class="th" x="364" y="217" text-anchor="middle" dominant-baseline="central">entity_set</text>
+  <text class="ts" x="364" y="234" text-anchor="middle" dominant-baseline="central">· fingerprint</text>
+</g>
+
+<line x1="434" y1="222" x2="452" y2="222" class="arr" marker-end="url(#arr)"/>
+
+<g class="node c-amber">
+  <rect x="452" y="202" width="170" height="40" rx="8" stroke-width="0.5"/>
+  <text class="th" x="537" y="217" text-anchor="middle" dominant-baseline="central">throughline</text>
+  <text class="ts" x="537" y="234" text-anchor="middle" dominant-baseline="central">entity-anchored · q_score</text>
+</g>
+
+<line x1="622" y1="222" x2="742" y2="222" class="arr" marker-end="url(#arr)"/>
+<text class="ts" x="682" y="214" text-anchor="middle">wiki solution</text>
+
+<g class="node c-teal">
+  <circle cx="778" cy="222" r="34" stroke-width="1"/>
+  <ellipse cx="778" cy="222" rx="17" ry="34" stroke-width="0.5"/>
+  <ellipse cx="778" cy="222" rx="34" ry="11" stroke-width="0.5"/>
+  <ellipse cx="778" cy="206" rx="26"  ry="7"  stroke-width="0.4"/>
+  <text class="ts" x="778" y="216" text-anchor="middle">ingredient KG</text>
+  <text class="ts" x="778" y="230" text-anchor="middle">wiki solutions</text>
+</g>
+
+<!-- Dashed bridges: offline -> query time -->
+<!-- utility fn index -> problem·objective (routes around query box at x=110) -->
+<path d="M 95,242 L 95,280 L 110,280 L 110,374 L 122,374" class="dash" marker-end="url(#arr)"/>
+<!-- anchor index -> anchor match -->
+<path d="M 227,242 L 227,292 L 199,292 L 199,300" class="dash" marker-end="url(#arr)"/>
+<!-- KG -> entity-set match -->
+<path d="M 778,256 L 778,280 L 412,280 L 412,308" class="dash" marker-end="url(#arr)"/>
+
+<!-- ══════════════════════  QUERY TIME  ══════════════════════ -->
+
+<g class="node c-gray">
+  <rect x="30" y="302" width="76" height="56" rx="8" stroke-width="0.5"/>
+  <text class="th" x="68" y="330" text-anchor="middle" dominant-baseline="central">query</text>
+</g>
+
+<line x1="106" y1="324" x2="122" y2="324" class="arr" marker-end="url(#arr)"/>
+<text class="ts" x="114" y="316" text-anchor="middle">intent</text>
+
+<g class="node c-purple">
+  <rect x="122" y="302" width="154" height="56" rx="8" stroke-width="0.5"/>
+  <text class="th" x="199" y="322" text-anchor="middle" dominant-baseline="central">problem · objective</text>
+  <text class="ts" x="199" y="340" text-anchor="middle" dominant-baseline="central">utility function</text>
+</g>
+
+<line x1="276" y1="336" x2="338" y2="336" class="arr" marker-end="url(#arr)"/>
+
+<!-- Bottom path: query expansion -->
+<path d="M 68,358 L 68,378" class="arr" marker-end="url(#arr)"/>
+
+<g class="node c-gray">
+  <rect x="30" y="378" width="200" height="46" rx="8" stroke-width="0.5"/>
+  <text class="th" x="130" y="395" text-anchor="middle" dominant-baseline="central">query expansion</text>
+  <text class="ts" x="130" y="412" text-anchor="middle" dominant-baseline="central">SPO extract · 3-hop KG</text>
+</g>
+
+<line x1="230" y1="401" x2="250" y2="401" class="arr" marker-end="url(#arr)"/>
+
+<g class="node c-purple">
+  <rect x="250" y="378" width="148" height="46" rx="8" stroke-width="0.5"/>
+  <text class="th" x="324" y="395" text-anchor="middle" dominant-baseline="central">augmented</text>
+  <text class="ts" x="324" y="412" text-anchor="middle" dominant-baseline="central">entity set</text>
+</g>
+
+<path d="M 398,401 L 412,401 L 412,362" class="arr" marker-end="url(#arr)"/>
+
+<g class="node c-teal">
+  <rect x="338" y="312" width="148" height="50" rx="8" stroke-width="0.5"/>
+  <text class="th" x="412" y="329" text-anchor="middle" dominant-baseline="central">entity-set match</text>
+  <text class="ts" x="412" y="347" text-anchor="middle" dominant-baseline="central">+ q_score</text>
+</g>
+
+<!-- entity-set match -> paper (on-demand retrieval) -->
+<line x1="486" y1="337" x2="498" y2="337" class="arr" marker-end="url(#arr)"/>
+<text class="ts" x="492" y="329" text-anchor="middle" font-size="10">retrieve</text>
+
+<g class="node c-gray">
+  <rect x="498" y="318" width="68" height="40" rx="8" stroke-width="0.5"/>
+  <text class="th" x="532" y="338" text-anchor="middle" dominant-baseline="central">paper</text>
+</g>
+
+<line x1="566" y1="338" x2="578" y2="338" class="arr" marker-end="url(#arr)"/>
+
+<g class="node c-teal">
+  <rect x="578" y="302" width="163" height="56" rx="8" stroke-width="0.5"/>
+  <text class="th" x="659" y="322" text-anchor="middle" dominant-baseline="central">pseudocode extraction</text>
+  <text class="ts" x="659" y="340" text-anchor="middle" dominant-baseline="central">crystallized lessons</text>
+  <text class="ts" x="659" y="354" text-anchor="middle" dominant-baseline="central">extract once · _methods.md</text>
+</g>
+
+<!-- entity-set match -> throughlines -> group synthesis (routes right of augmented entity set) -->
+<path d="M 430,362 L 430,419 L 578,419" class="arr" marker-end="url(#arr)"/>
+<text class="ts" x="435" y="393" text-anchor="start">throughlines</text>
+
+<g class="node c-amber">
+  <rect x="578" y="396" width="163" height="46" rx="8" stroke-width="0.5"/>
+  <text class="th" x="659" y="413" text-anchor="middle" dominant-baseline="central">group synthesis</text>
+  <text class="ts" x="659" y="430" text-anchor="middle" dominant-baseline="central">shared entity subset</text>
+</g>
+
+<!-- pseudocode extraction -> wiki solution -->
+<line x1="741" y1="330" x2="756" y2="330" class="arr" marker-end="url(#arr)"/>
+<text class="ts" x="748" y="322" text-anchor="middle">methods</text>
+
+<!-- group synthesis -> wiki solution -->
+<line x1="741" y1="419" x2="756" y2="419" class="arr" marker-end="url(#arr)"/>
+
+<!-- wiki solution IS the solution -->
+<g class="node c-amber">
+  <rect x="756" y="295" width="190" height="135" rx="8" stroke-width="0.5"/>
+  <text class="th" x="851" y="318" text-anchor="middle" dominant-baseline="central">wiki solution</text>
+  <text class="ts" x="851" y="340" text-anchor="middle" dominant-baseline="central">group throughline · methods</text>
+  <text class="ts" x="851" y="358" text-anchor="middle" dominant-baseline="central">use case · query</text>
+  <text class="ts" x="851" y="376" text-anchor="middle" dominant-baseline="central">stored in KG · q_score</text>
+</g>
+
+<!-- wiki solution -> KG feedback (routes above offline nodes) -->
+<path d="M 851,295 L 851,180 L 778,180 L 778,188" class="dash" marker-end="url(#arr)"/>
+<text class="ts" x="814" y="173" text-anchor="middle" font-size="10">store · q_score↑</text>
+
+</svg>
+</body>
+</html>

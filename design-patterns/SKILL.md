@@ -40,6 +40,25 @@ This skill sits under code work. Use it when a change stops being a local edit a
 - systematic debugging over coincidence
 - gather real requirements before abstracting
 
+## State Machine / Compiler Pattern (Agentic Systems)
+
+Use this pattern when an automated agent pipeline must be deterministic and tamper-resistant.
+
+**Problem:** A conversational loop allows the agent to choose its next step, self-report completion, and reinterpret ambiguous directives — each decision is a branch in a non-deterministic system.
+
+**Solution:** Replace the loop with a state machine where:
+- State transitions are triggered by external tool validation, not the model's self-assessment
+- Each transition condition is binary (pass/fail), not a judgement call
+- The model is the compiler (transforms inputs to outputs); the harness is the linker (sequences, gates, and certifies)
+
+```
+[State N] → run_external_validator() → pass: advance to [State N+1]
+                                      → fail: retry or escalate
+```
+
+Applies **State** pattern (behavioral GoF) plus **Template Method** for the gate sequence.
+Distinct from a simple pipeline: the key property is that the agent never self-reports what state it is in.
+
 ## Working Rule
 Use this skill with `code`: `code` owns the edit mechanics; `design-patterns` chooses the relationship shape and contract.
 <!-- consolidation:see-also:start -->

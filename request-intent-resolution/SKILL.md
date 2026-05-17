@@ -1,4 +1,4 @@
----
+﻿---
 name: request-intent-resolution
 description: >
   Build an end-to-end request intent resolution pipeline. Use this skill
@@ -900,6 +900,482 @@ request_intent_resolution/
 Implement in topological order. Each file complete and standalone.
 Validation gate before advancing. 10% sample during development � never
 wait for a full-corpus run during iteration.
+
+---
+
+## Orchestrator: arXiv Research Variant
+
+Adapts the same intent-routing pattern to scientific paper retrieval.
+"Resolved threads" → papers (use case + pseudocode).
+"Solution" → extracted algorithm context package.
+
+### Architecture
+
+```
+OFFLINE — handled by auto-ingest · arxiv-bridge
+  paper abstracts
+      → LLM extract (BM25 ⊕ semantic · RRF)
+      → SPO triplets + entities
+      → entity_set (frozenset) → fingerprint
+      → throughline (q_score, entity-anchored)  ──► ingredient KG (entity-indexed)
+      → use case · objective function           ──► utility fn index
+
+QUERY TIME — orchestrator
+  query
+      → LLM extract SPO triples (entailed only)
+      → 3-hop KG expansion → augmented entity set
+      → intent → nearest use case (utility fn)
+      → entity-set match + q_score → top throughlines + papers
+      → read · extract pseudocode              (check _methods.md first; extract if absent)
+      → group throughline synthesis            (shared entity subset of top-K)
+      → solution: group throughline · pseudocode · use case · query
+```
+
+The KG is infrastructure. Query time sees only its output (top papers + throughlines),
+not its internals. The query itself becomes a mini-RDF graph matched against
+the entity-indexed throughline index.
+
+### Throughline Indexing: Entity-Anchored (Offline)
+
+Throughlines are indexed by their **entity set** — the subjects and objects from the
+supporting SPO triplets. The entity set is the premise fingerprint. The identity of a
+throughline is its premise set, not its claim text (see `agentic_kg_memory` for the full
+schema and q-score update cycle).
+
+```text
+For each paper (offline, at ingest):
+  1. extract SPO triplets from abstract + methods section
+  2. entity_set = {norm(s) for (s,p,o) in triples} | {norm(o) for (s,p,o) in triples}
+  3. fingerprint = hash(frozenset(entity_set))
+  4. index row: (fingerprint, throughline_text, q_score, paper_ids, entity_list, use_case)
+
+At retrieval:
+  score = alpha * Jaccard(query_entities, throughline_entities)
+         + beta  * cosine(embed(query), embed(throughline.claim_text))
+         + gamma * throughline.q_score
+  default: alpha=0.5, beta=0.3, gamma=0.2  (tune with Optuna against downstream fitness)
+```
+
+Entity-set matching is the primary retrieval channel; semantic similarity balances when
+entity sets are sparse or the query is abstract.
+
+---
+
+### Query Expansion: Query as RDF Graph
+
+Before retrieval, extract the user query as its own entailed SPO graph, then expand
+3 hops outward through the ingredient KG to build an augmented entity set.
+
+```text
+user query text
+    → LLM: extract entailed SPO triplets  (only triples implied by the query text;
+                                           reject hallucinated or freely-generated triples)
+    → hop 1: for each extracted entity, retrieve 1-edge KG neighbors
+    → hop 2: expand from hop-1 entities (2 edges out)
+    → hop 3: one more expansion (3 edges out)
+    → augmented_entity_set = entities(query_triples) | hop1 | hop2 | hop3
+```
+
+**Why 3 hops** — hop 1 = direct synonyms/hyponyms, hop 2 = related methods/components,
+hop 3 = broader technique class. Signal-to-noise degrades beyond 3 hops.
+
+**Entailment discipline** — extracted triples must be entailed by the query text, matching
+the `agentic_kg_memory` rule: classify each candidate triple as {entails | neutral | contradicts};
+keep only entailing ones.
+
+```python
+QUERY_EXPANSION_PROMPT = (
+    "Extract SPO triplets entailed by this query. Return only triples where the "
+    "predicate and both nodes are directly implied by the query text. No hallucination. "
+    "Output: JSON array of [subject, predicate, object] arrays.\n"
+    "Query: {query}"
+)
+
+
+def expand_query_entities(query: str, kg_conn, hop_limit: int = 3) -> set:
+    """
+    Extract + expand query entities via KG traversal.
+    Require: query non-empty, kg_conn open to the ingredient KG.
+    Guarantee: returns normalized entity set (empty set valid when KG is cold).
+    Maintain: only entailed triples are used; never freely-generated ones.
+    """
+    raw = llm_json(QUERY_EXPANSION_PROMPT.format(query=query))
+    triples = raw if isinstance(raw, list) else []
+    entities = {norm(n) for t in triples for n in (t[0], t[2]) if len(t) >= 3}
+
+    frontier = set(entities)
+    for _ in range(hop_limit):
+        neighbors = kg_neighbors(frontier, kg_conn)   # 1-hop BFS in ingredient KG
+        new_ents = neighbors - entities
+        entities |= new_ents
+        frontier = new_ents
+        if not frontier:
+            break
+
+    return entities
+```
+
+---
+
+### Entity-Set Retrieval + Q-Score
+
+Use the augmented entity set to match throughline candidates; rank by composite score.
+
+```python
+import numpy as np
+
+
+def score_throughlines(
+    query_entities: set,
+    query_embedding,         # np.ndarray, unit-normalised
+    candidates: list,        # list[dict] from throughline index
+    alpha: float = 0.5,
+    beta: float = 0.3,
+    gamma: float = 0.2,
+) -> list:
+    """
+    Rank throughlines by entity overlap + semantic similarity + q_score.
+    Require: each candidate has keys: entities (list), claim_embedding (np.ndarray),
+             q_score (float).
+    Guarantee: returns candidates sorted by composite score descending.
+    """
+    for c in candidates:
+        t_ents = set(c["entities"])
+        union = query_entities | t_ents
+        jaccard = len(query_entities & t_ents) / len(union) if union else 0.0
+        sem_sim = float(np.dot(query_embedding, c["claim_embedding"]))
+        c["composite"] = alpha * jaccard + beta * sem_sim + gamma * c["q_score"]
+    return sorted(candidates, key=lambda x: x["composite"], reverse=True)
+```
+
+**Cross-throughline comparison** — to compare competing group throughlines across
+different entity subsets, rank by `q_score * Jaccard(target_entity_set, throughline.shared_entities)`.
+The highest adjusted score is the current best explanation for that solution space.
+
+---
+
+### Group Throughline Synthesis
+
+After retrieving top-K papers and their individual throughlines, synthesize a single
+**group throughline** grounded in their shared entity subset. This is the deductive
+cross-paper conclusion (global throughline) returned as the solution frame.
+
+```python
+GROUP_THROUGHLINE_PROMPT = (
+    "Synthesize a group throughline from multiple paper throughlines.\n"
+    "The shared entity set defines the scope — stay within it.\n\n"
+    "Query: {query}\n"
+    "Shared entities: {shared_entities}\n"
+    "Individual throughlines:\n{throughlines}\n"
+    "Key methods (pseudocode summaries):\n{methods}\n\n"
+    "Produce a single concise throughline (2–4 sentences) that:\n"
+    "- spans all retrieved sources\n"
+    "- is grounded only in the shared entity premises\n"
+    "- names the strongest point of convergence and any unresolved tension\n\n"
+    'Return JSON: {{\"claim_text\": \"...\", \"tension\": \"...\" or null}}'
+)
+
+
+def synthesize_group_throughline(
+    query: str,
+    top_k_results: list,       # list[dict] each with: throughline, entities, pseudocode
+    existing_index: dict,      # fingerprint (int) -> stored throughline dict
+    alpha: float = 0.1,
+) -> dict:
+    """
+    Produce or update the group throughline for the retrieved entity cluster.
+    Require: top_k_results each have keys: throughline (str), entities (list).
+    Guarantee: fingerprint-matched entries are updated, not duplicated.
+    Maintain: q_score updated via q_old + alpha*(reward - q_old); never reset.
+    """
+    entity_sets = [set(r["entities"]) for r in top_k_results if r.get("entities")]
+    shared = set.intersection(*entity_sets) if entity_sets else set()
+    fingerprint = hash(frozenset(norm(e) for e in shared))
+
+    if fingerprint in existing_index:
+        stored = existing_index[fingerprint]
+        reward = sum(r.get("composite", 0.5) for r in top_k_results) / max(len(top_k_results), 1)
+        stored["q_score"] = stored["q_score"] + alpha * (reward - stored["q_score"])
+        stored["visit_count"] = stored.get("visit_count", 0) + 1
+        return stored
+
+    throughlines_text = "\n".join(
+        f"  [{i+1}] {r['throughline']}" for i, r in enumerate(top_k_results)
+    )
+    methods_text = "\n".join(
+        f"  [{i+1}] {(r.get('pseudocode') or '')[:200]}" for i, r in enumerate(top_k_results)
+    )
+    result = llm_json(GROUP_THROUGHLINE_PROMPT.format(
+        query=query,
+        shared_entities=", ".join(sorted(shared)),
+        throughlines=throughlines_text,
+        methods=methods_text,
+    ))
+    return {
+        "fingerprint": fingerprint,
+        "shared_entities": list(shared),
+        "claim_text": result.get("claim_text", ""),
+        "tension": result.get("tension"),
+        "q_score": 0.5,
+        "visit_count": 1,
+        "paper_ids": [r["arxiv_id"] for r in top_k_results],
+    }
+```
+
+**Q-score semantics** mirror `agentic_kg_memory` exactly — running average over retrievals;
+repeated confirmation compounds asymptotically toward 1; contradiction drives it down;
+the prior is never reset.
+
+---
+
+### Orchestration Flow
+
+```python
+"""
+Orchestrate a research query to a solution context package.
+
+Preconditions:
+    - arxiv_retriever.py reachable (pgvector + BM25 + ColBERT pipeline)
+    - arxiv_bridge.py reachable for upstream discovery when local corpus is thin
+    - extract_methods.py + methods_sspv2.md present for inline extraction
+    - CSV: papers/post_processed/arxiv_data_with_analysis_cleaned.csv (use_case column)
+
+Postconditions:
+    - Returns list[SolutionContext] with pseudocode, use_case, and original query
+    - Papers with pre-existing _methods.md are served instantly (no LLM call)
+    - Novel papers without _methods.md are queued via auto-ingest or extracted inline
+
+Failure modes:
+    - No papers retrieved: expand via arxiv-bridge (--bridge flag on run.py)
+    - _methods.md absent + proxy down: return empty pseudocode, enriched=False
+    - KG cold / pgvector unavailable: fall back to BM25-only retrieval
+"""
+
+import csv as csv_module
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+
+REPO_ROOT = Path(r"C:\Users\user\arxiv_id_lists")
+PYTHON    = r"C:\Users\user\py310\Scripts\python.exe"
+POST_PROC = REPO_ROOT / "papers" / "post_processed"
+MAIN_CSV  = POST_PROC / "arxiv_data_with_analysis_cleaned.csv"
+
+
+@dataclass
+class SolutionContext:
+    """
+    Final output package assembled for each top paper.
+    Require: at least one of pseudocode/use_case must be non-empty.
+    """
+    arxiv_id:        str
+    query:           str
+    use_case:        str    # from utility fn index / CSV (thesis + utility fields)
+    pseudocode:      str    # from _methods.md; empty when extraction is pending
+    enriched:        bool   # True iff _methods.md was present before this call
+    throughline:     str = ""   # individual paper throughline (entity-anchored)
+    entities:        list = None  # normalized entity set (premise fingerprint basis)
+    composite_score: float = 0.0  # alpha*Jaccard + beta*cosine + gamma*q_score
+
+
+@dataclass
+class GroupThroughline:
+    """
+    Cross-paper deductive synthesis over the shared entity subset of top-K results.
+    Produced by synthesize_group_throughline(); returned alongside SolutionContext list.
+    """
+    claim_text:      str
+    tension:         str        # unresolved tension across sources, or empty string
+    shared_entities: list
+    q_score:         float
+    visit_count:     int
+    paper_ids:       list
+    fingerprint:     int
+
+
+def _stem(arxiv_id: str) -> str:
+    return arxiv_id.replace(".", "_")
+
+
+def _methods_path(arxiv_id: str) -> Path:
+    return POST_PROC / f"{_stem(arxiv_id)}_methods.md"
+
+
+def _load_csv_index() -> dict[str, dict]:
+    """Load main CSV as {stem_id: row}. Both dot and underscore IDs are indexed."""
+    if not MAIN_CSV.is_file():
+        return {}
+    index: dict[str, dict] = {}
+    with open(MAIN_CSV, encoding="utf-8", newline="") as fh:
+        for row in csv_module.DictReader(fh):
+            aid = row.get("arxiv_id", "").strip().strip('"')
+            if aid:
+                index[aid.replace(".", "_")] = row
+                index[aid.replace("_", ".")] = row
+    return index
+
+
+def _load_use_case(arxiv_id: str, csv_index: dict) -> str:
+    """Pull thesis + top-2 utility strings from the CSV row for this paper."""
+    row = csv_index.get(_stem(arxiv_id)) or csv_index.get(arxiv_id) or {}
+    thesis = row.get("thesis", "") or ""
+    try:
+        utility = __import__("ast").literal_eval(row.get("utility", "[]") or "[]")
+    except Exception:
+        utility = []
+    return "; ".join(filter(None, [thesis] + list(utility[:2])))
+
+
+def retrieve_top_papers(query: str, top_k: int = 10) -> list[str]:
+    """
+    Run ArxivRetriever and return sorted list of arxiv_ids.
+    Require: pgvector + langchain DB accessible at localhost:5432.
+    Guarantee: list ordered by final_score descending.
+    """
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from arxiv_retriever import ArxivRetriever
+    from pgvector_retriever import PGVectorConfig
+    config = PGVectorConfig()          # defaults to localhost:5432 langchain DB
+    retriever = ArxivRetriever(config)
+    results = retriever.search(query, top_k=top_k)
+    return [r.doc_id for r in results]
+
+
+def assemble_solution(
+    query: str,
+    arxiv_ids: list[str],
+    csv_index: dict,
+    extract_inline: bool = False,
+) -> list[SolutionContext]:
+    """
+    For each paper: load _methods.md if present; otherwise queue or extract inline.
+
+    Require: arxiv_ids non-empty, csv_index loaded via _load_csv_index().
+    Guarantee: every returned SolutionContext has use_case populated.
+    Maintain: papers already extracted are never re-extracted (invariant).
+    Assert: after inline extraction, _methods.md presence is re-checked before reading.
+    """
+    contexts: list[SolutionContext] = []
+    for aid in arxiv_ids:
+        mp = _methods_path(aid)
+        if mp.is_file():
+            pseudocode = mp.read_text(encoding="utf-8")
+            enriched   = True
+        elif extract_inline:
+            md_path = POST_PROC / f"{_stem(aid)}.md"
+            if md_path.is_file():
+                subprocess.run(
+                    [PYTHON, str(REPO_ROOT / "extract_methods.py"), str(md_path)],
+                    check=False,
+                )
+                pseudocode = mp.read_text(encoding="utf-8") if mp.is_file() else ""
+                enriched   = bool(pseudocode)
+            else:
+                pseudocode, enriched = "", False
+        else:
+            pseudocode, enriched = "", False
+
+        contexts.append(SolutionContext(
+            arxiv_id=aid,
+            query=query,
+            use_case=_load_use_case(aid, csv_index),
+            pseudocode=pseudocode,
+            enriched=enriched,
+        ))
+    return contexts
+
+
+def orchestrate(query: str, top_k: int = 10, extract_inline: bool = False) -> list[SolutionContext]:
+    """
+    End-to-end: query → top papers → solution context packages.
+
+    Require: query non-empty.
+    Guarantee: returns list[SolutionContext] sorted by retrieval rank.
+    """
+    csv_index = _load_csv_index()
+    arxiv_ids = retrieve_top_papers(query, top_k=top_k)
+    return assemble_solution(query, arxiv_ids, csv_index, extract_inline=extract_inline)
+```
+
+### Solution Package Format
+
+**`SolutionContext`** (one per paper):
+
+| Field | Source | Notes |
+|---|---|---|
+| `pseudocode` | `_methods.md` (Phase 5) | Core algorithm extracted via gpt-4.1 |
+| `use_case` | CSV `utility` + `thesis` columns | Loaded from offline LLM extraction |
+| `query` | Passed through unchanged | Original user query |
+| `enriched` | `bool` | `False` = extraction pending; queue via auto-ingest |
+| `throughline` | throughline index | Entity-anchored per-paper conclusion |
+| `entities` | SPO triplet extraction | Normalized entity set (premise fingerprint basis) |
+| `composite_score` | Retrieval scoring | alpha*Jaccard + beta*cosine + gamma*q_score |
+
+**`GroupThroughline`** (one per query result set):
+
+| Field | Source | Notes |
+|---|---|---|
+| `claim_text` | LLM synthesis | Cross-paper deductive conclusion (global throughline) |
+| `tension` | LLM synthesis | Unresolved conflict across sources, or empty string |
+| `shared_entities` | Entity intersection | Entities common to all top-K results |
+| `q_score` | Running average | Prior never reset; compounding confirmation |
+| `paper_ids` | Retrieval | Source paper ids for this group synthesis |
+
+The assembled package is the context window for downstream synthesis (not a graph artifact).
+
+### Skip-if-Extracted Rule
+
+Papers are never re-extracted. The invariant is enforced in three places:
+
+1. `arxiv_retriever.py` — attaches `metadata["methods"]` from `_methods.md` if present.
+2. `ingest_daemon.py` — checks `_methods.md` existence before entering Phase 5.
+3. `assemble_solution()` above — reads `_methods.md` directly; skips the subprocess call.
+
+To force re-extraction: delete `{stem}_methods.md` and re-queue via `auto-ingest`.
+
+### Queue Unenriched Papers
+
+When enriched=False, hand off to the background daemon instead of blocking:
+
+```python
+import sys
+sys.path.insert(0, str(REPO_ROOT))
+from ingest_mcp import queue_papers
+
+pending = [ctx.arxiv_id for ctx in contexts if not ctx.enriched]
+if pending:
+    queue_papers(pending, priority=5.0, repo_root=str(REPO_ROOT))
+    # Daemon enriches in background; _methods.md present next session
+```
+
+Use `arxiv_pipeline/run.py --extract` for synchronous inline extraction when the user
+is waiting for a complete result (expected latency: 5–18 min for 1–3 papers).
+
+### CLI Invocation
+
+```bash
+cd C:\Users\user\arxiv_id_lists
+
+# Full orchestration: retrieve + bridge-discover + extract solution package
+python arxiv_pipeline\run.py "agentic memory" --bridge --bridge_derive 3 --extract --output _solution.md
+
+# Retrieval only (KG + BM25 + ColBERT, no extraction)
+python arxiv_retriever.py --search "agentic memory" --top-k 10 --save _results.md
+
+# Bridge-only (upstream S2 / arXiv discovery, no local retrieval)
+python arxiv_bridge.py "agentic memory" --limit 20 --top-k 10
+
+# Phase 5 inline (extract pseudocode from a single enriched paper)
+python extract_methods.py papers\post_processed\2601_09113.md
+```
+
+### Related Skills
+
+- `auto-ingest` — background Phase 3–5 daemon and MCP server for queue inspection
+- `arxiv-bridge` — upstream Semantic Scholar / arXiv Atom discovery layer
+- `pdf-extraction` — standalone PDF → enriched-Markdown workflow
+- `agentic_kg_memory` — throughline schema, q-score update cycle, fingerprint dedup semantics
 <!-- consolidation:see-also:start -->
 ## See Also
 [[agentic_kg_memory]]  [[react-fastapi-sqlite]]  [[optuna-nested-cv]]  [[mlflow]]  [[representation-pipeline]]

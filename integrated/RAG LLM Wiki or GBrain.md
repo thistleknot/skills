@@ -1,0 +1,262 @@
+## RAG, LLM Wiki, or Gbrain? How Your Agent Remembers Changes Everything
+
+Karpathy's compounding wiki, Garry Tan's autonomous brain, and the decision framework most teams skip
+
+## Yanli Liu
+
+Three weeks ago, Andrej Karpathy posted a GitHub gist that hit 5,000 stars in days. His argument: stop using LLMs as search engines over your documents. Use them as knowledge engineers who compile, cross-reference, and maintain a living wiki. The system learns. The knowledge compounds. Later on, Garry Tan shipped GBrain -24 autonomous skills, 21 cron jobs, and a brain spanning 17,888 pages. His system doesn't just remember things. It acts on them. Autonomously. Both agree on the diagnosis: RAG alone isn't enough . Your agent re-reads the same documents for every question, never learning, never compounding, never connecting the dots between yesterday's insight and today's query. It's a retriever, not a thinker. But their fixes take opposite directions. Karpathy wants your agent to build a persistent, interlinked wiki - knowledge that grows richer with every source you feed it. Garry Tan wants your agent to operationalize that knowledge - skills that don't just know things but do things… And meanwhile, most production teams are still running vanilla RAG . Not because it's ideal, but because it works at scale and the alternatives are young. So which architecture actually fits your agent? The answer depends on a question most
+
+'RAG is dead' articles never ask:
+
+- what is your agent's job?
+- Is it retrieving answers from a large corpus?
+- Compiling knowledge that should grow over time?
+- Or acting autonomously on what it knows?
+
+Three patterns. Three trade-offs. One decision framework.
+
+## Why Agents Forget
+
+Here's what most agent tutorials skip: the context window is not memory. It's a whiteboard that gets erased after every session.
+
+Your agent can hold a million tokens in context. That sounds like a lot until you realize that degradation starts around 300,000-400,000 tokens - roughly 30-40% of the ceiling. And when the session ends, everything disappears. Your agent starts the next conversation from zero.
+
+Press enter or click to view image in full size
+
+## The Knowledge
+
+<image_001>
+The image is a two-column diagram comparing two contrasting learning models. The left column, labeled 'Context Window' with the subtitle 'The Whiteboard' in red, depicts a red rectangular frame with three sequential steps: Session 1 (learns architecture), Session 2 (learns same thing again), and Session 3 (starts from zero again). Each step is shown with a red arrow pointing downward, and text notes that all information is 'erased!' The right column, labeled 'Persistent Knowledge' with the subtitle 'The Library' in green, depicts a green rectangular frame with four sequential steps: Session 1 knowledge builds on Session 1 knowledge, Session 2 insights compound with Session 1 knowledge, Session 3 synthesis compounding with the previous steps, and the final step shows 'Agent gets smarter'. All steps in the right column are shown with green arrows pointing downward. The diagram uses text labels for the two columns, with a vertical 'vs' text between the columns. Below the left column is the text 'Never learns' in red, and below the right column is the text 'Always compounding' in green. All elements are clearly labeled and structured for comparison, with text elements including 'Session 1', 'Session 2', 'Session 3' and associated descriptive phrases like 'learns about your architecture' and 'builds on'.
+</image_001>
+
+Diagram by Author: The Knowledge Gap - context window vs. persistent knowledge RAG was the first serious answer to this problem. Instead of stuffing everything into the context window, you embed your documents into vectors, store them in a database, and retrieve relevant chunks at query time. It works. Millions of production systems run on it.
+
+But RAG has a fundamental limitation that a 2024 research paper mapped into seven distinct failure points. Three of them matter most for agents:
+
+The chunking problem. Your 30-page technical spec gets split into 500-token fragments. The chunk that mentions a compliance requirement lands in one vector. The chunk that explains why that requirement exists lands in another. The retriever finds one and misses the other. Your agent gives a technically correct but dangerously incomplete answer.
+
+The re-derivation problem. Every query starts from scratch. Your agent analyzed the same architecture doc yesterday and drew the same conclusions. It'll do it again tomorrow. RAG retrieves - it never learns. Karpathy put it sharply: 'RAG rereads the same books for every exam, never actually learning the material.'
+
+The passivity problem. RAG waits for you to ask. It never notices that the document it indexed last Tuesday contradicts the one it indexed today. It never flags that three sources disagree on a critical detail. It never acts on what it knows.
+
+These three gaps - fragmented context, no compounding, no action - are precisely what the two new architectures target. Karpathy's LLM Wiki attacks the first two. Garry Tan's GBrain attacks all three.
+
+Press enter or click to view image in full size
+
+## RAG's Three Critical Failure Points
+
+<image_002>
+formatting
+</image_002>
+
+Three gaps: fragmented context compounding no action
+
+Diagram by Author: RAG's Three Critical Failure Points
+
+## Architecture 1: RAG - The Retriever
+
+RAG wins at scale and loses at depth. If you have 100,000 documents changing daily and need answers now, nothing else comes close. But your agent will never get smarter from using it.
+
+How it works. You embed your documents into vectors, store them in a database like Pinecone or Chroma, and when a query arrives, you find the nearest chunks, inject them into the prompt, and let the model generate an answer. The pipeline is embed → store → retrieve → generate.
+
+The architecture is mature. LangChain, LlamaIndex, and a dozen other frameworks have standardized it. Your team probably already knows how to build one. That matters more than most architectural comparisons admit.
+
+Where it holds up. RAG handles corpus sizes that would choke the alternatives. A company with 200,000 internal documents - policies, memos, specs, Slack exports can index everything and start answering questions the same day. No preprocessing into wiki pages. No engineering skills into markdown. Just embed and go.
+
+It also handles freshness. When a document changes, you re-embed it. The next query gets the updated version. No wiki audit needed, no skill rewrite required.
+
+Where it breaks. The chunking problem from Section 2 is structural, not fixable with better chunk sizes. A 2024 study identified seven failure points in production RAG systems - and three of the seven happen before the language model even sees the context.
+
+There's also the cost that nobody talks about: latency. A RAG pipeline has multiple stages - embedding, vector search, reranking, context packaging - each adding milliseconds. For a single query, it's fine. For an agent making 40 tool calls in a loop, those milliseconds compound into seconds.
+
+The enterprise reality. RAG is what most production teams run today because it's the architecture with the most battle scars. It has known failure modes, documented fixes, and an ecosystem of vendors competing to solve its problems. If you need to ship an internal knowledge assistant by next quarter, RAG is the proven path.
+
+It's also the architecture compliance teams understand. Your data stays in your vector store. The retrieval is auditable. The generation is traceable. For regulated industries, that auditability often outweighs the compounding benefits of newer approaches.
+
+Verdict: Use RAG when your corpus is large (10,000+ documents), changes frequently, and your priority is shipping a production system with known trade-offs. Don't use it when your agent needs to learn from its own work or act autonomously.
+
+Press enter or click to view image in full size
+
+## RAG Pipeline: Where It Works, Where It Breaks
+
+<image_003>
+A horizontal flow diagram depicting a document processing pipeline. It consists of five rectangular steps arranged sequentially: 'Documents' (100K+ docs) in a light blue box, followed by 'Embed' (vectorize) in a green box, 'Vector Store' (Pinecone/Chroma) in a purple box, 'Retrieve' (top-k chunks) in an orange box, and 'LLM' (generate) in a red box. The diagram uses arrows to indicate the flow from left to right, with each step labeled in uppercase text. The text is primarily in English, with key terms like 'Documents', 'Embed', 'Vector Store', 'Retrieve', 'LLM', and specific tools like 'Pinecone/Chroma' mentioned. The boxes have simple rectangular shapes with rounded corners, and each step contains descriptive text. There are no charts, tables, or complex visual elements beyond the basic flow and labels. The diagram represents a process for document transcription using a vector store and an LLM.
+</image_003>
+
+## Where ìt works
+
+Scale: handles 2OOK documents, index Same update Maturìty: battle-tested, auditable, compliance-friendly day
+
+## X Where ìt breaks
+
+Chunking: fraqments destroy document relationships No learning: re-derives the Same ançwer every time latency: embed + Search rerank + package seconds per
+
+Verdict: production-proven at scale, but your never Smarter agent gets
+
+Diagram by Author: RAG architecture pipeline with failure points
+
+## Architecture 2: LLM Wiki - The Compiler
+
+The LLM Wiki wins at depth and loses at scale. If you have fewer than 1,000 sources and want your knowledge to grow richer with every document you feed it, this is the architecture that compounds. But try it on 100,000 documents and the maintenance cost will bury you.
+
+Karpathy's LLM Wiki gist proposes a simple but powerful shift: instead of retrieving raw chunks at query time, use the LLM to pre-compile your sources into a persistent, interlinked wiki. The model does the synthesis once. Every future query benefits from that work.
+
+The three-layer architecture. Raw sources sit at the bottom - PDFs, articles, transcripts, bookmarks. These are immutable. The LLM reads them but never modifies them.
+
+Above that sits the wiki itself - LLM-generated markdown pages containing summaries, entity pages, concept definitions, and cross-references. The LLM owns this layer entirely.
+
+At the top sits the schema - a configuration file (think CLAUDE.md) that tells the LLM how to maintain the wiki: naming conventions, cross-referencing rules, what counts as a contradiction.
+
+Press enter or click to view image in full size
+
+## LLM Wiki: Three-layer Architecture
+
+<image_004>
+A conceptual diagram illustrating a three-layer structure for document transcription. The top layer, labeled 'Layer 3: Schema' in a light purple box, contains structure rules, required fields, naming conventions, and the 'lint' that keeps knowledge consistent. Below it is 'Layer 2: Wiki Pages', described as human-readable pages, cross-linked, continuously refined, and synthesized knowledge that is not raw chunks. The bottom layer, 'Layer 1: Raw Sources', includes PDFs, transcripts, papers, notes, dumped in unprocessed hundreds of documents with no structure. Arrows indicate relationships: Layer 3 enforces Layer 2, and Layer 2 produces LM distills. Key insight text states: 'the wiki is a distillation layer, not a retrieval index'. Key visual elements are three colored rectangular boxes representing layers, with arrows showing directional relationships, and a 'Key insight' note at the bottom.
+</image_004>
+
+Key insight: the wiki is a distillation not a retrieval index layer,
+
+Diagram by Author: LLM Wiki three-layer architecture
+
+How compounding works. When you feed the system a new document, the LLM doesn't just create a summary page. It reads the new source against the existing wiki and updates every page that's affected. A single ingest typically touches 10-15 wiki pages - adding cross-references, flagging contradictions, updating entity profiles.
+
+The query loop compounds this further. When you ask a question and get a synthesized answer that represents new knowledge, that answer gets filed back as a new wiki page. The slug is derived from the question itself. Tomorrow's queries benefit from today's synthesis.
+
+And there's a maintenance loop most people miss: the lint workflow. Periodically, the LLM audits the entire wiki - finding orphan pages with no incoming links, flagging stale claims, identifying concepts mentioned but never given their own page. The wiki stays healthy because the machine does the maintenance humans always abandon.
+
+Press enter or click to view image in full size
+
+makes every existing page Smarter Every
+
+<image_005>
+The image is a diagram titled 'How One Document Touches 15 Wiki Pages'. It shows a flowchart starting from 'New research paper on transformer scaling' connecting to five green rectangular boxes labeled 'Scaling Laws', 'Training Efficiency', 'Transformer Architecture', 'Compute Budgets', and 'MoE Models'. Each connection from the main box to the green boxes is labeled with 'updates, refines, cross-links'. Below this, a section titled 'The Compounding Effect' compares two elements: a red rectangular box labeled 'RAG: retrieves 3 chunks fragments of the paper no connections preserved' and a green rectangular box labeled 'Wiki: updates 15 pages each richer than before relationships strengthened'. The diagram uses specific text elements like 'RAG', 'Wiki', and the terms 'chucks', 'fragments', 'connections', 'relationships', 'strengthened'. The visual elements include a title, flowchart connections, and a comparison section with contrasting colors (red vs green) and specific data points (3 chunks, 15 pages). The diagram is structured to explain how a research paper's content is distributed across multiple wiki pages, with a clear visual comparison showing the compounding effect. The diagram's main focus is on the relationships between the document and the wiki pages, with specific points of information such as the number of pages updated and the nature of the relationships. It does not contain any decorative elements like logos or page numbers that would make 'value_added' false; therefore, it contains substantive content.
+</image_005>
+
+Diagram by Author: How one document touches 15 pages
+
+Where it breaks. Scale is the hard ceiling. The wiki uses markdown files navigated by BM25 or grep. That works beautifully at 100 sources generating a few hundred wiki pages. At 10,000 sources, the navigation breaks down. At 100,000, it's unusable without adding a retrieval layer on top - which starts to look like RAG again.
+
+There's also the upfront compute cost. Every ingest requires the LLM to read the new source, read the relevant existing wiki pages, and rewrite all affected content. That's significantly more expensive per document than a RAG embedding. For a personal research wiki, the cost is manageable. For an enterprise knowledge base, it's a budget conversation.
+
+And the wiki is passive. It compiles knowledge beautifully, but it doesn't act on it. It won't notice that a deadline mentioned in three sources has passed. It won't trigger a notification when a new document contradicts a standing policy. It knows - but it doesn't do. The enterprise reality. This architecture works best for researchers, analysts, and small teams building deep expertise in a specific domain. A team tracking regulatory changes across 200 source documents? Excellent fit. A company trying to make 500,000 Confluence pages queryable? Wrong tool. The data governance story is mixed. The wiki creates derived copies of your source material - summaries, cross-references, synthesis pages. In some regulatory environments, those derived artifacts are themselves subject to retention and audit requirements. That's not a dealbreaker, but it's a conversation your legal team needs to have. Verdict: Use the LLM Wiki when your sources number in the hundreds (not thousands), your knowledge should compound over time, and you want synthesis - not just retrieval. Don't use it when you need real-time freshness, massive scale, or autonomous action. Architecture 3: Fat Skills - The Operator Fat skills win at autonomy and lose at accessibility. If you want knowledge that doesn't just sit there but triggers actions, runs on schedules, and compounds its own capabilities over time, this is the architecture that operates. But it requires real engineering investment and right now, it's a one-person show. Garry Tan's GBrain introduces an idea that neither RAG nor the LLM Wiki attempts: knowledge that acts. Not just 'what do we know?' but 'what should we do about it, and when?' Important context: GBrain wasn't designed as an enterprise product. It was built to run on personal AI agents - specifically OpenClaw, Hermes, and Claude Code . The README is blunt: 'Y our AI agent is smart but forgetful. GBrain gives it a brain . ' This is infrastructure built by the Y Combinator CEO to run his own agents, then open-sourced. That origin shapes everything about the architecture - it optimizes for one power user's workflows, not organizational deployment. The thin harness, fat skills architecture. GBrain inverts the typical agent design. Most frameworks build a thick runtime with dozens of tool definitions consuming half the context window. GBrain keeps the harness to roughly 200 lines of code - just enough to manage model execution, read/write files, and enforce safety. Press enter or click to view image in full size
+
+<image_006>
+This image is a flowchart titled 'GBrain: Thin Harness, Fat Skills'. At the top, there's a blue box labeled 'Thin Harness' with the text 'CLAUDER.md + RESOLVER.md - routing only' below it. Three arrows point from this box to four orange boxes: 'Deal Flow' (scrape + score + route to CRM), 'Research' (17,888 pages pvector search), 'Comms' (draft emails schedule sends), and 'Portfolio Ops' (monitor cos flag issues). The text 'routes to 24 skills' is written above the arrows connecting 'Thin Harness' to the four skills. Below these four boxes, there's a purple box labeled '21 Cron Jobs – Skills Run Themselves' containing the text 'scrape HIN daily' 'check portfolio weekly' 'draft digest every Monday'. An arrow points downward from this box to a green box labeled 'Postgres + pvector' with the description 'deterministic data (SQL) + latent knowledge (embeddings)' and a bottom note: 'The agent doesn’t just remember – it acts on what it knows'. All text elements are clearly defined, with a structured visual layout for the data flow.
+</image_006>
+
+Diagram by Author: Fat skills three-layer architecture
+
+All the intelligence lives in the skills. Each skill is a fat markdown document - not a prompt template, but an entire workflow: when to fire, what to check, how to chain with other skills, what quality bar to enforce. The agent reads the skill file and executes it.
+
+The resolver as routing table. GBrain's RESOLVER.md is a dispatcher that routes user intent to skills across six categories: always-on skills, brain operations, content ingestion, thinking skills, operational tasks, and setup. But here's the insight: the skill descriptions themselves function as the resolver. The model reads the descriptions and matches intent automatically. No explicit routing code needed.
+
+Garry Tan's latest iteration pushes this further: 'Fewer fatter skills makes the resolver shorter, which itself is less context bloat. Short resolvers are better than long ones.' The trend is toward fewer, more comprehensive skills with branching parameters rather than a library of narrow ones.
+
+Press enter or click to view image in full size
+
+<image_007>
+A flowchart illustrating a sales deal resolution process. It begins with the question 'What's our best Series A deal?' leading to a 'RESOLVER-md' step which performs a pattern match and skill routing based on 'deal' and 'Series A' to determine the 'Deal Flow Skill'. The 'RESOLVER-md' matches the 'deal' and 'Series A' to the 'Deal Flow Skill', with 'Research Skill' and 'Comms Skill' not matched. The 'Deal Flow Skill' is then used to query a PostgreSQL database, score deals through a pipeline, rank the deals, and return a specific deal information: 'Aime Corp, $4.2M round, 92/100 score'.
+</image_007>
+
+Deterministic routing, not semantic search zero hallucination risk
+
+Diagram by Author: Resolver routing flow
+
+What a fat skill actually looks like. Here's the frontmatter from GBrain's enrich skill - the one that builds and maintains person and company dossiers:
+
+name: enrich
+
+version: 1.0.0
+
+description: |
+
+Enrich brain pages with tiered enrichment protocol. Creates and updates person/company pages with compiled truth, timeline, and cross-links.
+
+## triggers:
+
+- "enrich"
+
+- "create person page"
+
+- "update company page"
+
+- "who is this person"
+
+## tools:
+
+- get\_page
+
+- put\_page - search - add\_link - add\_timeline\_entry mutating: true writes\_to: - people/ - companies/ That's not a prompt template. It's a contract. The skill declares its triggers, its tools, what it writes to, and whether it mutates brain state. Below this frontmatter sits a seven-step enrichment protocol that runs across three tiers - full research for inner-circle contacts (all APIs, deep web search), moderate effort for industry figures (web + social + brain crossreference), and light touch for entities worth tracking but not critical. Every claim requires inline [Source: ...] citations following a strict precedent hierarchy: user statements rank highest, then compiled truth, then timeline entries, then external APIs. The skill's philosophy line captures the whole approach: 'Intelligence dossiers, not LinkedIn scrapes.' The system prioritizes texture - beliefs, current projects, motivations, trajectory - over baseline facts you could get from a Google search. The always-on layer. Some skills don't wait for triggers at all. GBrain's signal-detector fires on every inbound message, running as a cheap sub-agent in parallel with the main response. It captures two things: original ideas (preserved in the user's exact phrasing, never paraphrased) and entity mentions (people, companies, concepts). Every entity it detects gets cross-linked to existing brain pages or spawns a new one. The operating principle: "An unlinked mention is a broken brain." This is what separates fat skills from function-calling. A function call is stateless - it runs, returns, and forgets. A fat skill maintains state, enforces quality standards, chains with other skills, and leaves the brain richer after every execution. Cron: skills that run themselves. The cron scheduler turns skills into autonomous agents. Each job is deliberately thin - the prompt is literally 'Read skills/{name}/SKILL.md and run it. " All the intelligence stays in the skill file, not the scheduler. Jobs run on 5-minute staggered slots to prevent collisions, respect quiet hours (11 PM-8 AM by default), and enforce idempotency - running the same job twice produces identical results with no duplicate outputs. Results get filed to reports/{job-name}/{YYYY-MM-DD-HHMM}.md for audit trails.
+
+A typical cron lineup might include: scrape Hacker News every six hours and file new signals, enrich newly mentioned entities daily, check portfolio company metrics weekly, and draft a digest every Monday morning. The agent works while you sleep. The deterministic split. A skill can call deterministic code - SQL queries, API calls, file operations - for tasks that shouldn't be left to LLM judgment. GBrain separates latent work (reading, synthesis, pattern recognition) from deterministic work (database writes, calculations, reproducible outputs). Mixing them is how agents hallucinate. Where it breaks. The engineering investment is substantial. GBrain's 24 skills are fully tested with end-to-end tests, evaluations, and unit tests. That's not a weekend project. It's a codebase. It's also deeply personal. GBrain is built around Garry Tan's specific workflows - his people, his companies, his publishing schedule. The architecture is transferable, but the implementation isn't drag-and-drop. You can't npm install someone else's brain. And the scale question is different from RAG or Wiki. GBrain's brain repo spans 17,888 pages - impressive for a personal system, small for an enterprise. The Postgres + pgvector backend could theoretically scale further, but the skill architecture assumes a single operator who understands the full system. The enterprise reality. This architecture maps well to a specific enterprise pattern: the power user who serves as a force multiplier for their team. A senior analyst running autonomous research workflows. A product lead who needs competitive intelligence updated daily without asking for it. An engineering manager whose agent monitors deployment health and escalates autonomously. But it doesn't map to the typical enterprise deployment of 'give everyone access to a knowledge assistant.' The engineering overhead per user is too high, and the skill authoring requires a level of system understanding that most knowledge workers don't have. At least, not yet. Verdict: Use fat skills when your knowledge needs to trigger autonomous actions, when the workflows for a team. Don't use it when you need broad organizational access or when you're willing to invest in engineering the skill layer, and when one power user can define your team can't maintain the skill codebase.
+
+## The Comparison: Same Problem, Three Trade-offs
+
+Here's what the 'RAG is dead' discourse misses: these architectures aren't competing. They're solving different versions of the same problem. Picking between them is a design decision, not a loyalty test.
+
+Press enter or click to view image in full size
+
+<image_008>
+The image is a comparative chart titled 'Three Architectures, Head to Head' which presents a table analyzing three different approaches: RAG, LLM Wiki, and Fat Skills. The chart compares various aspects such as core verb, scale, compounds?, proactive?, context, setup cost, and best for under the columns of Retrieve, Compile, and Act. Each row's data points are color-coded for clarity, with RAG using red, LLM Wiki in green, and Fat Skills in orange. The table includes data like '200K+ docs', '~1K sources', and '17K+ pages' for scale, and 'No' for compounds? under RAG. The chart also notes that RAG is 'No – waits' for proactive?, context is 'Chunks (lossy)' for RAG, and setup cost is 'Low (a weekend)' for RAG. A 'The Verdict' section states 'No single architecture wins everywhere. The question isn't which – it's what your agent's job actually is.' Finally, the chart includes a note stating 'Retrieval problem → RAG · Expertise problem → Wiki · Workflow problem → Skills'. The chart uses a visual layout with colored boxes for each architecture, and the overall style is minimalist and informative.
+</image_008>
+
+Expertise problem
+
+Workflow problem
+
+Diagram by Author: Three-way comparison matrix
+
+The decision starts with one question: what is your agent's job?
+
+Press enter or click to view image in full size
+
+## What Is Your Agent's Job?
+
+<image_009>
+The image is a flowchart depicting the process of building a production agent. It starts with a "Start: what does it do?" question, which branches into three main options: RAG (embed + retrieve), LLM Wiki (compile + refine), and Fat Skills (route + execute). Each option has sub-options: RAG branches to "10K+ docs? RAG shines," LLM Wiki to "Need context? <1K sources? Wiki sweet spot," and Fat Skills to "Must act too? Repeatable? Add skills/ Cron it." The bottom of the chart includes a text box stating: 'The real answer: most production agents need 2 of 3 RAG for scale + Wiki for depth • Wiki for knowledge + Skills for action Pick your primary, then layer the second when it hurts.' The chart uses color-coded rectangles for each major option and arrows to connect the steps. The background is white with a purple border around the top and bottom boxes.
+</image_009>
+
+Start with the The architecture follows. job.
+
+Diagram by Author: Decision tree - What is your agent's job?
+
+Your agent retrieves answers from a large corpus. You have thousands of documents. They change regularly. Users ask questions and need answers fast. Your priority is shipping something production-ready with a known cost model.
+
+Use RAG. It's not glamorous, but it's the architecture that scales to the corpus sizes most organizations actually have. Pair it with a reranker and you'll cover 80% of knowledge assistant use cases.
+
+Your agent builds expertise that should compound over time. You have hundreds of sources - research papers, regulatory filings, competitor analyses, technical specs. The value isn't in any single document but in the connections between them. You want your agent to get smarter the longer you use it.
+
+Use the LLM Wiki. Feed it your sources, let it build the cross-references, and query the compiled wiki instead of raw chunks. Your hundredth query will be significantly better than your first - something RAG can never promise.
+
+Your agent needs to act on what it knows without being asked. You don't just want answers. You want your agent to monitor, flag, enrich, and execute. You want it running while you sleep, filing insights back into the system, triggering workflows when conditions change.
+
+Use fat skills. But budget for the engineering. This isn't a weekend hack - it's a codebase with tests, evaluations, and maintenance overhead. The payoff is an agent that operates, not just responds.
+
+The hybrid reality. Production systems won't stay in a single lane. The most capable architectures will combine all three: RAG for the retrieval layer (finding relevant content at scale), Wiki for the synthesis layer (compiling retrieved content into persistent knowledge), and skills for the action layer (operationalizing that knowledge into autonomous workflows).
+
+Claude Code already hints at this convergence. CLAUDE.md files function as a mini-wiki (persistent context that compounds across sessions). Auto-memory learns from interactions (compounding). Skills trigger workflows (action). It's not a deliberate implementation of all three patterns - but the same pressures produced the same solutions.
+
+## Where This Is Heading
+
+The three-way split won't last. The same way databases evolved from 'pick SQL or NoSQL' to hybrid systems that handle both, knowledge architectures are converging.
+
+The early signs are already visible. Karpathy's LLM Wiki v2 community extensions are adding retrieval layers on top of compiled wikis - compounding meets scale. GBrain's skills already query a Postgres + pgvector backend - action meets retrieval. And enterprise platforms like Neo4j are building knowledge layers that combine graph databases, vector search, and semantic reasoning in a single access point.
+
+The question for 2026 isn't 'which architecture wins.' It's how quickly the boundaries between retrieve, compile, and act dissolve into a single knowledge operating system that does all three.
+
+Press enter or click to view image in full size
+
+## Where This Is Heading: Convergence
+
+<image_010>
+A three-circle Venn diagram representing the progression of knowledge systems across three time periods: 2023 (RAG era), 2025 (Wiki + Skills emerge), and 2026+ (Convergence). The red circle labeled 'Retrieve (RAG)' contains 'retrieve + synthesize' and 'search + execute' in the overlapping section. The green circle labeled 'Compile (Wiki)' contains 'retrieve + synthesize' and 'learn + automate' in its overlap. The orange circle labeled 'Act (Skills)' contains 'learn + automate' in its overlap. The three circles overlap at the center, which is labeled 'The Full Knowledge Layer'. The diagram is presented with a horizontal timeline at the bottom showing the three time periods with their respective descriptions.
+</image_010>
+
+Diagram by Author: Convergence - Retrieve, Compile, Act overlapping If you want to start exploring today:
+
+- RAG: LangChain's RAG tutorial is still the fastest path to a working prototype
+- LLM Wiki: Karpathy's gist is 200 lines of schema that you can run against Claude or GPT today
+- Fat Skills: GBrain's repo is open-source - read RESOLVER.md and THIN\_HARNESS\_FAT\_SKILLS.md before you read any code
+
+The knowledge layer is the part of the agent stack that nobody talks about until it breaks. Now you know what your options are.

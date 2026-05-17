@@ -8,8 +8,5 @@
   "temperature": 0.0,
   "top_p": 0.9,
   "frequency_penalty": 0.7,
-  "abstention_policy": "exclude_if_low",
-  "response_format": "structured",
-  "schema_strict": true,
-  "max_structured_items": 10
+  "abstention_policy": "exclude_if_low"
 }
