@@ -264,7 +264,7 @@ Recommended event hooks:
 | **on_session_start** | load relevant context pages based on recent activity and current task |
 | **on_session_end** | compress session observations into episodic entries, file insights back to pages |
 | **on_query** | check whether the answer is worth filing back (confidence > threshold) |
-| **on_memory_write** | check for contradictions with existing knowledge, trigger supersession if warranted |
+| **on_memory_write** | check for contradictions with existing knowledge, trigger supersession if warranted; also run write-time Jaccard dedup against `isLatest=true` entries — if `sim > τ_merge` (default 0.7), supersede the old entry rather than creating a standalone duplicate: bump `version`, set `parentId`, mark old `isLatest=false` |
 | **on_schedule** | periodic lint, consolidation pass, temporal retention decay |
 
 The human stays in the loop for curation and direction. Bookkeeping — the part that
@@ -1106,6 +1106,45 @@ meant to retrieve:
 - likely throughline shape
 
 This HyDE-style text is what you embed for cluster routing and dense retrieval.
+
+### Structured Query Expansion
+
+Before embedding the translated query, run structured expansion to maximize recall across phrasings:
+
+```xml
+<expansion>
+  <reformulations>
+    <query>semantically diverse rephrasing 1</query>
+    <query>semantically diverse rephrasing 2</query>
+    <query>semantically diverse rephrasing 3</query>
+  </reformulations>
+  <temporal>
+    <query>time-concretized version if applicable</query>
+  </temporal>
+  <entities>
+    <entity>extracted entity name 1</entity>
+    <entity>extracted entity name 2</entity>
+  </entities>
+</expansion>
+```
+
+Schema: `{original, reformulations[], temporalConcretizations[], entityExtractions[]}`
+
+- Generate 3–5 reformulations capturing different facets: paraphrase, domain-specific restatement, abstract/concrete variants
+- Temporal concretization: if the query mentions time ("recently", "last week"), generate a date-anchored form
+- Entity extraction: capitalized non-stopword tokens + quoted phrases are zero-cost entity hints for the graph traversal leg
+
+Execution: run tripleStreamSearch (BM25 + vector + graph) for each reformulation in parallel; merge by taking the best score per page or observation ID. This expands recall without inflating context budget.
+
+### Two-Phase Compact→Expand Retrieval
+
+When context budget is constrained, split retrieval into two phases:
+
+**Phase 1 — compact search**: return `{id, title, type, score, timestamp}` per result — no content, minimal context cost.
+
+**Phase 2 — expand on demand**: fetch full content only for the IDs the downstream reasoning step actually selects.
+
+This prevents the retrieval layer from saturating the context window before the reasoning step decides which results matter. Apply when the retrieval result set could exceed ~20 full records.
 
 ## Final Answer Contract
 
