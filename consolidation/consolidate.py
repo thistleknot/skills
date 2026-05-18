@@ -9,11 +9,14 @@ Idempotency contract:
   Assert:    changed_count computed before any vectorisation
 
 Usage:
-    python consolidate.py [--force] [--root PATH] [--obsidian [N]]
+    python consolidate.py [--force] [--root PATH] [--obsidian [N]] [--graph]
     --force      bypass idempotency check and always run
     --root       override skills root directory
     --obsidian N write/update [[wikilinks]] See Also sections in each SKILL.md
                  and a root _skill_graph.md index (default N=3 neighbors)
+    --graph      run graph analysis (community detection, betweenness, DWPC,
+                 spring layout) after the main pipeline; writes graph_report.json
+                 and graph.png to the consolidation/ directory
 """
 
 import argparse
@@ -186,6 +189,9 @@ def main() -> None:
     parser.add_argument("--obsidian", nargs="?", const=3, type=int, metavar="N",
                         help="write [[wikilinks]] into each SKILL.md and generate "
                              "_skill_graph.md (default N=3 neighbors per skill)")
+    parser.add_argument("--graph", action="store_true",
+                        help="run graph analysis (Louvain, k-means elbow, betweenness, "
+                             "DWPC, spring layout) after main pipeline")
     args = parser.parse_args()
 
     root: Path = args.root
@@ -306,6 +312,16 @@ def main() -> None:
     if args.obsidian is not None:
         write_obsidian_links(skill_files, names, M, chains_sorted, real_groups,
                              root, top_n=args.obsidian)
+
+    # -- graph analysis (optional) --------------------------------------------
+    if args.graph:
+        from graph_analysis import run_graph_analysis
+        run_graph_analysis(
+            db_path=db_path,
+            tau=None,  # adaptive: 85th pct of pairwise cosines
+            out_dir=db_path.parent,
+            render=True,
+        )
 
     # -- checkpoint ------------------------------------------------------------
     save_checkpoint(db_path, current_hashes, len(real_groups), len(changed))

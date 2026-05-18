@@ -1,0 +1,604 @@
+{
+  "n_skills": 89,
+  "tau": 0.7755898480690437,
+  "louvain_backend": "python-louvain",
+  "graph": {
+    "nodes": 89,
+    "edges": 588,
+    "wcc_count": 15,
+    "wcc_sizes": [
+      75,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  "louvain": {
+    "n_communities": 19,
+    "modularity": 0.207984,
+    "labels": {
+      "agentic-design-patterns": 0,
+      "agentic-hyperparm": 1,
+      "arxiv-bridge": 2,
+      "auto-ingest": 3,
+      "autoresearch": 0,
+      "build-observability": 0,
+      "business-writing": 7,
+      "cluster-quantized-knn": 5,
+      "code": 7,
+      "cognitive-taxonomy": 7,
+      "consolidation": 6,
+      "continuity-log": 0,
+      "cua-desktop-agent": 7,
+      "deep-research": 0,
+      "diagnostic-scanner": 3,
+      "doc-synthesizer": 7,
+      "documentation": 8,
+      "fabro-create-workflow": 9,
+      "feature-catalog": 2,
+      "gist-retriever": 0,
+      "gist_correlation_matrix": 7,
+      "git-workflow": 7,
+      "headless-browser-verification": 10,
+      "kg_ontology": 11,
+      "mcp-tool-registry": 0,
+      "memory-bank": 7,
+      "mlflow": 7,
+      "openspec-apply-change": 5,
+      "openspec-archive-change": 5,
+      "openspec-explore": 0,
+      "openspec-propose": 5,
+      "openspec-workflow": 13,
+      "pdf-extraction": 3,
+      "procedural-memory": 7,
+      "react-agent": 0,
+      "react-fastapi-sqlite": 3,
+      "reasoning": 0,
+      "representation-pipeline": 14,
+      "response-style": 0,
+      "security-review": 2,
+      "semantic-search-enrichment": 3,
+      "skill-sync": 15,
+      "spiral-radial-clustering-display": 3,
+      "stratified-quota-sampling": 5,
+      "test-planner": 0,
+      "timeout-guard": 7,
+      "todo": 2,
+      "validation-artifacts": 7,
+      "active-inference": 3,
+      "causal-inference": 7,
+      "continual-learning": 3,
+      "evaluator-optimizer": 0,
+      "agent-governance": 0,
+      "agentic-harness": 0,
+      "architecture": 16,
+      "checklist": 7,
+      "code-extraction": 3,
+      "codemap": 7,
+      "context-compaction": 17,
+      "deep-q-rl": 0,
+      "design-patterns": 5,
+      "generalization-theory": 18,
+      "median-bifurcation": 3,
+      "mergekit": 4,
+      "model-size-reduction": 3,
+      "multi-agent-coordination": 7,
+      "optuna-nested-cv": 2,
+      "request-intent-resolution": 7,
+      "program-synthesis": 3,
+      "rocky10-gnome-rdp": 12,
+      "siamese_from_correlation_matrix": 7,
+      "simplify": 3,
+      "class-balancing": 5,
+      "prompt-optimization": 3,
+      "substrate-selection": 7,
+      "subtractive-debugging": 5,
+      "synthetic-data": 7,
+      "tdd-agent": 3,
+      "uncertainty-quantification": 3,
+      "codebase-knowledge-graph": 7,
+      "hyper-parm_tuning": 7,
+      "mad-dynamic-batching": 7,
+      "memory-architecture": 7,
+      "nearest-neighbor-chain": 7,
+      "skill-wiki": 0,
+      "validation": 7,
+      "agentic_kg_memory": 0,
+      "crystallization": 5,
+      "debugging": 7
+    }
+  },
+  "kmeans": {
+    "optimal_k": 8,
+    "bss_tss_curve": [
+      0.067213,
+      0.099198,
+      0.125808,
+      0.146101,
+      0.162047,
+      0.171436,
+      0.191861,
+      0.20455,
+      0.220882
+    ],
+    "silhouette_curve": [
+      0.052774,
+      0.044447,
+      0.041417,
+      0.03269,
+      0.025061,
+      0.019988,
+      0.021885,
+      0.016728,
+      0.01696
+    ],
+    "labels": {
+      "agentic-design-patterns": 2,
+      "agentic-hyperparm": 3,
+      "arxiv-bridge": 5,
+      "auto-ingest": 1,
+      "autoresearch": 1,
+      "build-observability": 2,
+      "business-writing": 3,
+      "cluster-quantized-knn": 5,
+      "code": 0,
+      "cognitive-taxonomy": 3,
+      "consolidation": 0,
+      "continuity-log": 1,
+      "cua-desktop-agent": 6,
+      "deep-research": 2,
+      "diagnostic-scanner": 1,
+      "doc-synthesizer": 3,
+      "documentation": 0,
+      "fabro-create-workflow": 6,
+      "feature-catalog": 5,
+      "gist-retriever": 2,
+      "gist_correlation_matrix": 3,
+      "git-workflow": 6,
+      "headless-browser-verification": 2,
+      "kg_ontology": 2,
+      "mcp-tool-registry": 1,
+      "memory-bank": 3,
+      "mlflow": 3,
+      "openspec-apply-change": 6,
+      "openspec-archive-change": 6,
+      "openspec-explore": 2,
+      "openspec-propose": 0,
+      "openspec-workflow": 1,
+      "pdf-extraction": 1,
+      "procedural-memory": 3,
+      "react-agent": 1,
+      "react-fastapi-sqlite": 1,
+      "reasoning": 3,
+      "representation-pipeline": 3,
+      "response-style": 2,
+      "security-review": 3,
+      "semantic-search-enrichment": 1,
+      "skill-sync": 6,
+      "spiral-radial-clustering-display": 1,
+      "stratified-quota-sampling": 1,
+      "test-planner": 1,
+      "timeout-guard": 3,
+      "todo": 5,
+      "validation-artifacts": 3,
+      "active-inference": 1,
+      "causal-inference": 3,
+      "continual-learning": 1,
+      "evaluator-optimizer": 6,
+      "agent-governance": 2,
+      "agentic-harness": 2,
+      "architecture": 4,
+      "checklist": 3,
+      "code-extraction": 1,
+      "codemap": 0,
+      "context-compaction": 1,
+      "deep-q-rl": 2,
+      "design-patterns": 1,
+      "generalization-theory": 3,
+      "median-bifurcation": 1,
+      "mergekit": 1,
+      "model-size-reduction": 1,
+      "multi-agent-coordination": 6,
+      "optuna-nested-cv": 5,
+      "request-intent-resolution": 3,
+      "program-synthesis": 1,
+      "rocky10-gnome-rdp": 7,
+      "siamese_from_correlation_matrix": 3,
+      "simplify": 1,
+      "class-balancing": 3,
+      "prompt-optimization": 1,
+      "substrate-selection": 0,
+      "subtractive-debugging": 0,
+      "synthetic-data": 3,
+      "tdd-agent": 1,
+      "uncertainty-quantification": 3,
+      "codebase-knowledge-graph": 0,
+      "hyper-parm_tuning": 3,
+      "mad-dynamic-batching": 3,
+      "memory-architecture": 0,
+      "nearest-neighbor-chain": 3,
+      "skill-wiki": 2,
+      "validation": 0,
+      "agentic_kg_memory": 2,
+      "crystallization": 3,
+      "debugging": 0
+    }
+  },
+  "agreement": {
+    "ari": 0.353537,
+    "interpretation": "moderate \u2014 surface both to observer"
+  },
+  "communities": {
+    "0": {
+      "members": [
+        "agentic-design-patterns",
+        "autoresearch",
+        "build-observability",
+        "continuity-log",
+        "deep-research",
+        "gist-retriever",
+        "mcp-tool-registry",
+        "openspec-explore",
+        "react-agent",
+        "reasoning",
+        "response-style",
+        "test-planner",
+        "evaluator-optimizer",
+        "agent-governance",
+        "agentic-harness",
+        "deep-q-rl",
+        "skill-wiki",
+        "agentic_kg_memory"
+      ],
+      "size": 18,
+      "density": 0.451,
+      "conductance": 0.4853,
+      "lcc_ratio": 1.0
+    },
+    "1": {
+      "members": [
+        "agentic-hyperparm"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "2": {
+      "members": [
+        "arxiv-bridge",
+        "feature-catalog",
+        "security-review",
+        "todo",
+        "optuna-nested-cv"
+      ],
+      "size": 5,
+      "density": 0.9,
+      "conductance": 0.7731,
+      "lcc_ratio": 1.0
+    },
+    "3": {
+      "members": [
+        "auto-ingest",
+        "diagnostic-scanner",
+        "pdf-extraction",
+        "react-fastapi-sqlite",
+        "semantic-search-enrichment",
+        "spiral-radial-clustering-display",
+        "active-inference",
+        "continual-learning",
+        "code-extraction",
+        "median-bifurcation",
+        "model-size-reduction",
+        "program-synthesis",
+        "simplify",
+        "prompt-optimization",
+        "tdd-agent",
+        "uncertainty-quantification"
+      ],
+      "size": 16,
+      "density": 0.4417,
+      "conductance": 0.6036,
+      "lcc_ratio": 1.0
+    },
+    "4": {
+      "members": [
+        "mergekit"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "5": {
+      "members": [
+        "cluster-quantized-knn",
+        "openspec-apply-change",
+        "openspec-archive-change",
+        "openspec-propose",
+        "stratified-quota-sampling",
+        "design-patterns",
+        "class-balancing",
+        "subtractive-debugging",
+        "crystallization"
+      ],
+      "size": 9,
+      "density": 0.3889,
+      "conductance": 0.77,
+      "lcc_ratio": 1.0
+    },
+    "6": {
+      "members": [
+        "consolidation"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "7": {
+      "members": [
+        "business-writing",
+        "code",
+        "cognitive-taxonomy",
+        "cua-desktop-agent",
+        "doc-synthesizer",
+        "gist_correlation_matrix",
+        "git-workflow",
+        "memory-bank",
+        "mlflow",
+        "procedural-memory",
+        "timeout-guard",
+        "validation-artifacts",
+        "causal-inference",
+        "checklist",
+        "codemap",
+        "multi-agent-coordination",
+        "request-intent-resolution",
+        "siamese_from_correlation_matrix",
+        "substrate-selection",
+        "synthetic-data",
+        "codebase-knowledge-graph",
+        "hyper-parm_tuning",
+        "mad-dynamic-batching",
+        "memory-architecture",
+        "nearest-neighbor-chain",
+        "validation",
+        "debugging"
+      ],
+      "size": 27,
+      "density": 0.3647,
+      "conductance": 0.412,
+      "lcc_ratio": 1.0
+    },
+    "8": {
+      "members": [
+        "documentation"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "9": {
+      "members": [
+        "fabro-create-workflow"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "10": {
+      "members": [
+        "headless-browser-verification"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "11": {
+      "members": [
+        "kg_ontology"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "12": {
+      "members": [
+        "rocky10-gnome-rdp"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "13": {
+      "members": [
+        "openspec-workflow"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "14": {
+      "members": [
+        "representation-pipeline"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "15": {
+      "members": [
+        "skill-sync"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "16": {
+      "members": [
+        "architecture"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "17": {
+      "members": [
+        "context-compaction"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    },
+    "18": {
+      "members": [
+        "generalization-theory"
+      ],
+      "size": 1,
+      "density": 0,
+      "conductance": 0.0,
+      "lcc_ratio": 1.0
+    }
+  },
+  "betweenness_top10": [
+    {
+      "skill": "stratified-quota-sampling",
+      "score": 0.053292
+    },
+    {
+      "skill": "checklist",
+      "score": 0.050679
+    },
+    {
+      "skill": "tdd-agent",
+      "score": 0.047544
+    },
+    {
+      "skill": "validation-artifacts",
+      "score": 0.036834
+    },
+    {
+      "skill": "continual-learning",
+      "score": 0.035528
+    },
+    {
+      "skill": "autoresearch",
+      "score": 0.035266
+    },
+    {
+      "skill": "code-extraction",
+      "score": 0.035005
+    },
+    {
+      "skill": "react-agent",
+      "score": 0.030303
+    },
+    {
+      "skill": "subtractive-debugging",
+      "score": 0.029258
+    },
+    {
+      "skill": "optuna-nested-cv",
+      "score": 0.028736
+    }
+  ],
+  "dwpc_top15_pairs": [
+    {
+      "score": 3.226208,
+      "a": "code-extraction",
+      "b": "tdd-agent"
+    },
+    {
+      "score": 3.142873,
+      "a": "code-extraction",
+      "b": "subtractive-debugging"
+    },
+    {
+      "score": 3.137513,
+      "a": "subtractive-debugging",
+      "b": "tdd-agent"
+    },
+    {
+      "score": 3.102263,
+      "a": "code-extraction",
+      "b": "synthetic-data"
+    },
+    {
+      "score": 3.098212,
+      "a": "mcp-tool-registry",
+      "b": "tdd-agent"
+    },
+    {
+      "score": 3.07063,
+      "a": "checklist",
+      "b": "synthetic-data"
+    },
+    {
+      "score": 3.05226,
+      "a": "synthetic-data",
+      "b": "tdd-agent"
+    },
+    {
+      "score": 3.044233,
+      "a": "code-extraction",
+      "b": "optuna-nested-cv"
+    },
+    {
+      "score": 3.014786,
+      "a": "subtractive-debugging",
+      "b": "synthetic-data"
+    },
+    {
+      "score": 2.989585,
+      "a": "code-extraction",
+      "b": "substrate-selection"
+    },
+    {
+      "score": 2.977924,
+      "a": "optuna-nested-cv",
+      "b": "synthetic-data"
+    },
+    {
+      "score": 2.970626,
+      "a": "mcp-tool-registry",
+      "b": "code-extraction"
+    },
+    {
+      "score": 2.96547,
+      "a": "checklist",
+      "b": "code-extraction"
+    },
+    {
+      "score": 2.945396,
+      "a": "react-agent",
+      "b": "tdd-agent"
+    },
+    {
+      "score": 2.944975,
+      "a": "substrate-selection",
+      "b": "tdd-agent"
+    }
+  ]
+}

@@ -54,7 +54,18 @@ Override with `--force` when you need to re-run regardless (e.g., after changing
 ## Executable
 
 ```
-python consolidation/consolidate.py [--force] [--root PATH]
+python consolidation/consolidate.py [--force] [--root PATH] [--obsidian [N]] [--graph]
+```
+
+Flags:
+- `--force` — bypass idempotency check; always re-run
+- `--root PATH` — override skills root directory
+- `--obsidian [N]` — write `[[wikilinks]]` See Also sections in each SKILL.md; generate `_skill_graph.md` (default N=3 neighbors)
+- `--graph` — run graph analysis after the main pipeline (community detection, k-means elbow, betweenness centrality, DWPC, spring layout); writes `graph_report.json` + `graph.png`
+
+Standalone graph analysis (reads from existing checkpoint, does not re-derive):
+```
+python consolidation/graph_analysis.py [--db PATH] [--threshold TAU] [--out PATH] [--no-plot]
 ```
 
 Checkpoint stored at `consolidation/.checkpoint.db` (SQLite). Content hashes keyed by skill name; `run_log` table records history.
@@ -146,6 +157,66 @@ Group 2 (4 docs):
 | `triplets.db` | session checkpoint | doc → triplet cache |
 | `similarity.db` | session checkpoint | N×N similarity scores |
 | `consolidation_report.md` | output | sorted group report with prescriptions |
+| `graph_report.json` | `consolidation/` | community labels, subgraph metrics, betweenness, DWPC pairs (--graph only) |
+| `graph.png` | `consolidation/` | spring layout coloured by Louvain community (--graph only) |
+
+---
+
+## Graph Analysis Pipeline (`--graph`)
+
+An optional second-pass analysis that operates on the embedding space rather than the Jaccard triplet space. The two views are complementary: NNC chains reflect surface-term overlap; the graph analysis reflects semantic proximity in embedding space.
+
+### Pipeline
+
+```
+embeddings (from .checkpoint.db)
+  ↓
+cosine similarity matrix (unit-norm dot product)
+  ↓  adaptive τ = 85th pct of pairwise cosines  (user-overridable via --threshold)
+cosine graph  (networkx, weighted edges)
+  ↓
+WCC  →  enumerate disconnected islands / isolated skills
+  ↓
+Louvain community detection  →  partition + modularity score
+  ↓  cross-validate
+k-means (k=2..√N)  →  BSS/TSS elbow (argmin second derivative)  →  optimal k
+  ↓
+ARI(Louvain, k-means)  >0.7 high confidence | >0.3 surface both | else disagreement
+  ↓
+per-community subgraph metrics: density · conductance · LCC ratio
+  ↓
+betweenness centrality  →  bridge skill detection
+  ↓
+DWPC (k=1 direct, k=2 one-hop)  →  hub-corrected pair connectivity
+  ↓
+spring layout (Fruchterman–Reingold)  →  graph.png
+  ↓
+observer agent disposition prompt  →  per-community CONSOLIDATE | CROSS-REF | KEEP | INSPECT
+```
+
+### Threshold Notes
+
+- **Jaccard τ = 0.3** (Step 3 NNC): semantic floor for the fusion score (Jaccard-dominated)
+- **Graph τ = auto (85th pct)**: cosine similarities are uniformly higher than fusion scores, so a fixed 0.3 would produce a near-complete graph with trivial communities. The 85th-pct adaptive threshold yields ~10–15% edge density, which is the structurally informative regime. Pass `--threshold <value>` to override.
+
+### Observer Agent Disposition Rubric
+
+| Metric profile | Prescription |
+|---|---|
+| High density + low conductance | **CONSOLIDATE** — community is internally redundant |
+| Moderate density, any conductance | **CROSS-REF** — related but distinct; add See Also |
+| Low density or high conductance | **KEEP** — genuinely separate topics |
+| High betweenness centrality | **INSPECT** — bridge/hub skill; may span multiple communities |
+
+### BSS/TSS Elbow
+
+BSS/TSS is monotonically non-decreasing with k; maximising it directly gives k=N.
+The elbow is selected at the k with the most-negative second derivative (sharpest deceleration in marginal gain). Silhouette score is computed in parallel as a secondary criterion.
+
+### DWPC vs Betweenness
+
+- **Betweenness centrality**: O(N·E) via networkx; identifies nodes that lie on many shortest paths; most interpretable for bridge detection
+- **DWPC (k=1, k=2)**: degree-weight normalises path counts to penalise hub-mediated connectivity; PC vs DWPC delta exposes hub bias in pairs; O(N³) for k=2 but tractable at N≤500
 
 ---
 

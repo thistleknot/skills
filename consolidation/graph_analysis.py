@@ -1,0 +1,552 @@
+"""
+graph_analysis.py -- Community detection, cluster analysis, and graph metrics
+for the skill corpus.
+
+Standalone usage:
+    python graph_analysis.py [--db PATH] [--threshold TAU] [--out PATH] [--no-plot]
+
+Or called from consolidate.py via --graph.
+
+Pipeline:
+    embeddings → cosine graph → WCC → Louvain → k-means BSS/TSS elbow →
+    ARI cross-validation → subgraph metrics → betweenness centrality →
+    DWPC (k=1, k=2) → spring layout → JSON report + PNG + observer prompt
+
+Require:  numpy, networkx, python-louvain, scikit-learn, matplotlib installed
+Guarantee: writes graph_report.json + graph.png to out_dir; prints observer prompt
+Maintain:  non-breaking; does not modify .checkpoint.db schema
+Assert:    at least 3 skills with embeddings before analysis begins
+"""
+
+import argparse
+import json
+import math
+import sqlite3
+import sys
+from pathlib import Path
+
+# Ensure UTF-8 output on Windows consoles that default to cp1252
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.cm as cm
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.metrics import adjusted_rand_score, silhouette_score
+from sklearn.preprocessing import normalize
+
+try:
+    import community as community_louvain
+    _LOUVAIN_BACKEND = "python-louvain"
+except ImportError:
+    community_louvain = None
+    _LOUVAIN_BACKEND = "networkx"
+
+JACCARD_TAU = 0.30   # consolidation semantic floor (Jaccard domain)
+# Graph analysis uses a higher adaptive threshold in the cosine domain because
+# cosine similarities are uniformly higher than fused Jaccard+cosine scores.
+# Default is adaptive (85th percentile); pass --threshold to override.
+
+
+# ---------------------------------------------------------------------------
+# Data loading
+# ---------------------------------------------------------------------------
+
+def load_embeddings(db_path: Path) -> tuple[list[str], np.ndarray]:
+    """Load skill names and unit-normalised embedding vectors from checkpoint DB.
+
+    Require:  db_path exists; skill_derivations table has embedding_json column
+    Guarantee: returns (names, E) where E.shape == (N, dim) and rows are L2-normalised
+    Maintain:  skills with null or empty embedding_json are silently skipped
+    Assert:    at least one embedding row must be present
+    """
+    con = sqlite3.connect(db_path)
+    try:
+        rows = con.execute(
+            "SELECT skill_name, embedding_json FROM skill_derivations "
+            "WHERE embedding_json IS NOT NULL AND embedding_json != '[]'"
+        ).fetchall()
+    finally:
+        con.close()
+
+    names: list[str] = []
+    vecs: list[list[float]] = []
+    for name, emb_json in rows:
+        vec: list[float] = json.loads(emb_json)
+        if vec:
+            names.append(name)
+            vecs.append(vec)
+
+    assert names, "No embeddings found in checkpoint DB — run consolidate.py first"
+    return names, normalize(np.array(vecs, dtype=float))
+
+
+# ---------------------------------------------------------------------------
+# Graph construction
+# ---------------------------------------------------------------------------
+
+def adaptive_tau(cosine: np.ndarray, percentile: float = 85.0) -> float:
+    """Compute a data-driven threshold at the given percentile of all off-diagonal cosines.
+
+    Require:  cosine is symmetric (N,N); percentile in (0, 100)
+    Guarantee: returns the Nth percentile value, clamped to [0.5, 0.99]
+    Maintain:  ignores diagonal (self-similarity = 1.0)
+    """
+    N = cosine.shape[0]
+    off_diag = [float(cosine[i, j]) for i in range(N) for j in range(i + 1, N)]
+    raw = float(np.percentile(off_diag, percentile))
+    return max(0.50, min(0.99, raw))
+
+
+def build_graph(names: list[str], E: np.ndarray, tau: float) -> tuple[nx.Graph, np.ndarray]:
+    """Build weighted undirected graph from cosine similarity matrix.
+
+    Require:  E is L2-normalised (unit rows), tau > 0
+    Guarantee: edges only where cosine(i,j) > tau; no self-loops
+    """
+    cosine: np.ndarray = E @ E.T
+    N = len(names)
+    G = nx.Graph()
+    G.add_nodes_from(names)
+    for i in range(N):
+        for j in range(i + 1, N):
+            w = float(cosine[i, j])
+            if w > tau:
+                G.add_edge(names[i], names[j], weight=w)
+    return G, cosine
+
+
+# ---------------------------------------------------------------------------
+# Community detection
+# ---------------------------------------------------------------------------
+
+def louvain_partition(G: nx.Graph) -> dict[str, int]:
+    """Run Louvain community detection; fall back to networkx greedy modularity."""
+    if _LOUVAIN_BACKEND == "python-louvain":
+        return community_louvain.best_partition(G, weight="weight")
+    comms = nx.algorithms.community.greedy_modularity_communities(G, weight="weight")
+    return {node: cid for cid, comm in enumerate(comms) for node in comm}
+
+
+def modularity_score(partition: dict[str, int], G: nx.Graph) -> float | None:
+    """Return modularity for the partition, or None if backend unavailable."""
+    if _LOUVAIN_BACKEND == "python-louvain":
+        return community_louvain.modularity(partition, G, weight="weight")
+    return None
+
+
+# ---------------------------------------------------------------------------
+# k-means elbow
+# ---------------------------------------------------------------------------
+
+def kmeans_elbow(E: np.ndarray, k_max: int | None = None) -> tuple[int, list[float], list[float]]:
+    """Find optimal k via BSS/TSS elbow (most-concave bend in the curve).
+
+    Require:  E is (N, dim); k tested over [2, min(k_max, N-1)]
+    Guarantee: returns (optimal_k, bss_tss_curve, silhouette_curve)
+    Maintain:  elbow selected by argmin of discrete second derivative (most negative = sharpest bend)
+
+    Note: BSS/TSS is monotonically non-decreasing → directly maximising it gives k=N.
+    The elbow is the k where marginal gain decelerates most sharply.
+    """
+    N = E.shape[0]
+    k_max = min(k_max or max(2, math.ceil(math.sqrt(N))), N - 1)
+    k_range = list(range(2, k_max + 1))
+
+    total_var = float(np.sum((E - E.mean(axis=0)) ** 2))
+
+    bss_tss_curve: list[float] = []
+    sil_curve: list[float] = []
+
+    for k in k_range:
+        km = KMeans(n_clusters=k, n_init=10, random_state=42)
+        labels = km.fit_predict(E)
+        wss = float(km.inertia_)
+        bss_tss_curve.append((total_var - wss) / total_var if total_var > 0 else 0.0)
+        sil = silhouette_score(E, labels) if len(set(labels)) > 1 else 0.0
+        sil_curve.append(float(sil))
+
+    if len(bss_tss_curve) < 3:
+        return k_range[0], bss_tss_curve, sil_curve
+
+    # second derivative: negative = concave bend; most negative = sharpest elbow
+    d2 = [
+        bss_tss_curve[i + 2] - 2 * bss_tss_curve[i + 1] + bss_tss_curve[i]
+        for i in range(len(bss_tss_curve) - 2)
+    ]
+    elbow_idx = int(np.argmin(d2))      # most-concave point
+    optimal_k = k_range[elbow_idx + 1]  # d2[i] is centred at k_range[i+1]
+    return optimal_k, bss_tss_curve, sil_curve
+
+
+# ---------------------------------------------------------------------------
+# Subgraph metrics
+# ---------------------------------------------------------------------------
+
+def subgraph_metrics(G: nx.Graph, partition: dict[str, int]) -> dict[int, dict]:
+    """Compute density, conductance, and LCC-ratio per community.
+
+    Require:  partition keys cover all G.nodes()
+    Guarantee: returns {community_id: {members, size, density, conductance, lcc_ratio}}
+    """
+    metrics: dict[int, dict] = {}
+    for cid in sorted(set(partition.values())):
+        members = [n for n, c in partition.items() if c == cid]
+        subg = G.subgraph(members)
+
+        density = nx.density(subg)
+
+        cut_weight = sum(
+            d["weight"]
+            for u, v, d in G.edges(data=True)
+            if (partition[u] == cid) != (partition[v] == cid)
+        )
+        vol_s = sum(d for _, d in G.degree(members, weight="weight"))
+        vol_rest = sum(d for n, d in G.degree(weight="weight") if partition[n] != cid)
+        denom = min(vol_s, vol_rest)
+        conductance = cut_weight / denom if denom > 0 else 0.0
+
+        lcc_ratio = 0.0
+        if members:
+            lcc = max(nx.connected_components(subg), key=len)
+            lcc_ratio = len(lcc) / len(members)
+
+        metrics[cid] = {
+            "members": members,
+            "size": len(members),
+            "density": round(density, 4),
+            "conductance": round(conductance, 4),
+            "lcc_ratio": round(lcc_ratio, 4),
+        }
+    return metrics
+
+
+# ---------------------------------------------------------------------------
+# DWPC (Degree-Weighted Path Count)
+# ---------------------------------------------------------------------------
+
+def compute_dwpc(names: list[str], cosine: np.ndarray, tau: float, k_max: int = 2) -> np.ndarray:
+    """Compute hub-corrected connectivity via DWPC for paths up to length k_max.
+
+    DWPC(i,j,k) = PC(i,j,k) / PDP(i,j,k)^0.4
+      PC  = count of simple paths of length k
+      PDP = product of degrees of intermediate nodes (no endpoints)
+
+    k=1: direct edges only (no intermediates, PDP=1, DWPC = 1 per edge)
+    k=2: paths through one intermediate node (O(N^3), fine for N≤200)
+
+    Require:  cosine is (N,N); k_max in {1, 2}
+    Guarantee: returns (N,N) DWPC matrix summed over k in [1..k_max]; symmetric
+    """
+    N = len(names)
+    adj = np.where(cosine > tau, cosine, 0.0)
+    degrees = (adj > 0).sum(axis=1).astype(float)
+
+    dwpc = np.zeros((N, N), dtype=float)
+
+    # k=1
+    for i in range(N):
+        for j in range(i + 1, N):
+            if adj[i, j] > 0:
+                dwpc[i, j] += 1.0   # PDP=1 (no intermediate nodes)
+                dwpc[j, i] = dwpc[i, j]
+
+    if k_max >= 2:
+        # k=2
+        for i in range(N):
+            for j in range(i + 1, N):
+                pc2 = 0
+                pdp2 = 0.0
+                for m in range(N):
+                    if m != i and m != j and adj[i, m] > 0 and adj[m, j] > 0:
+                        pc2 += 1
+                        pdp2 += degrees[m]
+                if pc2 > 0:
+                    dwpc[i, j] += pc2 / max(pdp2, 1.0) ** 0.4
+                    dwpc[j, i] = dwpc[i, j]
+
+    return dwpc
+
+
+# ---------------------------------------------------------------------------
+# Visualisation
+# ---------------------------------------------------------------------------
+
+def render_spring_layout(
+    G: nx.Graph,
+    partition: dict[str, int],
+    betweenness: dict[str, float],
+    out_path: Path,
+) -> None:
+    """Render spring layout coloured by Louvain community.
+
+    Node size encodes betweenness centrality (bridges are visually prominent).
+    Edge alpha encodes similarity weight.
+
+    Require:  out_path parent directory exists
+    Guarantee: saves PNG to out_path at 150 dpi; closes figure
+    """
+    n_comm = len(set(partition.values()))
+    try:
+        cmap = matplotlib.colormaps.get_cmap("tab20")
+    except AttributeError:
+        cmap = cm.get_cmap("tab20", max(n_comm, 2))
+
+    node_colors = [cmap(partition.get(n, 0) % 20) for n in G.nodes()]
+    node_sizes = [300 + 4000 * betweenness.get(n, 0.0) for n in G.nodes()]
+    k_spring = 1.5 / math.sqrt(len(G.nodes()) + 1)
+    pos = nx.spring_layout(G, weight="weight", seed=42, k=k_spring)
+
+    fig, ax = plt.subplots(figsize=(20, 15))
+    ax.set_facecolor("#1a1a2e")
+    fig.patch.set_facecolor("#1a1a2e")
+
+    for u, v, d in G.edges(data=True):
+        alpha = min(1.0, max(0.05, float(d.get("weight", 0.3))))
+        nx.draw_networkx_edges(
+            G, pos, edgelist=[(u, v)],
+            alpha=alpha, edge_color="#8888bb", width=0.9, ax=ax,
+        )
+
+    nx.draw_networkx_nodes(
+        G, pos, node_color=node_colors, node_size=node_sizes, alpha=0.88, ax=ax,
+    )
+    nx.draw_networkx_labels(G, pos, font_size=6, font_color="white", ax=ax)
+
+    patches = [
+        mpatches.Patch(color=cmap(cid % 20), label=f"Community {cid}")
+        for cid in sorted(set(partition.values()))
+    ]
+    ax.legend(handles=patches, loc="lower right", fontsize=7,
+              facecolor="#2a2a4e", labelcolor="white", framealpha=0.8)
+    ax.set_title("Skill Graph — Spring Layout (Louvain Communities)", color="white", fontsize=14)
+    ax.axis("off")
+
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close()
+    print(f"Graph image saved -> {out_path}")
+
+
+# ---------------------------------------------------------------------------
+# Observer agent prompt
+# ---------------------------------------------------------------------------
+
+def print_observer_prompt(report: dict) -> None:
+    """Print a structured disposition prompt for the observer agent."""
+    g = report["graph"]
+    lou = report["louvain"]
+    km = report["kmeans"]
+    agr = report["agreement"]
+
+    print(f"""
+{'='*80}
+OBSERVER AGENT DISPOSITION PROMPT
+{'='*80}
+Skills: {report['n_skills']}  edges: {g['edges']}  tau: {report['tau']}
+WCC: {g['wcc_count']} component(s)  sizes: {g['wcc_sizes'][:5]}
+
+LOUVAIN -- {lou['n_communities']} communities  modularity={lou['modularity']}
+K-MEANS -- optimal k={km['optimal_k']}
+ARI (Louvain vs k-means) = {agr['ari']:.4f}  -> {agr['interpretation']}
+
+COMMUNITIES (sorted by size desc):""")
+
+    for cid_str, m in sorted(report["communities"].items(), key=lambda x: -x[1]["size"]):
+        members_str = ", ".join(m["members"][:8]) + ("..." if len(m["members"]) > 8 else "")
+        print(f"  [{cid_str}] size={m['size']:2d}  density={m['density']:.3f}  "
+              f"conductance={m['conductance']:.3f}  lcc={m['lcc_ratio']:.2f}")
+        print(f"       {members_str}")
+
+    print("\nTOP BRIDGE SKILLS (betweenness centrality):")
+    for item in report["betweenness_top10"][:7]:
+        print(f"  {item['skill']:<42}  {item['score']:.5f}")
+
+    print("\nTOP DWPC PAIRS (hub-corrected connectivity):")
+    for item in report["dwpc_top15_pairs"][:7]:
+        print(f"  {item['a']:<35} <-> {item['b']:<35}  {item['score']:.4f}")
+
+    print(f"""
+DISPOSITION TASK  (optionally verify against graph.png spring layout):
+For each community, decide:
+  CONSOLIDATE  — high density + low conductance  (redundant → merge/migrate)
+  CROSS-REF    — moderate density                (related → See Also links)
+  KEEP         — low density or high conductance (genuinely separate)
+  INSPECT      — bridge skill (high betweenness) — may be cross-cutting or misclassified
+
+OUTPUT FORMAT:
+  Community <N>: [CONSOLIDATE|CROSS-REF|KEEP|INSPECT]
+  Rationale: <one line>
+{'='*80}""")
+
+
+# ---------------------------------------------------------------------------
+# Main pipeline
+# ---------------------------------------------------------------------------
+
+def run_graph_analysis(
+    db_path: Path,
+    tau: float | None = None,
+    out_dir: Path | None = None,
+    render: bool = True,
+) -> dict:
+    """Full analysis pipeline.
+
+    Require:  db_path contains skill_derivations with embedding_json;
+              numpy, networkx, sklearn, matplotlib available
+    Guarantee: returns report dict; writes graph_report.json (+ graph.png if render)
+    Maintain:  .checkpoint.db is not modified
+    Assert:    N >= 3 skills with embeddings
+
+    tau: edge weight threshold in cosine domain; if None, auto-selected at 85th
+         percentile of all pairwise cosine scores (yields a sparse, interpretable graph).
+         Pass an explicit value if you need a specific density.
+    """
+    out_dir = out_dir or db_path.parent
+
+    print("Loading embeddings from checkpoint DB...")
+    names, E = load_embeddings(db_path)
+    N = len(names)
+    print(f"  {N} skills with embeddings")
+    assert N >= 3, f"Need >= 3 skills with embeddings, found {N}"
+
+    # Adaptive threshold: compute cosine matrix first, then derive tau
+    cosine_full: np.ndarray = E @ E.T
+    if tau is None:
+        tau = adaptive_tau(cosine_full, percentile=85.0)
+        print(f"  Adaptive tau (85th pct of pairwise cosines) = {tau:.4f}")
+
+    print(f"Building cosine graph (tau={tau:.4f})...")
+    G, cosine = build_graph(names, E, tau)
+    print(f"  {G.number_of_nodes()} nodes  {G.number_of_edges()} edges")
+
+    wccs = list(nx.connected_components(G))
+    wcc_sizes = sorted([len(c) for c in wccs], reverse=True)
+    print(f"  WCC: {len(wccs)} components  sizes={wcc_sizes[:6]}{'...' if len(wcc_sizes) > 6 else ''}")
+
+    print("Running Louvain community detection...")
+    partition = louvain_partition(G)
+    n_communities = len(set(partition.values()))
+    modularity = modularity_score(partition, G)
+    mod_str = f"{modularity:.4f}" if modularity is not None else "N/A"
+    print(f"  {n_communities} communities  modularity={mod_str}")
+
+    print("Running k-means elbow search...")
+    optimal_k, bss_tss_curve, sil_curve = kmeans_elbow(E)
+    km = KMeans(n_clusters=optimal_k, n_init=10, random_state=42)
+    km_labels_arr = km.fit_predict(E)
+    km_labels = {names[i]: int(km_labels_arr[i]) for i in range(N)}
+    sil_at_k = sil_curve[optimal_k - 2] if len(sil_curve) >= optimal_k - 1 else None
+    sil_str = f"{sil_at_k:.4f}" if sil_at_k is not None else "N/A"
+    print(f"  optimal k={optimal_k}  silhouette={sil_str}")
+
+    ari = float(adjusted_rand_score(
+        [partition[n] for n in names],
+        [km_labels[n] for n in names],
+    ))
+    print(f"  ARI(Louvain, k-means)={ari:.4f}")
+
+    print("Computing subgraph metrics...")
+    comm_metrics = subgraph_metrics(G, partition)
+
+    print("Computing betweenness centrality...")
+    betweenness = nx.betweenness_centrality(G, weight="weight", normalized=True)
+    top_bridges = sorted(betweenness.items(), key=lambda x: x[1], reverse=True)[:10]
+
+    print("Computing DWPC (k=1, k=2)...")
+    dwpc_mat = compute_dwpc(names, cosine, tau, k_max=2)
+    top_dwpc: list[tuple[float, str, str]] = []
+    for i in range(N):
+        for j in range(i + 1, N):
+            if dwpc_mat[i, j] > 0:
+                top_dwpc.append((float(dwpc_mat[i, j]), names[i], names[j]))
+    top_dwpc.sort(reverse=True)
+
+    if render:
+        render_spring_layout(G, partition, betweenness, out_dir / "graph.png")
+
+    report = {
+        "n_skills": N,
+        "tau": round(tau, 6),
+        "louvain_backend": _LOUVAIN_BACKEND,
+        "graph": {
+            "nodes": G.number_of_nodes(),
+            "edges": G.number_of_edges(),
+            "wcc_count": len(wccs),
+            "wcc_sizes": wcc_sizes,
+        },
+        "louvain": {
+            "n_communities": n_communities,
+            "modularity": round(modularity, 6) if modularity is not None else None,
+            "labels": partition,
+        },
+        "kmeans": {
+            "optimal_k": optimal_k,
+            "bss_tss_curve": [round(v, 6) for v in bss_tss_curve],
+            "silhouette_curve": [round(v, 6) for v in sil_curve],
+            "labels": km_labels,
+        },
+        "agreement": {
+            "ari": round(ari, 6),
+            "interpretation": (
+                "high confidence — Louvain and k-means agree" if ari > 0.7
+                else "moderate — surface both to observer" if ari > 0.3
+                else "disagreement — different structure; surface both"
+            ),
+        },
+        "communities": {str(cid): m for cid, m in comm_metrics.items()},
+        "betweenness_top10": [
+            {"skill": n, "score": round(s, 6)} for n, s in top_bridges
+        ],
+        "dwpc_top15_pairs": [
+            {"score": round(v, 6), "a": a, "b": b} for v, a, b in top_dwpc[:15]
+        ],
+    }
+
+    report_path = out_dir / "graph_report.json"
+    with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2)
+    print(f"Report saved -> {report_path}")
+
+    print_observer_prompt(report)
+    return report
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Skill library graph analysis")
+    parser.add_argument(
+        "--db", type=Path,
+        default=Path(__file__).resolve().parent / ".checkpoint.db",
+        help="consolidation checkpoint DB (default: consolidation/.checkpoint.db)",
+    )
+    parser.add_argument(
+        "--threshold", type=float, default=None,
+        help="edge weight threshold in cosine domain (default: auto at 85th pct of pairwise cosines)",
+    )
+    parser.add_argument(
+        "--out", type=Path,
+        default=Path(__file__).resolve().parent,
+        help="output directory for graph_report.json and graph.png",
+    )
+    parser.add_argument("--no-plot", action="store_true", help="skip spring layout rendering")
+    args = parser.parse_args()
+
+    run_graph_analysis(
+        db_path=args.db,
+        tau=args.threshold,
+        out_dir=args.out,
+        render=not args.no_plot,
+    )
+
+
+if __name__ == "__main__":
+    main()
