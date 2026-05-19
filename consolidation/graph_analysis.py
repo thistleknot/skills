@@ -345,13 +345,86 @@ def compute_dwpc(names: list[str], cosine: np.ndarray, tau: float, k_max: int = 
 # Visualisation
 # ---------------------------------------------------------------------------
 
+def community_aware_layout(
+    G: nx.Graph,
+    partition: dict[str, int],
+) -> dict:
+    """WCC-separated community layout.
+
+    1. Large WCCs: communities within each WCC arranged on an inner circle
+       sized so no two community blobs overlap.
+    2. Singleton WCCs: placed on an outer ring beyond all large WCCs.
+
+    This separates inter-community whitespace from the singletons that
+    would otherwise crowd the periphery of a global spring layout.
+
+    Require:  all partition keys are nodes in G
+    Guarantee: returns {node: np.ndarray([x, y])} covering all nodes
+    """
+    from collections import defaultdict
+
+    wccs = list(nx.connected_components(G))
+    large_wccs = sorted([c for c in wccs if len(c) > 1], key=lambda x: -len(x))
+    singleton_wccs = [c for c in wccs if len(c) == 1]
+
+    pos: dict = {}
+
+    # --- large WCCs (usually just one big one) ---
+    # Spread multiple large WCCs on a macro-circle if there are several
+    n_large = max(len(large_wccs), 1)
+    macro_r = 6.0 * n_large
+
+    for wcc_idx, wcc_nodes in enumerate(large_wccs):
+        macro_angle = 2 * math.pi * wcc_idx / n_large
+        wcc_ox = (macro_r * math.cos(macro_angle)) if n_large > 1 else 0.0
+        wcc_oy = (macro_r * math.sin(macro_angle)) if n_large > 1 else 0.0
+
+        # Communities in this WCC
+        wcc_comms: dict[int, list] = defaultdict(list)
+        for node in wcc_nodes:
+            wcc_comms[partition.get(node, 0)].append(node)
+
+        sorted_comms = sorted(wcc_comms.items(), key=lambda x: -len(x[1]))
+        n_wcc_comms = len(sorted_comms)
+        max_blob_r = max(0.6 * math.sqrt(len(m)) for _, m in sorted_comms)
+        # inner circle radius: enough that adjacent blobs don't overlap
+        inner_r = max(4.0, max_blob_r * math.sqrt(n_wcc_comms) * 1.5)
+
+        for comm_idx, (cid, members) in enumerate(sorted_comms):
+            comm_angle = 2 * math.pi * comm_idx / max(n_wcc_comms, 1)
+            cx = wcc_ox + inner_r * math.cos(comm_angle)
+            cy = wcc_oy + inner_r * math.sin(comm_angle)
+
+            subG = G.subgraph(members)
+            k_sub = 2.0 / math.sqrt(len(members) + 1)
+            sub_pos = nx.spring_layout(subG, weight="weight", seed=42,
+                                       k=k_sub, iterations=80)
+            scale = 0.6 * math.sqrt(len(members))
+            for node, p in sub_pos.items():
+                pos[node] = np.array([cx + p[0] * scale, cy + p[1] * scale])
+
+    # --- singletons on outer ring ---
+    n_singles = len(singleton_wccs)
+    if n_singles > 0:
+        inner_max_r = (
+            max(float(np.linalg.norm(p)) for p in pos.values()) if pos else 5.0
+        )
+        R_outer = inner_max_r + 4.0
+        for sg_idx, sg_nodes in enumerate(singleton_wccs):
+            node = next(iter(sg_nodes))
+            angle = 2 * math.pi * sg_idx / n_singles
+            pos[node] = np.array([R_outer * math.cos(angle), R_outer * math.sin(angle)])
+
+    return pos
+
+
 def render_spring_layout(
     G: nx.Graph,
     partition: dict[str, int],
     betweenness: dict[str, float],
     out_path: Path,
 ) -> None:
-    """Render spring layout coloured by Louvain community.
+    """Render community-aware layout coloured by Louvain community.
 
     Node size encodes betweenness centrality (bridges are visually prominent).
     Edge alpha encodes similarity weight.
@@ -367,10 +440,9 @@ def render_spring_layout(
 
     node_colors = [cmap(partition.get(n, 0) % 20) for n in G.nodes()]
     node_sizes = [300 + 4000 * betweenness.get(n, 0.0) for n in G.nodes()]
-    k_spring = 1.5 / math.sqrt(len(G.nodes()) + 1)
-    pos = nx.spring_layout(G, weight="weight", seed=42, k=k_spring)
+    pos = community_aware_layout(G, partition)
 
-    fig, ax = plt.subplots(figsize=(20, 15))
+    fig, ax = plt.subplots(figsize=(28, 22))
     ax.set_facecolor("#1a1a2e")
     fig.patch.set_facecolor("#1a1a2e")
 
@@ -384,7 +456,7 @@ def render_spring_layout(
     nx.draw_networkx_nodes(
         G, pos, node_color=node_colors, node_size=node_sizes, alpha=0.88, ax=ax,
     )
-    nx.draw_networkx_labels(G, pos, font_size=6, font_color="white", ax=ax)
+    nx.draw_networkx_labels(G, pos, font_size=7, font_color="white", ax=ax)
 
     patches = [
         mpatches.Patch(color=cmap(cid % 20), label=f"Community {cid}")
@@ -563,6 +635,11 @@ def run_graph_analysis(
     if render:
         render_spring_layout(G, partition, betweenness, out_dir / "graph.png")
 
+    print("Computing singleton community affinities...")
+    singleton_affinities = compute_singleton_affinities(names, cosine_full, partition, tau)
+    n_xref = sum(1 for v in singleton_affinities.values() if v["nearest_community"] >= 0)
+    print(f"  {len(singleton_affinities)} singletons  {n_xref} have affine community (cross-ref candidates)")
+
     report = {
         "n_skills": N,
         "tau": round(tau, 6),
@@ -600,6 +677,7 @@ def run_graph_analysis(
         "dwpc_top15_pairs": [
             {"score": round(v, 6), "a": a, "b": b} for v, a, b in top_dwpc[:15]
         ],
+        "singleton_affinities": singleton_affinities,
     }
 
     report_path = out_dir / "graph_report.json"
@@ -615,6 +693,66 @@ def run_graph_analysis(
             print(f"  [observer] LLM call failed: {exc}")
             print("  Re-run with Ollama running, or set LLM_BASE_URL to another endpoint.")
     return report
+
+
+# ---------------------------------------------------------------------------
+# Singleton community affinity
+# ---------------------------------------------------------------------------
+
+def compute_singleton_affinities(
+    names: list[str],
+    cosine: np.ndarray,
+    partition: dict[str, int],
+    tau: float,
+) -> dict[str, dict]:
+    """For each singleton community, find its nearest multi-member community by avg cosine.
+
+    Uses the full (pre-threshold) cosine matrix so below-tau signal is visible.
+
+    Require:  cosine is (N,N); partition covers all names; tau > 0
+    Guarantee: returns {skill: {nearest_community, avg_cosine, soft_threshold, nearest_members}}
+               nearest_community == -1 when best score is below soft_threshold
+    Maintain:  singleton-to-singleton affinities are not computed
+    """
+    from collections import defaultdict
+
+    name_to_idx = {n: i for i, n in enumerate(names)}
+    groups: dict[int, list[str]] = defaultdict(list)
+    for skill, cid in partition.items():
+        groups[cid].append(skill)
+
+    soft_threshold = round(tau * 0.90, 6)
+    affinities: dict[str, dict] = {}
+
+    for cid, members in groups.items():
+        if len(members) != 1:
+            continue
+        singleton = members[0]
+        si = name_to_idx.get(singleton)
+        if si is None:
+            continue
+
+        best_cid, best_score, best_members = -1, -1.0, []
+        for other_cid, other_members in groups.items():
+            if other_cid == cid or len(other_members) < 2:
+                continue
+            idxs = [name_to_idx[m] for m in other_members if m in name_to_idx]
+            if not idxs:
+                continue
+            avg = float(np.mean([cosine[si, j] for j in idxs]))
+            if avg > best_score:
+                best_score = avg
+                best_cid = other_cid
+                best_members = sorted(other_members)
+
+        affinities[singleton] = {
+            "nearest_community": best_cid if best_score >= soft_threshold else -1,
+            "avg_cosine": round(best_score, 4),
+            "soft_threshold": soft_threshold,
+            "nearest_members": best_members[:5],
+        }
+
+    return affinities
 
 
 # ---------------------------------------------------------------------------
@@ -721,11 +859,26 @@ def observer_disposition(report: dict, out_dir: Path) -> str:
 
         # rule-based disposition
         if size == 1:
-            disp = "INSPECT" if has_bridge else "KEEP"
-            rationale = (
-                f"singleton; bridge skill {bridge_members[0]}" if has_bridge
-                else f"singleton; {members[0]} is isolated, no action needed"
-            )
+            affinity = report.get("singleton_affinities", {}).get(members[0], {})
+            nearest_cid = affinity.get("nearest_community", -1)
+            avg_cos = affinity.get("avg_cosine", 0.0)
+            soft_tau = affinity.get("soft_threshold", 0.0)
+            nearest_members = affinity.get("nearest_members", [])
+
+            if nearest_cid >= 0 and nearest_members:
+                disp = "CROSS-REF"
+                rationale = (
+                    f"singleton but affine to community {nearest_cid} "
+                    f"(avg_cos={avg_cos:.3f} >= soft_tau={soft_tau:.3f}); "
+                    f"suggest cross-ref with: {', '.join(nearest_members)}"
+                )
+            else:
+                disp = "INSPECT" if has_bridge else "KEEP"
+                rationale = (
+                    f"singleton; bridge skill {bridge_members[0]}" if has_bridge
+                    else f"singleton; {members[0]} truly isolated "
+                         f"(best_cos={avg_cos:.3f} < soft_tau={soft_tau:.3f})"
+                )
             disposition_lines.append(f"Community {cid}: {disp} - {rationale}")
             continue
 
