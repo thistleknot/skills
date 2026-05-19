@@ -36,6 +36,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+from scipy import stats as scipy_stats
 from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score, silhouette_score
 from sklearn.preprocessing import normalize
@@ -48,9 +49,6 @@ except ImportError:
     _LOUVAIN_BACKEND = "networkx"
 
 JACCARD_TAU = 0.30   # consolidation semantic floor (Jaccard domain)
-# Graph analysis uses a higher adaptive threshold in the cosine domain because
-# cosine similarities are uniformly higher than fused Jaccard+cosine scores.
-# Default is adaptive (85th percentile); pass --threshold to override.
 
 
 # ---------------------------------------------------------------------------
@@ -90,12 +88,81 @@ def load_embeddings(db_path: Path) -> tuple[list[str], np.ndarray]:
 # Graph construction
 # ---------------------------------------------------------------------------
 
+def significance_tau(
+    cosine: np.ndarray,
+    alpha: float = 0.05,
+    n_dim: int | None = None,
+    correction: str = "bonferroni",
+) -> tuple[float, float, int]:
+    """Threshold: pairs whose cosine is statistically significantly above the corpus mean.
+
+    Dense semantic corpora (all skills share domain vocabulary) have a non-zero
+    background similarity floor.  A raw Pearson t-test on n=768 embedding dims makes
+    almost every pair significant -- useless for graph pruning.
+
+    Instead, model the null as the empirical background distribution of pairwise
+    cosines and test whether each pair is *above average* (one-tailed z-test):
+
+        z_ij = (cos_ij - mu) / sigma
+        H0:  z_ij ~ N(0, 1)
+        H1:  z_ij > 0  (pair is more similar than background)
+
+    Apply Bonferroni or BH/FDR across all N*(N-1)/2 pairs.  The returned tau is the
+    cosine value at the critical z -- pairs above tau are significantly above background.
+
+    Rationale:  cosine IS Pearson r for unit-norm vectors.  But "is r different from 0?"
+    is not the right question when all skills have r>0.15 with each other.  "Is this pair
+    more correlated than typical?" is the semantically correct question, and the
+    empirical z-score tests exactly that.
+
+    Bonferroni (default): alpha_adj = alpha / n_pairs  ->  conservative, fewer edges
+    BH (fdr_bh):          Benjamini-Hochberg FDR        ->  more liberal, more edges
+
+    Require:  cosine is symmetric (N,N); off-diagonal entries in (0,1) for unit vectors
+    Guarantee: returns (r_threshold, effective_alpha, n_significant_pairs)
+    Maintain:  diagonal is excluded; n_dim kept for API compatibility but unused
+    """
+    N = cosine.shape[0]
+    n_pairs = N * (N - 1) // 2
+
+    r_vals = cosine[np.triu_indices(N, k=1)]
+
+    mu = float(r_vals.mean())
+    sigma = float(r_vals.std())
+    if sigma < 1e-12:
+        return float(r_vals.mean()), float(alpha), 0
+
+    z_vals = (r_vals - mu) / sigma
+    p_vals = scipy_stats.norm.sf(z_vals)  # one-tailed: P(Z > z)
+
+    if correction == "bonferroni":
+        alpha_adj = alpha / n_pairs
+        sig_mask = p_vals <= alpha_adj
+    else:
+        sorted_idx = np.argsort(p_vals)
+        sorted_p = p_vals[sorted_idx]
+        thresholds = alpha * np.arange(1, n_pairs + 1) / n_pairs
+        bh_mask = sorted_p <= thresholds
+        if bh_mask.any():
+            cutoff = int(np.where(bh_mask)[0].max())
+            alpha_adj = float(sorted_p[cutoff])
+        else:
+            alpha_adj = 0.0
+        sig_mask = p_vals <= alpha_adj
+
+    if sig_mask.any():
+        r_threshold = float(np.min(r_vals[sig_mask]))
+    else:
+        r_threshold = float(np.percentile(r_vals, 85.0))
+
+    return r_threshold, float(alpha_adj), int(sig_mask.sum())
+
+
 def adaptive_tau(cosine: np.ndarray, percentile: float = 85.0) -> float:
-    """Compute a data-driven threshold at the given percentile of all off-diagonal cosines.
+    """Fallback: percentile-based threshold when significance is not appropriate.
 
     Require:  cosine is symmetric (N,N); percentile in (0, 100)
-    Guarantee: returns the Nth percentile value, clamped to [0.5, 0.99]
-    Maintain:  ignores diagonal (self-similarity = 1.0)
+    Guarantee: returns Nth percentile of off-diagonal cosines, clamped to [0.5, 0.99]
     """
     N = cosine.shape[0]
     off_diag = [float(cosine[i, j]) for i in range(N) for j in range(i + 1, N)]
@@ -394,32 +461,53 @@ def run_graph_analysis(
     tau: float | None = None,
     out_dir: Path | None = None,
     render: bool = True,
+    threshold_method: str = "significance",
+    alpha: float = 0.05,
+    sig_correction: str = "bonferroni",
 ) -> dict:
     """Full analysis pipeline.
 
     Require:  db_path contains skill_derivations with embedding_json;
-              numpy, networkx, sklearn, matplotlib available
+              numpy, networkx, sklearn, scipy, matplotlib available
     Guarantee: returns report dict; writes graph_report.json (+ graph.png if render)
     Maintain:  .checkpoint.db is not modified
     Assert:    N >= 3 skills with embeddings
 
-    tau: edge weight threshold in cosine domain; if None, auto-selected at 85th
-         percentile of all pairwise cosine scores (yields a sparse, interpretable graph).
-         Pass an explicit value if you need a specific density.
+    tau:              explicit threshold (overrides threshold_method when provided)
+    threshold_method: 'significance' (default) — Pearson r t-test, Bonferroni/BH corrected
+                      'percentile'   — 85th pct of pairwise cosines (fallback)
+    alpha:            significance level for threshold_method='significance' (default 0.05)
+    sig_correction:   'bonferroni' (default, conservative) or 'fdr_bh' (Benjamini-Hochberg)
     """
     out_dir = out_dir or db_path.parent
 
     print("Loading embeddings from checkpoint DB...")
     names, E = load_embeddings(db_path)
     N = len(names)
-    print(f"  {N} skills with embeddings")
+    n_dim = E.shape[1]
+    print(f"  {N} skills  embedding_dim={n_dim}")
     assert N >= 3, f"Need >= 3 skills with embeddings, found {N}"
 
-    # Adaptive threshold: compute cosine matrix first, then derive tau
     cosine_full: np.ndarray = E @ E.T
-    if tau is None:
+    tau_method_used = threshold_method
+
+    if tau is not None:
+        tau_method_used = "explicit"
+        print(f"  Explicit tau = {tau:.4f}")
+    elif threshold_method == "significance":
+        tau, alpha_adj, n_sig = significance_tau(cosine_full, alpha=alpha,
+                                                  n_dim=n_dim, correction=sig_correction)
+        n_pairs = N * (N - 1) // 2
+        if n_sig == 0:
+            tau_method_used = "significance->percentile_fallback"
+            print(f"  Significance tau: {sig_correction} too strict (0/{n_pairs} pairs survived)")
+            print(f"    -> fallback to 85th-pct  tau = {tau:.4f}")
+        else:
+            print(f"  Significance tau ({sig_correction}, alpha={alpha}) = {tau:.4f}")
+            print(f"    effective alpha = {alpha_adj:.2e}  significant pairs = {n_sig}/{n_pairs}")
+    else:
         tau = adaptive_tau(cosine_full, percentile=85.0)
-        print(f"  Adaptive tau (85th pct of pairwise cosines) = {tau:.4f}")
+        print(f"  Percentile tau (85th pct) = {tau:.4f}")
 
     print(f"Building cosine graph (tau={tau:.4f})...")
     G, cosine = build_graph(names, E, tau)
@@ -473,6 +561,7 @@ def run_graph_analysis(
     report = {
         "n_skills": N,
         "tau": round(tau, 6),
+        "threshold_method": tau_method_used,
         "louvain_backend": _LOUVAIN_BACKEND,
         "graph": {
             "nodes": G.number_of_nodes(),
@@ -522,15 +611,47 @@ def run_graph_analysis(
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Skill library graph analysis")
+    parser = argparse.ArgumentParser(
+        description="Skill library graph analysis",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+threshold methods:
+  significance  Pearson r t-test, Bonferroni or BH-FDR corrected across all pairs.
+                tau = min(r) that survives the correction. The "n" in the t-test is
+                the embedding dimension (nomic-embed-text: 768). Bonferroni is the
+                default (conservative); use --correction fdr_bh for more edges.
+  percentile    85th percentile of all pairwise cosines (simpler fallback).
+
+examples:
+  python graph_analysis.py                        # significance, bonferroni, default alpha
+  python graph_analysis.py --alpha 0.01           # stricter significance
+  python graph_analysis.py --correction fdr_bh    # BH-FDR (more edges)
+  python graph_analysis.py --threshold 0.7        # manual tau override
+  python graph_analysis.py --method percentile    # 85th-pct fallback
+""",
+    )
     parser.add_argument(
         "--db", type=Path,
         default=Path(__file__).resolve().parent / ".checkpoint.db",
-        help="consolidation checkpoint DB (default: consolidation/.checkpoint.db)",
+        help="consolidation checkpoint DB",
     )
     parser.add_argument(
         "--threshold", type=float, default=None,
-        help="edge weight threshold in cosine domain (default: auto at 85th pct of pairwise cosines)",
+        help="explicit edge weight threshold; overrides --method",
+    )
+    parser.add_argument(
+        "--method", dest="threshold_method", default="significance",
+        choices=["significance", "percentile"],
+        help="threshold selection method (default: significance)",
+    )
+    parser.add_argument(
+        "--alpha", type=float, default=0.05,
+        help="significance level for --method significance (default: 0.05)",
+    )
+    parser.add_argument(
+        "--correction", dest="sig_correction", default="bonferroni",
+        choices=["bonferroni", "fdr_bh"],
+        help="multiple-testing correction (default: bonferroni)",
     )
     parser.add_argument(
         "--out", type=Path,
@@ -545,6 +666,9 @@ def main() -> None:
         tau=args.threshold,
         out_dir=args.out,
         render=not args.no_plot,
+        threshold_method=args.threshold_method,
+        alpha=args.alpha,
+        sig_correction=args.sig_correction,
     )
 
 
