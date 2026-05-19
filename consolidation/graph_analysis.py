@@ -484,7 +484,7 @@ def run_graph_analysis(
     sig_correction:   'bonferroni' (default, conservative) or 'fdr_bh' (Benjamini-Hochberg)
     observe:          if True, call observer LLM for community disposition after analysis
     """
-    out_dir = out_dir or db_path.parent
+    out_dir = out_dir or db_path.parent.parent
 
     print("Loading embeddings from checkpoint DB...")
     names, E = load_embeddings(db_path)
@@ -851,8 +851,9 @@ examples:
     )
     parser.add_argument(
         "--out", type=Path,
-        default=Path(__file__).resolve().parent,
-        help="output directory for graph_report.json and graph.png",
+        default=Path(__file__).resolve().parent.parent,
+        help="output directory for graph_report.json, graph.png, graph_disposition.txt "
+             "(default: repo root, one level above consolidation/)",
     )
     parser.add_argument("--no-plot", action="store_true", help="skip spring layout rendering")
     parser.add_argument(

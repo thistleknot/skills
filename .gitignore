@@ -23,6 +23,11 @@ test_*.py  # Test files are not versioned
 # Todo state (local, not versioned)
 .todo/
 
+# Corpus-specific graph analysis runtime outputs (not part of the skill definition)
+graph.png
+graph_report.json
+graph_disposition.txt
+
 # OS artifacts
 .DS_Store
 Thumbs.db
