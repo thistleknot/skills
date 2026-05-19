@@ -21,6 +21,7 @@ Assert:    at least 3 skills with embeddings before analysis begins
 import argparse
 import json
 import math
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -441,10 +442,10 @@ COMMUNITIES (sorted by size desc):""")
     print(f"""
 DISPOSITION TASK  (optionally verify against graph.png spring layout):
 For each community, decide:
-  CONSOLIDATE  — high density + low conductance  (redundant → merge/migrate)
-  CROSS-REF    — moderate density                (related → See Also links)
-  KEEP         — low density or high conductance (genuinely separate)
-  INSPECT      — bridge skill (high betweenness) — may be cross-cutting or misclassified
+  CONSOLIDATE  - high density + low conductance  (redundant -> merge/migrate)
+  CROSS-REF    - moderate density                (related -> See Also links)
+  KEEP         - low density or high conductance (genuinely separate)
+  INSPECT      - bridge skill (high betweenness) - may be cross-cutting or misclassified
 
 OUTPUT FORMAT:
   Community <N>: [CONSOLIDATE|CROSS-REF|KEEP|INSPECT]
@@ -464,20 +465,24 @@ def run_graph_analysis(
     threshold_method: str = "significance",
     alpha: float = 0.05,
     sig_correction: str = "bonferroni",
+    observe: bool = False,
 ) -> dict:
     """Full analysis pipeline.
 
     Require:  db_path contains skill_derivations with embedding_json;
               numpy, networkx, sklearn, scipy, matplotlib available
-    Guarantee: returns report dict; writes graph_report.json (+ graph.png if render)
+    Guarantee: returns report dict; writes graph_report.json (+ graph.png if render,
+               + graph_disposition.txt if observe)
     Maintain:  .checkpoint.db is not modified
     Assert:    N >= 3 skills with embeddings
 
     tau:              explicit threshold (overrides threshold_method when provided)
-    threshold_method: 'significance' (default) — Pearson r t-test, Bonferroni/BH corrected
-                      'percentile'   — 85th pct of pairwise cosines (fallback)
+    threshold_method: 'significance' (default) — empirical z-score above background,
+                      Bonferroni/BH corrected; falls back to 85th-pct if too strict
+                      'percentile'   — 85th pct of pairwise cosines (explicit fallback)
     alpha:            significance level for threshold_method='significance' (default 0.05)
     sig_correction:   'bonferroni' (default, conservative) or 'fdr_bh' (Benjamini-Hochberg)
+    observe:          if True, call observer LLM for community disposition after analysis
     """
     out_dir = out_dir or db_path.parent
 
@@ -603,7 +608,197 @@ def run_graph_analysis(
     print(f"Report saved -> {report_path}")
 
     print_observer_prompt(report)
+    if observe:
+        try:
+            observer_disposition(report, out_dir)
+        except RuntimeError as exc:
+            print(f"  [observer] LLM call failed: {exc}")
+            print("  Re-run with Ollama running, or set LLM_BASE_URL to another endpoint.")
     return report
+
+
+# ---------------------------------------------------------------------------
+# Observer LLM disposition
+# ---------------------------------------------------------------------------
+
+def _call_llm_observer(prompt: str, max_tokens: int = 1200) -> str:
+    """Call local Ollama LLM for observer disposition. Returns raw text.
+
+    Require:  Ollama running at LLM_BASE_URL (default http://localhost:11434/v1)
+    Guarantee: returns non-empty text after <think> stripping
+    Maintain:  falls back through model list; raises RuntimeError if all fail
+    """
+    import re as _re
+    import shutil
+    import subprocess
+
+    base_url = os.environ.get("LLM_BASE_URL", "http://localhost:11434/v1")
+    api_key = os.environ.get("LLM_API_KEY", "ollama")
+    env_model = os.environ.get("LLM_MODEL", "qwen3.5:0.8b")
+    models = list(dict.fromkeys(m for m in [env_model, "qwen2.5-coder:1.5b"] if m))
+
+    endpoint = f"{base_url.rstrip('/')}/chat/completions"
+    curl_bin = shutil.which("curl.exe") or shutil.which("curl")
+    if not curl_bin:
+        raise RuntimeError("curl is required for local LLM calls")
+
+    last_err: Exception | None = None
+    for model in models:
+        payload = json.dumps({
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.0,
+            "max_tokens": max_tokens,
+        })
+        try:
+            result = subprocess.run(
+                [curl_bin, "-sS", endpoint,
+                 "-H", "Content-Type: application/json",
+                 "-H", f"Authorization: Bearer {api_key}",
+                 "--data-binary", "@-"],
+                input=payload.encode(),
+                capture_output=True,
+                timeout=120,
+            )
+        except subprocess.TimeoutExpired as exc:
+            last_err = exc
+            continue
+        if result.returncode != 0:
+            last_err = RuntimeError(result.stderr.decode(errors="replace"))
+            continue
+        try:
+            data = json.loads(result.stdout)
+            content = data["choices"][0]["message"]["content"].strip()
+            if not content:
+                last_err = RuntimeError(f"model {model} returned empty content")
+                continue
+            content = _re.sub(r"<think>.*?</think>", "", content, flags=_re.DOTALL).strip()
+            if content:
+                return content
+            last_err = RuntimeError(f"model {model} content empty after think-strip")
+        except (KeyError, json.JSONDecodeError) as exc:
+            last_err = exc
+
+    raise last_err or RuntimeError("No LLM response from observer models")
+
+
+def observer_disposition(report: dict, out_dir: Path) -> str:
+    """Run the observer LLM agent on communities; save + return disposition text.
+
+    Require:  report contains louvain.labels, communities, betweenness_top10
+    Guarantee: writes graph_disposition.txt; returns raw disposition text
+    Maintain:  does not modify report dict or any other output file
+
+    Strategy: singletons and rule-deterministic cases are resolved in Python.
+    Large communities (size >= 4) are sent to the LLM one at a time so the
+    0.8b model can focus on a single community's member names.
+    """
+    from collections import defaultdict
+
+    partition: dict[str, int] = report.get("louvain", {}).get("labels", {})
+    communities_metrics: dict[str, dict] = report.get("communities", {})
+    bridge_set = {
+        entry["skill"]
+        for entry in report.get("betweenness_top10", [])[:7]
+        if entry.get("score", 0) > 0
+    }
+
+    # group members by community id
+    groups: dict[int, list[str]] = defaultdict(list)
+    for skill, cid in partition.items():
+        groups[cid].append(skill)
+
+    disposition_lines: list[str] = []
+
+    for cid in sorted(groups):
+        members = sorted(groups[cid])
+        m = communities_metrics.get(str(cid), {})
+        density = m.get("density", 0.0)
+        conductance = m.get("conductance", 0.0)
+        size = len(members)
+        has_bridge = any(s in bridge_set for s in members)
+        bridge_members = [s for s in members if s in bridge_set]
+
+        # rule-based disposition
+        if size == 1:
+            disp = "INSPECT" if has_bridge else "KEEP"
+            rationale = (
+                f"singleton; bridge skill {bridge_members[0]}" if has_bridge
+                else f"singleton; {members[0]} is isolated, no action needed"
+            )
+            disposition_lines.append(f"Community {cid}: {disp} - {rationale}")
+            continue
+
+        if has_bridge:
+            rule_disp = "INSPECT"
+        elif density > 0.8 and conductance < 0.5:
+            rule_disp = "CONSOLIDATE"
+        elif density >= 0.3:
+            rule_disp = "CROSS-REF"
+        else:
+            rule_disp = "KEEP"
+
+        # for small groups (2-3), rule is sufficient
+        if size < 4:
+            b_note = f"; bridge: {', '.join(bridge_members)}" if bridge_members else ""
+            disposition_lines.append(
+                f"Community {cid}: {rule_disp} - size={size}, "
+                f"density={density:.2f}, conductance={conductance:.2f}{b_note}; "
+                f"members: {', '.join(members)}"
+            )
+            continue
+
+        # large community: ask LLM for name-aware rationale
+        b_note = (
+            f" [bridge skills present: {', '.join(bridge_members)}]"
+            if bridge_members else ""
+        )
+        llm_prompt = (
+            f"Skill library community analysis.\n"
+            f"Community {cid}: size={size}, density={density:.3f}, "
+            f"conductance={conductance:.3f}{b_note}\n"
+            f"Members: {', '.join(members)}\n\n"
+            f"Rule-based suggestion: {rule_disp}\n\n"
+            f"Output exactly ONE line:\n"
+            f"Community {cid}: [CONSOLIDATE|CROSS-REF|KEEP|INSPECT] - <one sentence why>\n"
+            f"Confirm or override the suggestion based on whether the member names "
+            f"represent genuinely overlapping skill domains."
+        )
+        try:
+            raw = _call_llm_observer(llm_prompt, max_tokens=120)
+            # grab the first line that starts with "Community N:" and strip format brackets
+            for line in raw.splitlines():
+                stripped = line.strip()
+                if stripped.startswith(f"Community {cid}"):
+                    # remove any [WORD] bracket wrapping the disposition
+                    import re as _re
+                    stripped = _re.sub(r"\[([A-Z\-]+)\]", r"\1", stripped)
+                    disposition_lines.append(stripped)
+                    break
+            else:
+                # fallback: use rule if model didn't produce expected format
+                disposition_lines.append(
+                    f"Community {cid}: {rule_disp} - (LLM did not produce expected format; "
+                    f"rule-based fallback) density={density:.2f}, conductance={conductance:.2f}"
+                )
+        except RuntimeError as exc:
+            disposition_lines.append(
+                f"Community {cid}: {rule_disp} - (LLM error: {exc}; rule-based fallback)"
+            )
+
+    output = "\n".join(disposition_lines)
+    # replace unicode dashes the model may echo
+    output = output.replace("\u2014", "-").replace("\u2013", "-")
+
+    out_path = out_dir / "graph_disposition.txt"
+    out_path.write_text(output, encoding="utf-8")
+    print(f"Disposition saved -> {out_path}")
+    print("\n" + "=" * 72)
+    print("OBSERVER DISPOSITION")
+    print("=" * 72)
+    print(output)
+    print("=" * 72)
+    return output
 
 
 # ---------------------------------------------------------------------------
@@ -628,6 +823,7 @@ examples:
   python graph_analysis.py --correction fdr_bh    # BH-FDR (more edges)
   python graph_analysis.py --threshold 0.7        # manual tau override
   python graph_analysis.py --method percentile    # 85th-pct fallback
+  python graph_analysis.py --observe              # run LLM observer disposition
 """,
     )
     parser.add_argument(
@@ -659,6 +855,10 @@ examples:
         help="output directory for graph_report.json and graph.png",
     )
     parser.add_argument("--no-plot", action="store_true", help="skip spring layout rendering")
+    parser.add_argument(
+        "--observe", action="store_true",
+        help="run observer LLM (qwen3.5:0.8b via Ollama) to emit community dispositions",
+    )
     args = parser.parse_args()
 
     run_graph_analysis(
@@ -669,6 +869,7 @@ examples:
         threshold_method=args.threshold_method,
         alpha=args.alpha,
         sig_correction=args.sig_correction,
+        observe=args.observe,
     )
 
 

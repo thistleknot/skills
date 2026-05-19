@@ -1,0 +1,19 @@
+Community 0: INSPECT - The member names do not represent genuinely overlapping skill domains, as they overlap significantly with each other.
+Community 1: KEEP - singleton; agentic-hyperparm is isolated, no action needed
+Community 2: KEEP - singleton; rocky10-gnome-rdp is isolated, no action needed
+Community 3: INSPECT - The member names do not represent genuinely overlapping skill domains, as they overlap significantly with each other.
+Community 4: KEEP - The member names do not represent genuinely overlapping skill domains, as they all relate to various aspects of software development and knowledge management.
+Community 5: INSPECT - The member names do not represent genuinely overlapping skill domains, as they all relate to stratified quota sampling and cluster-quantized kNN.
+Community 6: KEEP - singleton; consolidation is isolated, no action needed
+Community 7: KEEP - singleton; documentation is isolated, no action needed
+Community 8: KEEP - singleton; fabro-create-workflow is isolated, no action needed
+Community 9: KEEP - singleton; headless-browser-verification is isolated, no action needed
+Community 10: KEEP - singleton; kg_ontology is isolated, no action needed
+Community 11: KEEP - singleton; openspec-workflow is isolated, no action needed
+Community 12: KEEP - The member names do not represent genuinely overlapping skill domains, as they all relate to different aspects of software development and machine learning tasks.
+Community 13: KEEP - singleton; representation-pipeline is isolated, no action needed
+Community 14: KEEP - singleton; skill-sync is isolated, no action needed
+Community 15: KEEP - singleton; architecture is isolated, no action needed
+Community 16: KEEP - singleton; context-compaction is isolated, no action needed
+Community 17: KEEP - singleton; generalization-theory is isolated, no action needed
+Community 18: KEEP - singleton; mergekit is isolated, no action needed
