@@ -25,6 +25,7 @@ test_*.py  # Test files are not versioned
 
 # Corpus-specific graph analysis runtime outputs (not part of the skill definition)
 graph.png
+graph_preview.png
 graph_report.json
 graph_disposition.txt
 
