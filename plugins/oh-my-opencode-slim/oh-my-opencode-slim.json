@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
-  "preset": "openrouter",
+  "preset": "openrouter-gemma-orchestrator",
   "presets": {
     "openrouter": {
       "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash" },
