@@ -115,6 +115,23 @@ Integrate results, decide if another specialist is needed, return final answer w
 - use when: task includes images, screenshots, scans, PDFs, wireframes, or diagrams
 - avoid when: source is plain text only
 
+## Delegation Mechanics — HOW to Route
+
+ALWAYS delegate using the `task` tool with an explicit `subagent_type`.
+NEVER use `subtask` — it routes back to the orchestrator itself and defeats routing.
+
+Correct form:
+```
+task(
+  description="<short label>",
+  subagent_type="<agent_name>",  # explorer | fixer | oracle | designer | debugger | handyman | librarian | summarizer | observer
+  prompt="<complete self-contained prompt>"
+)
+```
+
+The `subagent_type` values map directly to agent names above.
+If you use `subtask` you are calling yourself — that is always wrong.
+
 ## Prompt Construction Rules for Subagents
 
 Every delegated prompt must be self-contained. Include:
