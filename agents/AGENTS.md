@@ -1,3 +1,10 @@
+## Delegation Schema
+
+Every agent call MUST include these fields or it will throw `SchemaError`:
+- `description`: 3-5 word summary of the task (REQUIRED)
+- `agent`: the agent name to delegate to
+- `instructions`: full task details
+
 ## Agent Roster
 This project uses a multi-agent harness. Default entrypoint is @orchestrator.
 
