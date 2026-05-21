@@ -8,7 +8,7 @@
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
       "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
-      "librarian":    { "model": "openrouter/x-ai/grok-4.1-fast-reasoning" },
+      "librarian":    { "model": "openrouter/x-ai/grok-4.1-fast-reasoning", "variant": "extraction" },
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
     },
     "openrouter-gemma-orchestrator": {
@@ -17,7 +17,7 @@
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
       "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
-      "librarian":    { "model": "openrouter/x-ai/grok-4.1-fast-reasoning" },
+      "librarian":    { "model": "openrouter/x-ai/grok-4.1-fast-reasoning", "variant": "extraction" },
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
     }
   },
@@ -37,6 +37,12 @@
       "model": "openrouter/x-ai/grok-4.1-fast-reasoning",
       "prompt": "You are Summarizer. Data Parser: Zero-reasoning extraction of semantic triplets. Output JSON only: {triplets: [{subject, predicate, object, origin}]} where origin is 'observed' or 'inferred'. No prose.",
       "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets\n- Delegate when: need structured triplet extraction from text\n- Don't delegate when: general summarization needed"
+    },
+    "thinker": {
+      "model": "openrouter/deepseek/deepseek-v4-flash",
+      "variant": "heavy",
+      "prompt": "You are Thinker. Deep Reasoning: Extended chain-of-thought analysis for fundamentally stuck problems. Re-approach from first principles. Challenge all prior assumptions. Surface the root constraint, not just the symptom.",
+      "orchestratorPrompt": "@thinker\n- Role: Deep Reasoning — first-principles re-approach when all lighter models have failed\n- Delegate when: stuck after 2+ failed fix attempts, root cause unknown, need to invert the problem\n- Don't delegate when: any standard debug/implement path is still untried"
     }
   }
 }

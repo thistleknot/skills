@@ -547,7 +547,34 @@ foreach ($mirror in $Mirrors) {
     }
 }
 
-# ── Step 6: Remote guidance ───────────────────────────────────────────────────
+# ── Step 6: Deploy opencode config files ─────────────────────────────────────
+Write-Header "Deploying opencode config files"
+
+$opencodeConfig = "$env:USERPROFILE\.config\opencode"
+$deployMap = @(
+    @{ Src = "$Master\agents\opencode.json";                                          Dst = "$opencodeConfig\opencode.json" },
+    @{ Src = "$Master\plugins\oh-my-opencode-slim\oh-my-opencode-slim.json";          Dst = "$opencodeConfig\oh-my-opencode-slim.json" }
+)
+
+foreach ($item in $deployMap) {
+    if (-not (Test-Path $item.Src)) {
+        Write-Host "  [SKIP] Source not found: $($item.Src)" -ForegroundColor DarkGray
+        continue
+    }
+    $label = Split-Path $item.Src -Leaf
+    if ($DryRun) {
+        Write-Host "  [DRY] Would copy $label -> $($item.Dst)" -ForegroundColor DarkGray
+    } else {
+        $destDir = Split-Path $item.Dst -Parent
+        if (-not (Test-Path $destDir)) { New-Item $destDir -ItemType Directory -Force | Out-Null }
+        Copy-Item $item.Src $item.Dst -Force
+        Write-Host "  Deployed: $label -> $($item.Dst)" -ForegroundColor Green
+    }
+}
+Write-Host "  NOTE: orchestrator prompt (~/.config/opencode/oh-my-opencode-slim/orchestrator.md) is NOT auto-deployed" -ForegroundColor DarkGray
+Write-Host "        Gemma variant: agents\orchestrator.gemma.md  |  DeepSeek: orchestrator.deepseek.md (in opencode dir)" -ForegroundColor DarkGray
+
+# ── Step 7: Remote guidance ───────────────────────────────────────────────────
 Write-Header "Remote: $RemoteUser@${RemoteHost}:$RemotePath"
 
 Write-Host @"
