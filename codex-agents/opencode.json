@@ -173,7 +173,8 @@
         "glob": "deny",
         "list": "deny",
         "bash": "deny",
-        "edit": "deny"
+        "edit": "deny",
+        "subtask": "deny"
       }
     }
   },
