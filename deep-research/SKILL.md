@@ -26,6 +26,16 @@ This skill is **L0** in the three-tier knowledge retrieval cascade:
 
 Only trigger L0 when L2 and L1 have both failed to surface sufficient evidence.
 
+### Scientific / Academic Queries
+
+For queries about **research papers, arXiv, methods, benchmarks, or models**, compose with `arxiv-bridge` before falling back to generic web fetch:
+
+1. `arxiv-bridge` hits Semantic Scholar (primary) + arXiv Atom API (fallback) — no auth, no local corpus required
+2. Results feed into this skill's evidence graph as Tier-1 sources
+3. `arxiv-bridge` deduplicates against any local CSV corpus, but a local corpus is **not required** — the live APIs are sufficient
+
+Use `arxiv-bridge` as a pre-step: run it, collect `(arxiv_id, title, abstract)` tuples, then pass them into the web-fetch / evidence extraction phase of this skill as seed URLs.
+
 ### Store-back contract
 
 After a successful L0 research run:
