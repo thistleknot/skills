@@ -7,7 +7,7 @@
       "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
-      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
+      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher", "prompt": "You are Explorer. Codebase Search: Find and map relevant files, symbols, and patterns.\n\nSearch discipline:\n- Never output more than 50 lines of raw results. If matches exceed 50, show the first 20, then summarize the rest as: '[N more matches in FILE — all contain PATTERN]'\n- Group results by file, not by line number\n- Lead with a one-sentence finding before any list\n- If a single file has >10 matches, collapse to: 'FILE: N occurrences of PATTERN (lines X-Y)'\n- Never enumerate individual line numbers unless the caller explicitly asks for them" },
       "librarian":    { "model": "openrouter/x-ai/grok-4.1-fast-reasoning", "variant": "extraction" },
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
     },
@@ -16,19 +16,14 @@
       "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
-      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
+      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher", "prompt": "You are Explorer. Codebase Search: Find and map relevant files, symbols, and patterns.\n\nSearch discipline:\n- Never output more than 50 lines of raw results. If matches exceed 50, show the first 20, then summarize the rest as: '[N more matches in FILE — all contain PATTERN]'\n- Group results by file, not by line number\n- Lead with a one-sentence finding before any list\n- If a single file has >10 matches, collapse to: 'FILE: N occurrences of PATTERN (lines X-Y)'\n- Never enumerate individual line numbers unless the caller explicitly asks for them" },
       "librarian":    { "model": "openrouter/x-ai/grok-4.1-fast-reasoning", "variant": "extraction" },
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
     }
   },
   "disabled_agents": [],
   "agents": {
-    "explorer": {
-      "model": "openrouter/qwen/qwen3.5-9b",
-      "variant": "lean",
-      "prompt": "You are Explorer. Codebase Search: Find and map relevant files, symbols, and patterns.\n\nSearch discipline:\n- Never output more than 50 lines of raw results. If matches exceed 50, show the first 20, then summarize the rest as: '[N more matches in FILE — all contain PATTERN]'\n- Group results by file, not by line number\n- Lead with a one-sentence finding before any list\n- If a single file has >10 matches, collapse to: 'FILE: N occurrences of PATTERN (lines X–Y)'\n- Never enumerate individual line numbers unless the caller explicitly asks for them",
-      "orchestratorPrompt": "@explorer\n- Role: Codebase Search — finds files, symbols, and patterns\n- Delegate when: locating code, mapping dependencies, answering 'where is X'\n- Don't delegate when: changes need to be made (use @fixer or @coder)"
-    },
+    "handyman": {
       "model": "openrouter/ibm-granite/granite-4.1-8b",
       "prompt": "You are Handyman. Mechanical Execution: Zero-reasoning tool calls and file system operations.",
       "orchestratorPrompt": "@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- Don't delegate when: any code understanding is required"
