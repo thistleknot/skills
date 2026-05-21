@@ -340,6 +340,8 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Architecture, greenfield design, abstract class planning | `architecture` |
 | Bug present, error reproducing, fix confirmed broken | `debugging` |
 | Autonomous fix-run-retry without human input | `debugging` (self-repair section) |
+| Unknown format, config, or API schema — reverse-engineer from N examples | `schema-induction` |
+| Regression across instances (one works, one doesn't) — find the differentia | `schema-induction` |
 | Code generation, modification, or review | `code` |
 | Structuring context, files, prompts for LLM effectiveness | `code` (context-engineering section) |
 | README / changelog / release-note / fixes-applied updates | `documentation` |

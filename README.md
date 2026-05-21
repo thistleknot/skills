@@ -23,6 +23,7 @@ skills/
 │   │   └── design-patterns          # GoF / contract / relationship-shape companion to code
 │   ├── code-extraction              # extract source files + configs into copy-paste-ready markdown artifact (docling-style)
 │   ├── diagnostic-scanner           # language-aware compiler/linter scanning; errors/warnings grouped by severity
+│   ├── schema-induction             # cross-instance schema discovery via pairwise contrast (Aristotelian diairesis); constants vs variable dims; CRISP-DM data understanding analog
 │   ├── test-planner                 # coverage-aware test plan generation (green/yellow/red status); regression detection
 │   ├── doc-synthesizer              # AST-based documentation with Mermaid dependency/data-flow diagrams
 │   ├── debugging                    # error isolation, salience tiers, diagnostic strategy, self-repair loop
