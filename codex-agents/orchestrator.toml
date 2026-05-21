@@ -132,6 +132,11 @@ task(
 The `subagent_type` values map directly to agent names above.
 If you use `subtask` you are calling yourself — that is always wrong.
 
+CRITICAL: Writing "@explorer: ..." or "Route to @explorer" as TEXT is NOT routing.
+Only a `task()` tool call actually delegates work.
+After announcing your routing decision, you MUST immediately call `task()`.
+A response that only contains text describing the routing plan, without a `task()` call, has failed.
+
 ## Prompt Construction Rules for Subagents
 
 Every delegated prompt must be self-contained. Include:
