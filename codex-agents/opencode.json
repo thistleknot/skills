@@ -165,5 +165,17 @@
   "plugin": [
     "oh-my-opencode-slim"
   ],
+  "agent": {
+    "orchestrator": {
+      "permission": {
+        "read": "deny",
+        "grep": "deny",
+        "glob": "deny",
+        "list": "deny",
+        "bash": "deny",
+        "edit": "deny"
+      }
+    }
+  },
   "lsp": true
 }
