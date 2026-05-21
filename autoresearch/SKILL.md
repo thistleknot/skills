@@ -283,6 +283,64 @@ The key insight: the proposer learns from the change log. Each iteration's ratio
 
 ---
 
+## Retrieval Policy Self-Evolution (EvolveMem Target)
+
+Autoresearch applies to retrieval configuration, not just code or prompts. EvolveMem (SimpleMem v3.0) is structurally identical to this loop — targeted at retrieval policy:
+
+```
+Evaluate retrieval quality (RAGAS or equivalent scorer)
+    → Diagnose: which retrieval dimensions are underperforming?
+    → Propose: config changes (depth, view weights, fusion constants, intent-aware settings)
+    → Guard: verify no regression on prior benchmark set
+    → Repeat
+```
+
+**Merge target:** run against the existing RAGAS fitness function rather than as a separate system. The scorer is already defined; the proposer targets retrieval hyperparameters instead of code artifacts.
+
+Wire it into the standard `autoresearch` loop:
+
+```python
+scorer  = lambda cfg: ragas_eval(run_retrieval(cfg), ground_truth)
+propose = lambda state: llm_propose_retrieval_config(state.current_state, state.change_log[-5:])
+# loop: propose → measure → keep/discard → checkpoint
+```
+
+Key insight: EvolveMem discovers retrieval dimensions not in the original design — it is autoresearch applied reflexively to the memory/retrieval system itself. No new framework required.
+
+### Concrete scorer design — separate scorers for code vs retrieval
+
+Code and retrieval quality are incommensurable. Use two independent scorers; don't compose them into one number.
+
+```python
+# Code quality scorer
+code_scorer = lambda cfg: (
+    cfg["pass_rate"] * (1.0 - cfg["test_failure_rate"])
+)
+
+# Retrieval quality scorer (RAGAS composite)
+retrieval_scorer = lambda cfg: ragas_eval(
+    run_retrieval(cfg), ground_truth,
+    metrics=["faithfulness", "answer_relevancy", "context_precision"]
+)
+```
+
+Run EvolveMem as autoresearch on `retrieval_scorer` only. The code scorer stays on the code improvement loop. Mixing them creates a multi-objective problem that collapses signal.
+
+**Proposer target space for retrieval evolution:**
+
+```python
+RETRIEVAL_CONFIG_SPACE = {
+    "chunk_size":          [256, 512, 1024],
+    "top_k":               [5, 10, 20],
+    "bm25_weight":         (0.0, 1.0),      # complement = dense weight
+    "reranker_threshold":  (0.0, 1.0),
+    "recall_expand":       [True, False],   # memo.recall() upstream toggle
+    "intent_depth":        ["shallow", "deep"],
+}
+```
+
+---
+
 ## Evidence
 
 - Karpathy autoresearch pattern (llm-wiki / nanollm-wiki, 2024)

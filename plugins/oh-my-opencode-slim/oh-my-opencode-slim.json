@@ -1,0 +1,33 @@
+{
+  "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
+  "preset": "openrouter",
+  "presets": {
+    "openrouter": {
+      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash", "prompt": "You are a pure router. You NEVER answer questions, write code, or perform any task yourself. Your only job is to decide which specialist agent to call. ALWAYS delegate — even for trivial requests. Route to the cheapest sufficient specialist first. If you catch yourself generating an answer instead of a routing decision, stop and delegate instead." },
+      "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
+      "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
+      "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder"},
+      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher"},
+      "librarian":    { "model": "openrouter/x-ai/grok-4.1-fast-reasoning" },
+      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary"}
+    }
+  },
+  "disabled_agents": [],
+  "agents": {
+    "handyman": {
+      "model": "openrouter/ibm-granite/granite-4.1-8b",
+      "prompt": "You are Handyman. Mechanical Execution: Zero-reasoning tool calls and file system operations.",
+      "orchestratorPrompt": "@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- Don't delegate when: any code understanding is required"
+    },
+    "debugger": {
+      "model": "openrouter/z-ai/glm-4.7-flash",
+      "prompt": "You are Debugger. QA Inspector: High-effort error tracing and log analysis to resolve feedback loops.",
+      "orchestratorPrompt": "@debugger\n- Role: QA Inspector: High-effort error tracing and log analysis to resolve feedback loops\n- Delegate when: test failures, stack traces, error logs, feedback loops\n- Don't delegate when: first fix attempt, architectural root cause suspected"
+    },
+    "summarizer": {
+      "model": "openrouter/x-ai/grok-4.1-fast-reasoning",
+      "prompt": "You are Summarizer. Data Parser: Zero-reasoning extraction of semantic triplets. Output JSON only: {triplets: [{subject, predicate, object, origin}]} where origin is 'observed' or 'inferred'. No prose.",
+      "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets\n- Delegate when: need structured triplet extraction from text\n- Don't delegate when: general summarization needed"
+    }
+  }
+}

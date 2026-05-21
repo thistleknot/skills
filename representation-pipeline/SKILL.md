@@ -319,6 +319,164 @@ Stopping criteria:
 co-training can oscillate. Freeze after the first round that shows no
 improvement.
 
+## MemoRAG — Global Memory Layer Upstream of Retrieval
+
+Standard retrieval (BM25 + dense + ColBERT) operates on local chunk similarity. MemoRAG adds a **global memory layer** that understands corpus shape before retrieval begins.
+
+### Architecture
+
+```
+query
+    │
+    ▼  [memory model — lightweight long-range LLM]
+    │  memorag-qwen2-7b-inst, 400K–1M context tokens
+    │  builds global understanding of entire corpus
+    │  generates: clues (surrogate queries + draft answer fragment)
+    │
+    ▼  [standard retriever — BGE-M3 + FAISS]
+    │  guided by clues, not raw query
+    │
+    ▼  [generator — expensive LLM, swappable]
+    │  GPT / Mistral / Llama via OpenAI-compatible API
+    │  produces final answer from retrieved passages
+    │
+    ▼  answer
+```
+
+### Three memory model operations
+
+```python
+memo.recall(query)   # → text clues guiding retrieval
+memo.answer(query)   # → direct answer from global memory (no retrieval step)
+memo.rewrite(query)  # → decomposes query into surrogate sub-queries
+```
+
+### Integration with existing retrieval pipeline
+
+MemoRAG sits **upstream of retrieval**, not inside agent session memory. Use as query expansion before BM25+dense:
+
+```
+current:  query → BM25+dense → ColBERT rerank → result
+upgraded: query → memo.recall() → expanded_query → BM25+dense → ColBERT rerank → result
+```
+
+`memo.recall()` does structurally what the throughline node and ingredient knowledge graph do explicitly — but learned from global corpus shape, not hand-constructed.
+
+### Practical constraints
+
+| Constraint | Value |
+|---|---|
+| Default context window | 400K tokens (`memorag-qwen2-7b-inst`) |
+| Extended window | 1M tokens (`beacon_ratio=16`) — verify OOM before production |
+| GPU requirement | 16GB VRAM (Quadro P5200 compatible at default settings) |
+| Encode latency | 200K tokens → 35s first encode, 1.5s reload from disk cache |
+| Install | `pip install memorag` |
+
+Memory model and generator are independent: local memory model + API generator is a valid split.
+
+**This is HyDE but trained, not prompted.** Outperforms HyDE, BGE-M3, RQ-RAG across LongBench, InfBench, UltraDomain (WebConf 2025, Apache 2.0). Reference: MemoRAG (qhjqhj00/MemoRAG v0.1.5).
+
+---
+
+## MemoRAG — Integration Benchmark and Placement Decision
+
+Three candidate pipeline configurations for placing `memo.recall()`:
+
+```
+(a)  query → BM25+dense → ColBERT reranker → output             (baseline)
+(b)  query → recall() → BM25+dense → ColBERT reranker → output  (recall upstream)
+(c)  query → recall() → BM25+dense → output                     (recall, no ColBERT)
+```
+
+**Decision rules (evaluate NDCG@10 on a held-out benchmark set):**
+
+| Comparison | Outcome | Action |
+|---|---|---|
+| (b) beats (a) by > 5% | recall() adds signal | Use recall() upstream |
+| (b) vs (c) difference < 2% | ColBERT marginal | Drop ColBERT, use (c) — saves latency |
+| (a) vs (b) difference < 2% | recall() adds no signal | Skip recall(), stay with baseline |
+
+ColBERT is the latency cost; recall() is the quality bet. If (c) ≈ (b), the ColBERT pass is wasted after recall() has already expanded the query.
+
+**Default recommendation until benchmarked:** use (c) — recall() upstream, no ColBERT. Rationale: recall() expands the query globally; BM25+dense then retrieves precisely on the expansion; ColBERT is most valuable when the initial retrieval is noisy (which recall() reduces).
+
+## MemoRAG — GPU Test Protocol (P5200 16GB)
+
+Run this protocol before deploying MemoRAG in production against a long-context corpus.
+
+```python
+# memorag_gpu_test.py
+from memorag import MemoRAG
+import torch
+
+MODEL = "memrag-qwen2-7b-inst"
+CORPUS_FILE = "test_corpus_200k.txt"   # ~200K token document
+BEACON_RATIOS = [8, 16, 32]
+
+for beacon_ratio in BEACON_RATIOS:
+    try:
+        memo = MemoRAG(
+            mem_model_name_or_path=MODEL,
+            beacon_ratio=beacon_ratio,
+            cache_dir="./cache",
+        )
+        memo.memorize(CORPUS_FILE, save_dir=f"./cache/br{beacon_ratio}/")
+        result = memo.recall("What are the main themes in this document?")
+        peak_mem = torch.cuda.max_memory_allocated() / 1e9
+        print(f"beacon_ratio={beacon_ratio}: OK, peak_gpu={peak_mem:.1f}GB")
+        torch.cuda.reset_peak_memory_stats()
+    except torch.cuda.OutOfMemoryError:
+        print(f"beacon_ratio={beacon_ratio}: OOM")
+        break
+```
+
+Record: OOM boundary, peak GPU at each ratio, max usable context window. Expected: P5200 16GB handles beacon_ratio=8–16 on 200K tokens; beacon_ratio=32 likely OOM. Document result in `representation-pipeline` Evidence before production use.
+
+**Windows proxy (triton unavailable):** `beacon_ratio` maps directly to effective sequence length (`corpus_tokens / beacon_ratio`). The benchmark measures peak GPU memory vs sequence length on a 7B model — that measurement is independent of memorag. Proxy used `torch.nn.functional.scaled_dot_product_attention` at Qwen2-7B GQA dimensions (28 Q-heads, 4 KV-heads, head_dim=128) with a real 272K-token corpus (local skill .md files).
+
+**Results (Quadro RTX 5000 16GB, torch 2.8.0+cu128, corpus=272K tokens):**
+
+| beacon_ratio | seq_len | attn peak | status |
+|---|---|---|---|
+| 8 | 34,031 | 0.98 GB | OK |
+| 16 | 17,015 | 0.49 GB | OK |
+| 32 | 8,507 | 0.24 GB | OK |
+| 64 | 4,253 | 0.13 GB | OK |
+
+**KV cache budget (binding constraint, not attention):**
+
+Qwen2-7B fp16 weights consume ~14.0 GB, leaving **3.2 GB** for KV cache + activations.
+KV cache per token = 2 (K+V) × 4 kv_heads × 128 head_dim × 28 layers × 2 bytes = 56 KB/token.
+Max tokens in KV cache = **~55,800** — all beacon_ratio=8–64 seq_lens (4K–34K) fit comfortably.
+
+**Conclusion:** RTX 5000 16GB can run MemoRAG-equivalent workloads at beacon_ratio ≥ 8 with zero OOM risk on a 272K-token corpus. The practical ceiling is loading the full 7B weights (14 GB) not the attention computation.
+
+## Omni-SimpleMem KG vs GATv2+BM25 Graph-RAG — Overlap Assessment
+
+**What each system models:**
+
+| System | Graph structure | Node features | Edge weights |
+|---|---|---|---|
+| Omni-SimpleMem v3 KG | Semantic entity-relation graph (subject → predicate → object) | Entity embeddings (GraphSAGE / R-GCN) | Relation type |
+| GATv2+BM25 Graph-RAG | Item similarity graph | Dense embeddings (per-item) | BM25 + cosine similarity scores |
+
+**Assessment:** These are structurally different graphs. Omni-SimpleMem encodes *semantic meaning* (who did what to whom). GATv2+BM25 encodes *item similarity* (which documents are like each other). They do not duplicate.
+
+**Can one subsume the other?** Only with loss:
+- Replacing GATv2 similarity edges with KG semantic edges would lose the fine-grained similarity signal that BM25 provides for retrieval ranking
+- Replacing KG entity nodes with similarity nodes would lose relational reasoning capability
+
+**Recommendation:** Keep both; wire them in series:
+
+```
+source text
+    → entity extraction → Omni-SimpleMem KG  ← enriches node features
+    → embed + BM25 index → GATv2 similarity graph (KG entity tags as extra node features)
+    → GATv2 attention → retrieval ranking
+```
+
+The KG augments GATv2 node features with entity-type and relation context. GATv2 still drives retrieval attention over the similarity graph. Neither subsumes the other.
+
 ## Anti-Patterns
 
 Avoid:

@@ -195,6 +195,157 @@ stalled agents and re-assign tasks if an agent has been `IN_FLIGHT` for > `stall
 
 ---
 
+## Shared Graph Substrate (ActiveGraph Pattern)
+
+When agents need to share ephemeral world state without direct coupling, replace context-passing with an event-sourced reactive graph. Each agent mutation is an append-only event; the graph is the world; the event log is the audit trail.
+
+**The graph replaces context-passing, not orchestration.** The orchestrator still drives sequencing. Agents read their assignment from the graph and write their output back — they never call each other directly.
+
+### Integration pattern
+
+```
+orchestrator writes job + assignee → graph
+    → calls agent directly
+        → agent reads own assignment from graph
+        → agent writes output to graph, updates status
+            → orchestrator reads result, assigns next
+```
+
+Handoff = object status transition. No agent needs to know any other agent exists.
+
+### Agent contract
+
+```
+Require(graph object exists, status == expected)
+    → Execute
+    → Guarantee(output written to graph, status updated)
+    → no direct agent-to-agent calls
+```
+
+### Dispatcher routing table (orchestrator skill only)
+
+```python
+STATUS_ROUTER = {
+    "open":             "coder",
+    "review_ready":     "reviewer",
+    "revision_needed":  "coder",
+    "failed":           "debugger",
+    "approved":         None,  # check goal completion or decompose further
+}
+```
+
+The dispatcher lives in the orchestrator skill only — not distributed across agents.
+
+### Relation behaviors
+
+Logic on typed edges handles dependency unblocking without a coordinator. Implement as edge callbacks on typed edges, not as endpoint logic. Use for task dependency chains.
+
+### Fork-and-diff
+
+Branch at any historical event; diff against parent. LLM replay cache means shared prefix doesn't re-execute. Use for hypothesis testing in the coder→reviewer loop without manual revert.
+
+### Session graph vs. context graph
+
+| Layer | Scope | Lifecycle |
+|---|---|---|
+| **Session graph** (ActiveGraph) | Ephemeral world state for this run | Discarded at session end |
+| **Context graph** (`agentic_kg_memory`) | What was decided, corrected, learned — with provenance | Durable across sessions |
+
+Design the status state machine before writing any agent logic. Extract patterns from the session graph to the context graph at session end.
+
+**Stack:** Python 3.11+, SQLite default, Postgres optional (yoheinakajima/activegraph v1.0, MIT). Primitives: `Graph`, `Behavior`, `RelationBehavior`, `Patch`, `Frame`, `Fork`, `EventLog`.
+
+---
+
+## ActiveGraph Object Type and Status State Machine
+
+Five object types live in the dark factory harness. Each has a defined status set and valid transitions. The dispatcher routing table is derived directly from this schema.
+
+### Object types and status machines
+
+| Object | Status machine | Notes |
+|---|---|---|
+| **task** | `pending → assigned → in_progress → review_ready → done` | Any state → `blocked` or `failed` |
+| **file** | `unmodified → locked → modified → verified` | `modified → conflict` on concurrent write |
+| **test** | `unwritten → written → passing` | `written → failing` on run failure |
+| **patch** | `drafted → applied → verified` | `applied → reverted` on rollback |
+| **review** | `pending → in_progress → approved` | `in_progress → revision_needed` → back to coder |
+
+Status transitions are append-only EventLog entries. No object may skip a status — `in_progress → done` without `review_ready → approved` is illegal for tasks requiring review.
+
+### Role → object permission matrix
+
+| Role | Can write to |
+|---|---|
+| orchestrator | task (create, assign), all (read), conflict escalation resolution |
+| coder | file (lock, modify), patch (draft), task (claim `assigned`) |
+| reviewer | review (all), patch (approve/reject), task (`review_ready → approved` or `revision_needed`) |
+| debugger | task (claim `failed`/`blocked`), file (modify), test (write, run), patch (draft) |
+| librarian | read-only on all; annotate only — no status changes |
+
+### Dispatcher extension
+
+```python
+TASK_ROUTER = {
+    "pending":          "orchestrator",   # assigns to appropriate agent
+    "assigned":         None,             # awaits agent pickup
+    "in_progress":      None,             # agent working
+    "review_ready":     "reviewer",
+    "revision_needed":  "coder",
+    "failed":           "debugger",
+    "blocked":          "orchestrator",   # unblock or reassign decision
+    "done":             None,
+}
+
+FILE_ROUTER = {
+    "conflict":         "orchestrator",   # human-escalation path
+}
+```
+
+---
+
+## ActiveGraph Optimistic Concurrency Policy
+
+No pessimistic locks. Agents read-modify-write with version checks; conflicts are detected at write time.
+
+### Version field
+
+```python
+class GraphObject(BaseModel):
+    id: str
+    object_type: str        # task | file | test | patch | review
+    status: str
+    version: int = 0        # incremented on every accepted write
+    payload: dict
+```
+
+### Write protocol
+
+```python
+def apply_patch(obj_id, patch, expect_version):
+    current = graph.get(obj_id)
+    if current.version != expect_version:
+        raise ConflictError(current.version, expect_version)
+    graph.write(obj_id, patch, new_version=current.version + 1)
+```
+
+### Conflict resolution rules
+
+| Field type | Rule |
+|---|---|
+| status | Most-advanced wins: `failed` > `blocked` > `done` > `revision_needed` > `approved`; `failed` is never silently overwritten |
+| annotations / notes | Merge: concatenate, deduplicate by content hash |
+| content / payload | Reject — require orchestrator resolution; log `conflict_escalation` to EventLog |
+
+Last-write-wins is **banned** for status fields.
+
+### Retry strategy
+
+- Exponential backoff: base 200 ms, max 3 retries
+- After 3rd failure: emit `conflict_escalation` event to EventLog; orchestrator reads both candidate versions, applies resolution rules, writes at `version + 1`
+
+---
+
 ## Evidence
 
 - Claude Code multi-agent (Anthropic, 2025): orchestrator + parallel subagents; context window partitioning

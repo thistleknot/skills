@@ -1,0 +1,169 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "openrouter/deepseek/deepseek-v4-flash",
+  "provider": {
+    "openrouter": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://openrouter.ai/api/v1",
+        "apiKey": "{env:OPENROUTER_API_KEY}",
+        "timeout": 480000
+      },
+      "models": {
+        "google/gemma-4-26b-a4b-it": {
+          "name": "Gemma 4 26B Strategic",
+          "limit": {
+            "context": 262144,
+            "output": 32768
+          },
+          "variants": {
+            "strategic": {
+              "reasoning": {
+                "effort": "high",
+                "enabled": true
+              }
+            },
+            "fast": {
+              "reasoning": {
+                "effort": "minimal",
+                "exclude": true
+              }
+            }
+          }
+        },
+        "deepseek/deepseek-v4-flash": {
+          "name": "DeepSeek V4 Flash",
+          "limit": {
+            "context": 1048576,
+            "output": 393216
+          },
+          "variants": {
+            "heavy": {
+              "reasoning": {
+                "effort": "high",
+                "enabled": true
+              }
+            }
+          }
+        },
+        "qwen/qwen-3.6-35b-a3b": {
+          "name": "Qwen 3.6 35B",
+          "limit": {
+            "context": 262144,
+            "output": 66000
+          },
+          "variants": {
+            "tactical": {
+              "reasoning": {
+                "effort": "medium"
+              }
+            }
+          }
+        },
+        "qwen/qwen3.5-9b": {
+          "name": "Qwen 3.5 9B",
+          "limit": {
+            "context": 262144,
+            "output": 81920
+          },
+          "variants": {
+            "lean": {
+              "reasoning": {
+                "effort": "minimal"
+              }
+            }
+          }
+        },
+        "x-ai/grok-4.1-fast-reasoning": {
+          "name": "Grok 4.1 Fast",
+          "limit": {
+            "context": 2000000,
+            "output": 16000
+          },
+          "variants": {
+            "extraction": {
+              "reasoning": {
+                "effort": "minimal"
+              }
+            }
+          }
+        },
+        "z-ai/glm-4.7-flash": {
+          "name": "GLM 4.7 Flash",
+          "limit": {
+            "context": 2000000,
+            "output": 131072
+          },
+          "variants": {
+            "audit": {
+              "reasoning": {
+                "effort": "high",
+                "enabled": true
+              }
+            }
+          }
+        },
+        "ibm-granite/granite-4.1-8b": {
+          "name": "Granite 4.1 8B",
+          "limit": {
+            "context": 131072,
+            "output": 131072
+          },
+          "variants": {
+            "io": {
+              "reasoning": {
+                "effort": "minimal"
+              }
+            }
+          }
+        },
+        "qwen/qwen3-vl-30b-a3b-instruct": {
+          "name": "Qwen3 VL 30B",
+          "limit": {
+            "context": 262144,
+            "output": 32768
+          },
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "variants": {
+            "vision_audit": {
+              "reasoning": {
+                "effort": "medium",
+                "enabled": true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "mcp": {
+    "memory-bank": {
+      "type": "local",
+      "command": [
+        "python",
+        "C:\\Users\\user\\.copilot\\memory_mcp.py"
+      ],
+      "enabled": true
+    },
+    "todo": {
+      "type": "local",
+      "command": [
+        "python",
+        "C:\\Users\\user\\Documents\\dev\\skills\\todo\\todo_mcp.py"
+      ],
+      "enabled": true
+    }
+  },
+  "plugin": [
+    "oh-my-opencode-slim"
+  ],
+  "lsp": true
+}

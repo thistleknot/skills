@@ -1597,6 +1597,89 @@ highest-risk case.
 ADK context compression, sst/opencode built-in compaction all use the same
 deterministic + LLM hybrid pattern. This is settled consensus, not an experiment.
 
+## Session Lifecycle Hooks (SimpleMem-Cross Pattern)
+
+Session boundaries are the right integration surface for persistent memory. Wire these three hooks at the harness level — not inside individual agents:
+
+```python
+# At session start — inject prior context before goal decomposition
+orchestrator.start_session(goal: str) -> prior_context: str
+
+# During execution — each agent records its own actions inline
+agent.record_tool_use(tool_name: str, inputs: dict, output: str)
+agent.record_file_change(path: str, before_hash: str, after_hash: str)
+
+# At session end — extract observations, write to persistent memory
+orchestrator.stop_session() -> observations: list[str]
+# observations = decisions, discoveries, learnings extracted from the session
+```
+
+**Contract:**
+- `start_session` retrieves relevant prior context before the orchestrator decomposes the goal
+- `record_*` methods are called inline (synchronous, not async/background) immediately after each action
+- `stop_session` extracts per-session observations and consolidates them into persistent memory
+
+The consolidation worker (decay, merge, prune) runs separately on a schedule. **Write-time synthesis is synchronous; background maintenance is deferred.** This keeps memory topology compact immediately with no cleanup debt.
+
+Storage: LanceDB (vector + provenance), SQLite (sessions/events/observations). Every memory entry carries a provenance link to source evidence.
+
+Reference: SimpleMem-Cross (aiming-lab/SimpleMem v0.2.0, MIT, PyPI, MCP server available).
+
+## Symbolic Working Memory (Mermaid Canvas Pattern)
+
+For coding session state, encode task state as a symbolic Mermaid graph rather than prose context. Offload verbose tool logs to filesystem with `node_id` references. The agent operates on the compact graph (hundreds of tokens) and drills down on demand.
+
+```
+session state = Mermaid graph (node_id per task/file/test/failure)
+verbose logs  = refs/{node_id}.md  (filesystem, retrieved on demand)
+```
+
+Token budget: canvas constrained to ≤5% of context window. Benchmark result: 61.38% token reduction vs. prose baseline.
+
+Canvas node schema for coding sessions:
+
+- `task` — top-level objective
+- `subtask` — decomposed work item
+- `file` — artifact being mutated
+- `test` — test result (pass/fail)
+- `failure` — error class with `ref_id`
+- `patch` — proposed fix with `ref_id`
+
+Edge types: `depends_on`, `produces`, `tests`, `fixes`, `blocks`.
+
+### Formal Mermaid serialization spec
+
+Node IDs use `type:id` format. Status is a 1-char code appended to the label.
+
+**Status codes:** `p`=pending, `a`=assigned, `r`=running, `d`=done, `b`=blocked, `f`=failed, `v`=verified
+
+```mermaid
+graph TD
+    T:story-001["story-001 [r]"]
+    S:impl-auth["impl-auth [r]"]
+    S:write-tests["write-tests [p]"]
+    F:src/auth.py["src/auth.py"]
+    X:test_auth["test_auth [f]"]
+    E:err-001["TypeError: NoneType [ref:err-001.md]"]
+    P:patch-001["patch-001 [d]"]
+
+    T:story-001 -->|depends_on| S:impl-auth
+    T:story-001 -->|depends_on| S:write-tests
+    S:impl-auth -->|produces| F:src/auth.py
+    S:write-tests -->|tests| F:src/auth.py
+    X:test_auth -->|blocks| S:write-tests
+    E:err-001 -->|blocks| X:test_auth
+    P:patch-001 -->|fixes| E:err-001
+```
+
+**Serialization rules:**
+- Every node has a unique `type:id` — never bare IDs
+- Verbose tool logs externalized to `refs/{node_id}.md`; graph carries only the `ref_id` pointer
+- Canvas rebuild: parse EventLog → reconstruct current status per object → emit Mermaid
+- A 20-node graph with edges encodes to ~500 tokens — well under 5% of 128K context
+
+Reference concept: TencentDB-Agent-Memory L0–L3 pyramid (reference architecture only — TypeScript/Node, not an integration target).
+
 ## Applicability Envelope
 
 **Works well when:**

@@ -44,8 +44,8 @@ If the user's message includes an attached image, screenshot, diagram, wireframe
 ### 1. Explicit user override
 Honor explicit specialist targeting unless unsafe, impossible, or missing a required predecessor.
 
-### 2. Direct answer without delegation
-Answer directly only when: task is small, no specialist materially improves quality, no mutation required.
+### 2. No direct answers — always delegate
+NEVER answer directly. Regardless of task size or apparent simplicity, always route to the cheapest sufficient specialist. Your only permitted outputs are a routing decision, merged specialist results, or a clarifying question when a load-bearing ambiguity blocks routing. If you find yourself composing an answer, stop — route instead.
 
 ### 3. Discovery before action
 Route to explorer, librarian, or observer first when source is large, poorly structured, or visual.
@@ -70,7 +70,7 @@ Integrate results, decide if another specialist is needed, return final answer w
 
 ## Agent Capability Map
 
-### planner
+### oracle
 - high-effort planning, decomposition, architecture, checkpoint strategy
 - use when: task is large, ambiguous, multi-phase, or needs evaluator-optimizer loop
 - avoid when: task is trivial or already concretely specified
@@ -80,7 +80,7 @@ Integrate results, decide if another specialist is needed, return final answer w
 - use when: signatures, stubs, interfaces, or design structure needed before implementation
 - avoid when: no design ambiguity, simple direct implementation is enough
 
-### coder
+### fixer
 - concrete implementation, bounded code changes, file updates, pipeline assembly
 - use when: plan exists, task is concrete enough to build
 - avoid when: task is mostly research, planning, or audit
@@ -132,8 +132,8 @@ Good: "Target path/to/file.py. Implement X that does Y. Do not modify Z. Return 
 ## Chaining and Parallelization
 
 Sequential: use when later steps depend on earlier outputs.
-- planner -> designer -> coder -> debugger
-- explorer -> summarizer -> coder
+- oracle -> designer -> fixer -> debugger
+- explorer -> summarizer -> fixer
 - observer -> explorer -> summarizer
 
 Parallel: use only when tasks are independent.

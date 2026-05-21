@@ -942,6 +942,30 @@ Do not delete decayed memories. Instead:
 This is the semantic equivalent of moving something to a bottom drawer: deprioritized
 but recoverable.
 
+### Coding Session Decay Schedule (SimpleMem Concrete Parameters)
+
+Operationalizes the Ebbinghaus model above for coding session observations. Units are **sessions**, not wall time.
+
+| Memory granularity | Half-life (sessions) | Prune trigger |
+|---|---|---|
+| File-level action (`modified X`, `added Y`) | 3 | `read_count = 0` after 6 sessions |
+| Function / class decision | 7 | `read_count = 0` after 14 sessions |
+| Bug / error pattern | 5 | `read_count = 0` after 10 sessions (bugs recur; keep longer than file actions) |
+| Architectural decision | ∞ (no decay) | Manual prune only — never auto-expire |
+| Procedural workflow | ∞ (no decay) | Manual prune only |
+
+**Prune execution timing:** On session start, after memory is read — garbage-collect dormant entries whose `effective_q` fell below floor and whose `read_count` has been 0 for ≥ 2× half-life sessions.
+
+```python
+def prune_coding_memory(store, session_count):
+    for entry in store.list(status="dormant"):
+        age_sessions = session_count - entry.last_accessed_session
+        if age_sessions >= 2 * entry.half_life and entry.read_count == 0:
+            store.delete(entry.id)
+```
+
+Architectural and workflow entries are assigned `half_life = float('inf')` — they never age into the prune window.
+
 ## Triplet Layer
 
 The atom is still the semantic triplet `(S, P, O)` with provenance.
@@ -1746,6 +1770,59 @@ Avoid:
 - merging memories just because they mention the same entities
 - updating conclusions without preserving provenance
 - importing control-flow frameworks into the memory model
+
+## Three-View Indexing and Intent-Aware Retrieval (SimpleMem Pattern)
+
+Each atomic memory unit should be indexed across three independent representations:
+
+| View | Backend | Purpose |
+|---|---|---|
+| Dense | 1024-d vector (LanceDB or Chroma) | Semantic similarity |
+| Sparse | BM25 inverted index | Lexical and keyword match |
+| Symbolic | Metadata tags (entity type, timestamp, provenance) | Structured filter |
+
+Retrieve in parallel across all three views and fuse results with RRF. Fixed top-k without intent-awareness degrades under query diversity.
+
+### Write-time synthesis
+
+Consolidate related fragments on write, not in a background job:
+1. Resolve coreferences and anchor timestamps to absolute values before storage
+2. Run online semantic synthesis: check for related fragments (Jaccard or cosine > τ) and consolidate on-the-fly
+3. Memory topology stays compact immediately — no cleanup debt accumulates
+
+**Write-time consolidation is synchronous. Background workers handle decay/prune only.**
+
+### Intent-aware retrieval planning
+
+Rather than fixed-depth search, retrieval scope is LLM-reasoned from query intent:
+
+```
+query
+    → LLM generates retrieval plan:
+        depth (single-hop → minimal; multi-hop temporal → expanded)
+        views required (dense only vs. dense + BM25 + symbolic)
+        expansion strategy (narrow vs. broad)
+    → parallel multi-view retrieval
+    → RRF fusion
+    → result
+```
+
+SimpleMem benchmark: 43.24% F1 with 30× fewer tokens than full-context (LoCoMo-10). Intent-aware depth consistently beats fixed-k across diverse query types.
+
+### Lossless drill-down chain
+
+Every abstraction must trace deterministically to source evidence:
+
+```
+Throughline / persona (tier 3 — procedural)
+    → Page / scenario (tier 2 — semantic)
+        → Triplet / atom (tier 1 — episodic)
+            → Source span / raw conversation (tier 0 — working memory)
+```
+
+A query at any tier must be able to retrieve the full evidence chain below it. If drill-down is broken at any link, the memory system is opaque. Maps to: `SPO triplet → BIO-tagged span → raw source`.
+
+Reference: SimpleMem (aiming-lab/SimpleMem). Omni-SimpleMem variant adds text/image/audio/video unified memory with KG augmentation (SOTA LoCoMo F1=0.613, +47%).
 
 ## Minimal Output Contract
 
