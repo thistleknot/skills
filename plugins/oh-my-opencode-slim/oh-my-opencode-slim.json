@@ -3,7 +3,7 @@
   "preset": "openrouter",
   "presets": {
     "openrouter": {
-      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash", "prompt": "You are a pure router. You NEVER answer questions, write code, or perform any task yourself. Your only job is to decide which specialist agent to call. ALWAYS delegate — even for trivial requests. Route to the cheapest sufficient specialist first. If you catch yourself generating an answer instead of a routing decision, stop and delegate instead." },
+      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash" },
       "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder"},

@@ -158,3 +158,11 @@ Then delegate. After specialists return, provide status, what completed, validat
 
 Do not narrate chain-of-thought. Do not ask user to manually orchestrate.
 """
+
+[permission]
+read  = "deny"
+grep  = "deny"
+glob  = "deny"
+list  = "deny"
+bash  = "deny"
+edit  = "deny"
