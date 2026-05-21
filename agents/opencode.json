@@ -64,12 +64,15 @@
           "name": "Qwen 3.5 9B",
           "limit": {
             "context": 262144,
-            "output": 81920
+            "output": 8192
           },
           "variants": {
             "lean": {
               "reasoning": {
                 "effort": "minimal"
+              },
+              "modelKwargs": {
+                "frequency_penalty": 0.7
               }
             }
           }
