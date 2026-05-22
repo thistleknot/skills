@@ -60,7 +60,7 @@ explorer("find all .tga files")    ← throws invalid tool
 
 **Correct:**
 ```
-task(subagent_type="researcher", description="find tga files", prompt="...")
+task(subagent_type="explorer", description="find tga files", prompt="...")
 ```
 
 ---
@@ -87,35 +87,42 @@ errors before OpenCode's compaction threshold is reached.
 
 ---
 
-## ❌ PITFALL 5: Orchestrator repetition loops — no sampler penalties set
+## ❌ PITFALL 5: Orchestrator repetition loops - no sampler penalties set
 
 **Symptom:** Orchestrator prints the same sentence 10+ times ("Wait, I'll check using `task` with `explorer`… Actually, I'll just wait.") then times out.
 
 **Root cause:** Without `frequency_penalty`/`presence_penalty`, nothing taxes repeated token sequences. A model that hesitates once will hesitate forever — each repetition is as probable as the last.
 
-**Fix:** Add repetition penalties **directly on the orchestrator model entry** in every preset. This is the right layer — cheaper than prompt changes and model-agnostic:
+**Fix:** Add repetition penalties in `opencode.json` under the model variant's `modelKwargs`, then point the OMO-Slim preset at that variant. Do not add sampler keys directly to `oh-my-opencode-slim.json`; the plugin schema rejects unknown preset fields and falls back to default config.
 
 ```jsonc
-// openrouter preset (DeepSeek orchestrator)
-"orchestrator": { "model": "...", "frequency_penalty": 0.4, "presence_penalty": 0.2 }
+// opencode.json
+"deepseek/deepseek-v4-flash": {
+  "variants": {
+    "orchestrator": {
+      "reasoning": { "effort": "high", "enabled": true },
+      "modelKwargs": { "frequency_penalty": 0.4, "presence_penalty": 0.2 }
+    }
+  }
+}
 
-// openrouter-gemma-orchestrator preset (Gemma loops harder — higher values)
-"orchestrator": { "model": "...", "variant": "strategic", "frequency_penalty": 0.6, "presence_penalty": 0.3 }
+// oh-my-opencode-slim.json
+"orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "orchestrator" }
 ```
 
-**Rule:** Every orchestrator entry in every preset MUST have `frequency_penalty` ≥ 0.4. Any new preset you add — set it immediately, not after the first stall.
+**Rule:** Every orchestrator variant in `opencode.json` MUST have `frequency_penalty` >= 0.4. Any new orchestrator variant you add - set it immediately, not after the first stall.
 
 | Parameter | Effect | Recommended range for orchestrator |
 |-----------|--------|-------------------------------------|
-| `frequency_penalty` | Taxes tokens proportional to how many times they've appeared → directly breaks repeat loops | 0.4–0.6 |
-| `presence_penalty` | Taxes any token that appeared at all → broader novelty push | 0.2–0.3 |
+| `frequency_penalty` | Taxes tokens proportional to how many times they've appeared -> directly breaks repeat loops | 0.4-0.6 |
+| `presence_penalty` | Taxes any token that appeared at all -> broader novelty push | 0.2-0.3 |
 
-**Do NOT rely on prompt instructions alone to stop repetition.** Sampler-level suppression is the only reliable fix.
+**Do NOT rely on prompt instructions alone to stop repetition.** Sampler-level suppression is the only reliable fix, but it must live in `opencode.json` `modelKwargs`, not in the OMO-Slim plugin preset object.
 
 
 ---
 
-## ? PITFALL 6: Using displayName instead of slot key as subagent_type
+## ❌ PITFALL 6: Using displayName instead of slot key as subagent_type
 
 **Symptom:** Unknown agent type: planner is not a valid agent type (or researcher, coder, visionary)
 
@@ -123,11 +130,23 @@ errors before OpenCode's compaction threshold is reached.
 
 | Config slot key | displayName (UI only) | Correct subagent_type |
 |---|---|---|
-| oracle | planner | "oracle" |
-| ixer | coder | "fixer" |
-| explorer | researcher | "explorer" |
-| observer | visionary | "observer" |
+| `oracle` | planner | `"oracle"` |
+| `fixer` | coder | `"fixer"` |
+| `explorer` | researcher | `"explorer"` |
+| `observer` | visionary | `"observer"` |
 
-**Rule:** subagent_type = slot key. Always. The displayName is never a valid routing value.
+**Rule:** `subagent_type` = slot key. Always. The displayName is never a valid routing value.
 
-**Every orchestrator.md and orchestratorPrompt MUST use slot keys � never displayNames � in any example or routing table.**
+**Every orchestrator.md and orchestratorPrompt MUST use slot keys - never displayNames - in any example or routing table.**
+
+---
+
+## ❌ PITFALL 7: Reusing a stale resumed session after config changes
+
+**Symptom:** A resumed session keeps hanging on the same task even after the live config is fixed.
+
+**Root cause:** `opencode -s <session_id>` reattaches to the old session state. If that session was created before the config repair, it can keep the poisoned control flow even while the new config loads correctly.
+
+**Fix:** After any harness/config repair, start a fresh session against the synced config. Do not use `-s` until the new run has proven it can complete the target task.
+
+**Rule:** Config repair and stale-session recovery are separate steps. First sync the config, then launch a new session, then validate the task on that clean run.
