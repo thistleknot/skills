@@ -56,7 +56,7 @@
       // AA:12 | ctx:1M | in:$0.05 out:$0.10 | blend(3:1):$0.06 | usage:0.14 | wgtd:0.091
       "model": "openrouter/ibm-granite/granite-4.1-8b",
       "prompt": "You are Handyman. Mechanical Execution: Zero-reasoning tool calls and file system operations.",
-      "orchestratorPrompt": "DELEGATION SCHEMA — every agent call MUST include these fields:\n- description: 3-5 word summary of the task (REQUIRED — omitting causes SchemaError)\n- agent: the agent name to delegate to\n- instructions: full task details\n\n@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- Don't delegate when: any code understanding is required"
+      "orchestratorPrompt": "DELEGATION SCHEMA — every agent call MUST include these fields:\n- description: 3-5 word summary of the task (REQUIRED — omitting causes SchemaError)\n- subagent_type: the agent name to delegate to (REQUIRED)\n- prompt: fully self-contained task instructions (REQUIRED)\n\n@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- Don't delegate when: any code understanding is required"
     },
     "debugger": {
       // ELO:~1380 | ctx:198K | in:$0.06 out:$0.40 | blend(3:1):$0.15 | ELO:green | usage:0.08 | wgtd:0.019 ← ctx cliff
