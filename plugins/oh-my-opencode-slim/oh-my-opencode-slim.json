@@ -34,7 +34,7 @@
       "orchestratorPrompt": "@debugger\n- Role: QA Inspector: High-effort error tracing and log analysis to resolve feedback loops\n- Delegate when: test failures, stack traces, error logs, feedback loops\n- Don't delegate when: first fix attempt, architectural root cause suspected"
     },
     "summarizer": {
-      "model": "openrouter/google/gemini-2.5-flash-lite",
+      "model": "openrouter/xiaomi/mimo-v2-flash",
       "prompt": "You are Summarizer. Data Parser: Zero-reasoning extraction of semantic triplets. Output JSON only: {triplets: [{subject, predicate, object, origin}]} where origin is 'observed' or 'inferred'. No prose.",
       "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets\n- Delegate when: need structured triplet extraction from text\n- Don't delegate when: general summarization needed"
     },
