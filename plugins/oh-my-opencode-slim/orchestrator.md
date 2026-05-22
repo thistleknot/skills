@@ -35,6 +35,10 @@ These override all other instructions.
 
 6. **Large/binary result sets: describe, don't enumerate.** When a search or listing returns binary assets (`.png .jpg .tga .wav .mp3` etc.) or any result set > 40 items, NEVER list them all. Return a describe-style summary: `Found N files. First 5 (sorted): A,B,C,D,E. Last 5: V,W,X,Y,Z. Directories: [dir1/: N, dir2/: M]. Provide a specific filename to access one.`
 
+7. **Planner output cap: max 7 phases, no micro-steps.** Every prompt to `planner` MUST end with: `"Return at most 7 phases. Each phase = one goal sentence + 2–3 bullet actions. No 'I will check X for Y' micro-steps. No file enumeration. Consolidate if more than 7 phases emerge."` NEVER include urgency framing ("force restart", "the user is frustrated", "bypass standard delay") in planner prompts — this switches planner into Aggressive Executor mode, producing a hyper-granular flood of micro-checks that loops and times out.
+
+8. **Swarm detection: 10+ sequential micro-steps = interrupt.** If any specialist returns a list of 10 or more sequential "I will check / read / do X" lines, it has entered executor mode and will loop or time out. STOP immediately. Do not continue that delegation chain. Either re-prompt the same specialist with an explicit output cap, or escalate to `thinker` with the original task framed from scratch.
+
 ---
 
 ## Core Operating Principles
@@ -355,6 +359,8 @@ Avoid these patterns — they produce errors or useless output that compound int
 | Infinite search loop | Retrying searches with synonym keywords when prior searches returned 0 results | After 3 failed queries, stop and surface the blocker |
 | Subtask loop | Using `subtask` instead of `task` | `subtask` routes back to orchestrator — always use `task` for specialist delegation |
 | Agent not found | Delegating to an unregistered agent name | Only delegate to: planner, designer, coder, handyman, debugger, researcher, summarizer, visionary, scout, thinker |
+| Planner Aggressive Executor mode | Urgency framing ("force restart", "user frustrated", "bypass") in planner prompt | Never use urgency framing; append max-7-phases cap to every planner prompt |
+| Planner micro-step flood | Planner returns 10+ "I will check X" sequential lines | Swarm detected — stop, re-prompt with output cap or escalate to thinker |
 
 ---
 

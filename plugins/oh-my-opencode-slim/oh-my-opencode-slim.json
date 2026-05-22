@@ -3,48 +3,67 @@
   "preset": "openrouter-gemma-orchestrator",
   "presets": {
     "openrouter": {
+      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green
       "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash" },
+      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green
       "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
+      // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07
       "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
+      // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green
       "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction" },
+      // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
     },
     "openrouter-gemma-orchestrator": {
+      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green
       "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic" },
+      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green
       "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
+      // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07
       "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
+      // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green
       "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction" },
+      // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
     }
   },
   "disabled_agents": [],
   "agents": {
     "handyman": {
+      // AA:12 | ctx:1M | in:$0.05 out:$0.10 | blend(3:1):$0.06
       "model": "openrouter/ibm-granite/granite-4.1-8b",
       "prompt": "You are Handyman. Mechanical Execution: Zero-reasoning tool calls and file system operations.",
       "orchestratorPrompt": "DELEGATION SCHEMA — every agent call MUST include these fields:\n- description: 3-5 word summary of the task (REQUIRED — omitting causes SchemaError)\n- agent: the agent name to delegate to\n- instructions: full task details\n\n@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- Don't delegate when: any code understanding is required"
     },
     "debugger": {
+      // ELO:~1380 | ctx:203K | in:$0.06 out:$0.40 | blend(3:1):$0.15 | ELO:green
       "model": "openrouter/z-ai/glm-4.7-flash",
       "prompt": "You are Debugger. QA Inspector: High-effort error tracing and log analysis to resolve feedback loops.",
       "orchestratorPrompt": "@debugger\n- Role: QA Inspector: High-effort error tracing and log analysis to resolve feedback loops\n- Delegate when: test failures, stack traces, error logs, feedback loops\n- Don't delegate when: first fix attempt, architectural root cause suspected"
     },
     "summarizer": {
+      // ELO:~1400 | ctx:262K | in:$0.10 out:$0.30 | blend(4:1):$0.12 | ELO:green
       "model": "openrouter/xiaomi/mimo-v2-flash",
       "prompt": "You are Summarizer. Data Parser: Zero-reasoning extraction of semantic triplets. Output JSON only: {triplets: [{subject, predicate, object, origin}]} where origin is 'observed' or 'inferred'. No prose.",
       "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets\n- Delegate when: need structured triplet extraction from text\n- Don't delegate when: general summarization needed"
     },
     "thinker": {
+      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green
       "model": "openrouter/deepseek/deepseek-v4-flash",
       "variant": "heavy",
       "prompt": "You are Thinker. Deep Reasoning: Extended chain-of-thought analysis for fundamentally stuck problems. Re-approach from first principles. Challenge all prior assumptions. Surface the root constraint, not just the symptom.",
       "orchestratorPrompt": "@thinker\n- Role: Deep Reasoning — first-principles re-approach when all lighter models have failed\n- Delegate when: stuck after 2+ failed fix attempts, root cause unknown, need to invert the problem\n- Don't delegate when: any standard debug/implement path is still untried"
     },
     "scout": {
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07
       "model": "openrouter/qwen/qwen3.5-9b",
       "variant": "lean",
       "prompt": "You are Scout. Codebase Search: Find and map relevant files, symbols, and patterns.\n\nSearch discipline:\n- Never output more than 40 lines of raw results. If matches exceed 40, show the first 20, then summarize the rest as: '[N more matches — all contain PATTERN]'\n- Group results by file, not by line number\n- Lead with a one-sentence finding before any list\n- If a single file has >10 matches, collapse to: 'FILE: N occurrences of PATTERN (lines X-Y)'\n- Never enumerate individual line numbers unless the caller explicitly asks for them\n- Read only — no edits. Cite exact files and line ranges.\n\nFor binary/asset file results (.png .jpg .tga .wav .mp3 .gif .bmp .dll .exe etc.) OR any result set > 40 items:\nNEVER list them individually. Return a describe-style summary ONLY:\n  Found N files.\n  First 5 (sorted): A, B, C, D, E\n  Last 5 (sorted): V, W, X, Y, Z\n  Directories: [group by parent dir with count each]\n  Provide a specific filename if you need to access one.",
