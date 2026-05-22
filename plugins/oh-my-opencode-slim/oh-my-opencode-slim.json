@@ -1,9 +1,10 @@
 {
   // Fleet stats (usage-weighted, 2026-05-21):
   //   Bld3 score = (quality_prop + ctx_prop + blend_price_prop) / 3  [0=worst 1=best]
-  //   Wgtd = usage_share × Bld3
-  //   pComb = (pLow×1 + pMid×3 + pHigh×1) / 5  [expected usage proportion, 1:3:1 weight]
+  //   Wgtd = usage_share * Bld3
+  //   pComb = (pLow*1 + pMid*3 + pHigh*1) / 5  [expected usage proportion, 1:3:1 weight]
   //   Fleet Bld3: 0.684  |  Fleet expected cost: $0.1352/M (usage-weighted blend)
+  //   Fleet expected price by p-scenario: low $0.0775/M | mid $0.1370/M | high $0.2038/M | pComb $0.1385/M
   //
   // Agent          | Usage | Qual  | Ctx   | Bld$  | Bld3  | Wgtd  | pLow  | pMid  | pHigh | pComb
   // orchestrator   | 0.25  | 0.543 | 0.942 | 0.767 | 0.751 | 0.188 | 0.200 | 0.250 | 0.300 | 0.250
@@ -12,17 +13,17 @@
   // librarian      | 0.06  | 0.286 | 1.000 | 0.767 | 0.684 | 0.041 | 0.030 | 0.060 | 0.100 | 0.062
   // observer       | 0.03  | 0.114 | 0.942 | 0.433 | 0.497 | 0.015 | 0.010 | 0.030 | 0.060 | 0.032
   // handyman       | 0.14  | 0.000 | 0.942 | 1.000 | 0.647 | 0.091 | 0.080 | 0.140 | 0.200 | 0.140
-  // debugger       | 0.08  | 0.000 | 0.000 | 0.700 | 0.233 | 0.019 | 0.040 | 0.080 | 0.140 | 0.084  ← ctx cliff (198K)
+  // debugger       | 0.08  | 0.000 | 0.000 | 0.700 | 0.233 | 0.019 | 0.040 | 0.080 | 0.140 | 0.084  <- ctx cliff (198K)
   // summarizer     | 0.03  | 1.000 | 0.070 | 0.800 | 0.623 | 0.019 | 0.010 | 0.030 | 0.050 | 0.030
   // thinker        | 0.09  | 1.000 | 0.942 | 0.733 | 0.892 | 0.080 | 0.020 | 0.090 | 0.150 | 0.088
   "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
-  "preset": "openrouter",
+  "preset": "openrouter-gemma-orchestrator",
   "presets": {
     "openrouter": {
       // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.25 | wgtd:0.188
-      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash", "frequency_penalty": 0.4, "presence_penalty": 0.2 },
+      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "orchestrator" },
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
-      "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
+      "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner" },
       // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36 | usage:0.10 | wgtd:0.061
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
       // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
@@ -36,9 +37,9 @@
     },
     "openrouter-gemma-orchestrator": {
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
-      "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "frequency_penalty": 0.6, "presence_penalty": 0.3 },
+      "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic" },
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
-      "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
+      "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner" },
       // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36 | usage:0.10 | wgtd:0.061
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
       // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
@@ -60,7 +61,7 @@
       "orchestratorPrompt": "DELEGATION SCHEMA — every agent call MUST include these fields:\n- description: 3-5 word summary of the task (REQUIRED — omitting causes SchemaError)\n- subagent_type: the agent name to delegate to (REQUIRED)\n- prompt: fully self-contained task instructions (REQUIRED)\n\n@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- Don't delegate when: any code understanding is required"
     },
     "debugger": {
-      // ELO:~1380 | ctx:198K | in:$0.06 out:$0.40 | blend(3:1):$0.15 | ELO:green | usage:0.08 | wgtd:0.019 ← ctx cliff
+      // ELO:~1380 | ctx:198K | in:$0.06 out:$0.40 | blend(3:1):$0.15 | ELO:green | usage:0.08 | wgtd:0.019 <- ctx cliff
       "model": "openrouter/z-ai/glm-4.7-flash",
       "prompt": "You are Debugger. QA Inspector: High-effort error tracing and log analysis to resolve feedback loops.",
       "orchestratorPrompt": "@debugger\n- Role: QA Inspector: High-effort error tracing and log analysis to resolve feedback loops\n- Delegate when: test failures, stack traces, error logs, feedback loops\n- Don't delegate when: first fix attempt, architectural root cause suspected"
@@ -73,8 +74,8 @@
     },
     "thinker": {
       // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.09 | wgtd:0.080
-      "model": "openrouter/deepseek/deepseek-v4-flash",
-      "variant": "heavy",
+      "model": "openrouter/qwen/qwen3.6-35b-a3b",
+      "variant": "tactical",
       "prompt": "You are Thinker. Deep Reasoning: Extended chain-of-thought analysis for fundamentally stuck problems. Re-approach from first principles. Challenge all prior assumptions. Surface the root constraint, not just the symptom.",
       "orchestratorPrompt": "@thinker\n- Role: Deep Reasoning — first-principles re-approach when all lighter models have failed\n- Delegate when: stuck after 2+ failed fix attempts, root cause unknown, need to invert the problem\n- Don't delegate when: any standard debug/implement path is still untried"
     },
