@@ -554,7 +554,9 @@ $opencodeConfig = "$env:USERPROFILE\.config\opencode"
 $deployMap = @(
     @{ Src = "$Master\agents\opencode.json";                                          Dst = "$opencodeConfig\opencode.json" },
     @{ Src = "$Master\plugins\oh-my-opencode-slim\oh-my-opencode-slim.json";          Dst = "$opencodeConfig\oh-my-opencode-slim.json" },
-    @{ Src = "$Master\plugins\oh-my-opencode-slim\orchestrator.md";                   Dst = "$opencodeConfig\oh-my-opencode-slim\orchestrator.md" }
+    @{ Src = "$Master\plugins\oh-my-opencode-slim\orchestrator.md";                   Dst = "$opencodeConfig\oh-my-opencode-slim\orchestrator.md" },
+    @{ Src = "$Master\agents\orchestrator.agent.md";                                  Dst = "$opencodeConfig\oh-my-opencode-slim\orchestrator.deepseek.md" },
+    @{ Src = "$Master\agents\orchestrator.gemma.md";                                  Dst = "$opencodeConfig\oh-my-opencode-slim\orchestrator.gemma.md" }
 )
 
 foreach ($item in $deployMap) {
@@ -572,8 +574,9 @@ foreach ($item in $deployMap) {
         Write-Host "  Deployed: $label -> $($item.Dst)" -ForegroundColor Green
     }
 }
-Write-Host "  NOTE: orchestrator prompt (~/.config/opencode/oh-my-opencode-slim/orchestrator.md) is NOT auto-deployed" -ForegroundColor DarkGray
-Write-Host "        Gemma variant: agents\orchestrator.gemma.md  |  DeepSeek: orchestrator.deepseek.md (in opencode dir)" -ForegroundColor DarkGray
+Write-Host "  NOTE: orchestrator prompt variants are deployed from source templates." -ForegroundColor DarkGray
+Write-Host "        DeepSeek: agents\orchestrator.agent.md -> orchestrator.deepseek.md" -ForegroundColor DarkGray
+Write-Host "        Gemma   : agents\orchestrator.gemma.md -> orchestrator.gemma.md" -ForegroundColor DarkGray
 
 # ── Step 7: Remote guidance ───────────────────────────────────────────────────
 Write-Header "Remote: $RemoteUser@${RemoteHost}:$RemotePath"

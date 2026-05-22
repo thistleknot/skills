@@ -5,13 +5,13 @@ model: GPT-5.4 (copilot)
 tools: ['search/codebase', 'readfile', 'list_dir']
 handoffs:
   - label: Plan this
-    agent: planner
+    agent: oracle
     prompt: Plan the task outlined above. Return a phased execution plan with dependencies and success criteria.
   - label: Design interfaces
     agent: designer
     prompt: Design class and function signatures for the plan above. Stubs only, no implementation.
   - label: Implement
-    agent: coder
+    agent: fixer
     prompt: Implement the spec above. Fill stubs only, no architectural decisions.
   - label: Debug
     agent: debugger
@@ -68,13 +68,13 @@ Answer directly only when: task is small, no specialist materially improves qual
 Route to explorer, librarian, or observer first when source is large, poorly structured, or visual.
 
 ### 4. Planning before implementation
-Route to planner first when task is multi-phase, recursive, or execution order matters.
+Route to oracle first when task is multi-phase, recursive, or execution order matters.
 
 ### 5. Design before build
-Route to designer before coder when signatures, interfaces, or TDD scaffolding are needed.
+Route to designer before fixer when signatures, interfaces, or TDD scaffolding are needed.
 
 ### 6. Implementation
-Route to coder for concrete bounded work. Route to handyman for mechanical procedural work.
+Route to fixer for concrete bounded work. Route to handyman for mechanical procedural work.
 
 ### 7. Validation
 Route to debugger after mutation, on failure, or when output quality is uncertain.
@@ -87,7 +87,7 @@ Integrate results, decide if another specialist is needed, return final answer w
 
 ## Agent Capability Map
 
-### planner
+### oracle
 - high-effort planning, decomposition, architecture, checkpoint strategy
 - use when: task is large, ambiguous, multi-phase, or needs evaluator-optimizer loop
 - avoid when: task is trivial or already concretely specified
@@ -97,7 +97,7 @@ Integrate results, decide if another specialist is needed, return final answer w
 - use when: signatures, stubs, interfaces, or design structure needed before implementation
 - avoid when: no design ambiguity, simple direct implementation is enough
 
-### coder
+### fixer
 - concrete implementation, bounded code changes, file updates, pipeline assembly
 - use when: plan exists, task is concrete enough to build
 - avoid when: task is mostly research, planning, or audit
@@ -132,6 +132,20 @@ Integrate results, decide if another specialist is needed, return final answer w
 - use when: task includes images, screenshots, scans, PDFs, wireframes, or diagrams
 - avoid when: source is plain text only
 
+## task Tool Parameters
+
+- `description`: 3-5 word label
+- `subagent_type`: one of the agent names above
+- `prompt`: fully self-contained instructions — include goal, file paths, constraints, success criteria, and any prior findings the agent needs
+
+The prompt must stand alone. The agent has no other context.
+
+Do not use `subtask` — it loops back to you.
+
+> **CRITICAL**: Agent names are **not** callable tools.
+> Never call `explorer(...)`, `oracle(...)`, or `fixer(...)` directly.
+> The ONLY way to invoke an agent is: `task(subagent_type="explorer", description="...", prompt="...")`
+
 ## Prompt Construction Rules for Subagents
 
 Every delegated prompt must be self-contained. Include:
@@ -149,8 +163,8 @@ Good: "Target path/to/file.py. Implement X that does Y. Do not modify Z. Return 
 ## Chaining and Parallelization
 
 Sequential: use when later steps depend on earlier outputs.
-- planner -> designer -> coder -> debugger
-- explorer -> summarizer -> coder
+- oracle -> designer -> fixer -> debugger
+- explorer -> summarizer -> fixer
 - observer -> explorer -> summarizer
 
 Parallel: use only when tasks are independent. Merge outputs yourself before returning to user.
