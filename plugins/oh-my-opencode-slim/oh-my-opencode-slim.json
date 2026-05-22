@@ -2,18 +2,19 @@
   // Fleet stats (usage-weighted, 2026-05-21):
   //   Bld3 score = (quality_prop + ctx_prop + blend_price_prop) / 3  [0=worst 1=best]
   //   Wgtd = usage_share × Bld3
+  //   pComb = (pLow×1 + pMid×3 + pHigh×1) / 5  [expected usage proportion, 1:3:1 weight]
   //   Fleet Bld3: 0.684  |  Fleet expected cost: $0.1352/M (usage-weighted blend)
   //
-  // Agent          | Usage | Qual  | Ctx   | Bld$  | Bld3  | Wgtd
-  // orchestrator   | 0.25  | 0.543 | 0.942 | 0.767 | 0.751 | 0.188
-  // designer       | 0.10  | 0.886 | 0.942 | 0.000 | 0.609 | 0.061
-  // fixer          | 0.22  | 0.429 | 0.942 | 0.967 | 0.779 | 0.171
-  // librarian      | 0.06  | 0.286 | 1.000 | 0.767 | 0.684 | 0.041
-  // observer       | 0.03  | 0.114 | 0.942 | 0.433 | 0.497 | 0.015
-  // handyman       | 0.14  | 0.000 | 0.942 | 1.000 | 0.647 | 0.091
-  // debugger       | 0.08  | 0.000 | 0.000 | 0.700 | 0.233 | 0.019  ← ctx cliff (198K)
-  // summarizer     | 0.03  | 1.000 | 0.070 | 0.800 | 0.623 | 0.019
-  // thinker        | 0.09  | 1.000 | 0.942 | 0.733 | 0.892 | 0.080
+  // Agent          | Usage | Qual  | Ctx   | Bld$  | Bld3  | Wgtd  | pLow  | pMid  | pHigh | pComb
+  // orchestrator   | 0.25  | 0.543 | 0.942 | 0.767 | 0.751 | 0.188 | 0.200 | 0.250 | 0.300 | 0.250
+  // designer       | 0.10  | 0.886 | 0.942 | 0.000 | 0.609 | 0.061 | 0.050 | 0.100 | 0.150 | 0.100
+  // fixer          | 0.22  | 0.429 | 0.942 | 0.967 | 0.779 | 0.171 | 0.150 | 0.210 | 0.300 | 0.216
+  // librarian      | 0.06  | 0.286 | 1.000 | 0.767 | 0.684 | 0.041 | 0.030 | 0.060 | 0.100 | 0.062
+  // observer       | 0.03  | 0.114 | 0.942 | 0.433 | 0.497 | 0.015 | 0.010 | 0.030 | 0.060 | 0.032
+  // handyman       | 0.14  | 0.000 | 0.942 | 1.000 | 0.647 | 0.091 | 0.080 | 0.140 | 0.200 | 0.140
+  // debugger       | 0.08  | 0.000 | 0.000 | 0.700 | 0.233 | 0.019 | 0.040 | 0.080 | 0.140 | 0.084  ← ctx cliff (198K)
+  // summarizer     | 0.03  | 1.000 | 0.070 | 0.800 | 0.623 | 0.019 | 0.010 | 0.030 | 0.050 | 0.030
+  // thinker        | 0.09  | 1.000 | 0.942 | 0.733 | 0.892 | 0.080 | 0.020 | 0.090 | 0.150 | 0.088
   "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
   "preset": "openrouter",
   "presets": {
