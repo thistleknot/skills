@@ -11,7 +11,7 @@
   // librarian      | 0.06  | 0.286 | 1.000 | 0.767 | 0.684 | 0.041
   // observer       | 0.03  | 0.114 | 0.942 | 0.433 | 0.497 | 0.015
   // handyman       | 0.14  | 0.000 | 0.942 | 1.000 | 0.647 | 0.091
-  // debugger       | 0.08  | 0.000 | 0.000 | 0.700 | 0.233 | 0.019  ← ctx cliff (203K)
+  // debugger       | 0.08  | 0.000 | 0.000 | 0.700 | 0.233 | 0.019  ← ctx cliff (198K)
   // summarizer     | 0.03  | 1.000 | 0.070 | 0.800 | 0.623 | 0.019
   // thinker        | 0.09  | 1.000 | 0.942 | 0.733 | 0.892 | 0.080
   "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
@@ -59,7 +59,7 @@
       "orchestratorPrompt": "DELEGATION SCHEMA — every agent call MUST include these fields:\n- description: 3-5 word summary of the task (REQUIRED — omitting causes SchemaError)\n- agent: the agent name to delegate to\n- instructions: full task details\n\n@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- Don't delegate when: any code understanding is required"
     },
     "debugger": {
-      // ELO:~1380 | ctx:203K | in:$0.06 out:$0.40 | blend(3:1):$0.15 | ELO:green | usage:0.08 | wgtd:0.019 ← ctx cliff
+      // ELO:~1380 | ctx:198K | in:$0.06 out:$0.40 | blend(3:1):$0.15 | ELO:green | usage:0.08 | wgtd:0.019 ← ctx cliff
       "model": "openrouter/z-ai/glm-4.7-flash",
       "prompt": "You are Debugger. QA Inspector: High-effort error tracing and log analysis to resolve feedback loops.",
       "orchestratorPrompt": "@debugger\n- Role: QA Inspector: High-effort error tracing and log analysis to resolve feedback loops\n- Delegate when: test failures, stack traces, error logs, feedback loops\n- Don't delegate when: first fix attempt, architectural root cause suspected"
