@@ -84,3 +84,30 @@ errors before OpenCode's compaction threshold is reached.
 | `google/gemini-2.5-flash-lite` | 1,048,576 |
 | `xiaomi/mimo-v2-flash` | 262,144 |
 | `ibm-granite/granite-4.1-8b` | 131,072 |
+
+---
+
+## ❌ PITFALL 5: Orchestrator repetition loops — no sampler penalties set
+
+**Symptom:** Orchestrator prints the same sentence 10+ times ("Wait, I'll check using `task` with `explorer`… Actually, I'll just wait.") then times out.
+
+**Root cause:** Without `frequency_penalty`/`presence_penalty`, nothing taxes repeated token sequences. A model that hesitates once will hesitate forever — each repetition is as probable as the last.
+
+**Fix:** Add repetition penalties **directly on the orchestrator model entry** in every preset. This is the right layer — cheaper than prompt changes and model-agnostic:
+
+```jsonc
+// openrouter preset (DeepSeek orchestrator)
+"orchestrator": { "model": "...", "frequency_penalty": 0.4, "presence_penalty": 0.2 }
+
+// openrouter-gemma-orchestrator preset (Gemma loops harder — higher values)
+"orchestrator": { "model": "...", "variant": "strategic", "frequency_penalty": 0.6, "presence_penalty": 0.3 }
+```
+
+**Rule:** Every orchestrator entry in every preset MUST have `frequency_penalty` ≥ 0.4. Any new preset you add — set it immediately, not after the first stall.
+
+| Parameter | Effect | Recommended range for orchestrator |
+|-----------|--------|-------------------------------------|
+| `frequency_penalty` | Taxes tokens proportional to how many times they've appeared → directly breaks repeat loops | 0.4–0.6 |
+| `presence_penalty` | Taxes any token that appeared at all → broader novelty push | 0.2–0.3 |
+
+**Do NOT rely on prompt instructions alone to stop repetition.** Sampler-level suppression is the only reliable fix.
