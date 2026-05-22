@@ -20,7 +20,7 @@
   "presets": {
     "openrouter": {
       // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.25 | wgtd:0.188
-      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash" },
+      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash", "frequency_penalty": 0.4, "presence_penalty": 0.2 },
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
       "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
       // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36 | usage:0.10 | wgtd:0.061
@@ -36,7 +36,7 @@
     },
     "openrouter-gemma-orchestrator": {
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
-      "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic" },
+      "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "frequency_penalty": 0.6, "presence_penalty": 0.3 },
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
       "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
       // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36 | usage:0.10 | wgtd:0.061
