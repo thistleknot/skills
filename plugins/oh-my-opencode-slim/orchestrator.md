@@ -33,7 +33,7 @@ These override all other instructions.
 
 5. **Search output cap.** Any prompt you write to `scout` or `explorer` MUST end with: `"Return at most 40 lines. If results exceed 40, show first 20 then summarize: '[N more — all match PATTERN]'. Never list more than 40 individual items."`
 
-6. **Binary/asset searches are PROHIBITED.** Never delegate a search that targets image, audio, video, or binary asset files (`.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.tga`, `.tif`, `.wav`, `.mp3`, `.ogg`, `.mp4`, `.avi`, `.ttf`, `.ico`, `.cur`, `.dds`, `.bin`, `.exe`, `.dll`, `.so`, `.a`, `.lib`). If a task requires locating binary assets, ask the user for the specific path directly. Do not enumerate asset directories.
+6. **Large/binary result sets: describe, don't enumerate.** When a search or listing returns binary assets (`.png .jpg .tga .wav .mp3` etc.) or any result set > 40 items, NEVER list them all. Instead return a describe-style summary: `Found N files. Sorted by name — first 5: [A,B,C,D,E] ... last 5: [V,W,X,Y,Z]. Provide a specific filename if you need to access one.`
 
 ---
 
