@@ -1,69 +1,84 @@
 {
+  // Fleet stats (usage-weighted, 2026-05-21):
+  //   Bld3 score = (quality_prop + ctx_prop + blend_price_prop) / 3  [0=worst 1=best]
+  //   Wgtd = usage_share × Bld3
+  //   Fleet Bld3: 0.684  |  Fleet expected cost: $0.1352/M (usage-weighted blend)
+  //
+  // Agent          | Usage | Qual  | Ctx   | Bld$  | Bld3  | Wgtd
+  // orchestrator   | 0.25  | 0.543 | 0.942 | 0.767 | 0.751 | 0.188
+  // designer       | 0.10  | 0.886 | 0.942 | 0.000 | 0.609 | 0.061
+  // fixer          | 0.22  | 0.429 | 0.942 | 0.967 | 0.779 | 0.171
+  // librarian      | 0.06  | 0.286 | 1.000 | 0.767 | 0.684 | 0.041
+  // observer       | 0.03  | 0.114 | 0.942 | 0.433 | 0.497 | 0.015
+  // handyman       | 0.14  | 0.000 | 0.942 | 1.000 | 0.647 | 0.091
+  // debugger       | 0.08  | 0.000 | 0.000 | 0.700 | 0.233 | 0.019  ← ctx cliff (203K)
+  // summarizer     | 0.03  | 1.000 | 0.070 | 0.800 | 0.623 | 0.019
+  // thinker        | 0.09  | 1.000 | 0.942 | 0.733 | 0.892 | 0.080
   "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
   "preset": "openrouter-gemma-orchestrator",
   "presets": {
     "openrouter": {
-      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green
+      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.25 | wgtd:0.188
       "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash" },
-      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green
+      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
       "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
-      // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36
+      // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36 | usage:0.10 | wgtd:0.061
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
-      // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green
+      // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
       "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction" },
-      // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23
+      // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
     },
     "openrouter-gemma-orchestrator": {
-      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green
+      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
       "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic" },
-      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green
+      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
       "oracle":       { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "displayName": "planner" },
-      // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36
+      // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36 | usage:0.10 | wgtd:0.061
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
-      // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green
+      // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
       "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction" },
-      // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23
+      // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
     }
   },
   "disabled_agents": [],
   "agents": {
     "handyman": {
-      // AA:12 | ctx:1M | in:$0.05 out:$0.10 | blend(3:1):$0.06
+      // AA:12 | ctx:1M | in:$0.05 out:$0.10 | blend(3:1):$0.06 | usage:0.14 | wgtd:0.091
       "model": "openrouter/ibm-granite/granite-4.1-8b",
       "prompt": "You are Handyman. Mechanical Execution: Zero-reasoning tool calls and file system operations.",
       "orchestratorPrompt": "DELEGATION SCHEMA — every agent call MUST include these fields:\n- description: 3-5 word summary of the task (REQUIRED — omitting causes SchemaError)\n- agent: the agent name to delegate to\n- instructions: full task details\n\n@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- Don't delegate when: any code understanding is required"
     },
     "debugger": {
-      // ELO:~1380 | ctx:203K | in:$0.06 out:$0.40 | blend(3:1):$0.15 | ELO:green
+      // ELO:~1380 | ctx:203K | in:$0.06 out:$0.40 | blend(3:1):$0.15 | ELO:green | usage:0.08 | wgtd:0.019 ← ctx cliff
       "model": "openrouter/z-ai/glm-4.7-flash",
       "prompt": "You are Debugger. QA Inspector: High-effort error tracing and log analysis to resolve feedback loops.",
       "orchestratorPrompt": "@debugger\n- Role: QA Inspector: High-effort error tracing and log analysis to resolve feedback loops\n- Delegate when: test failures, stack traces, error logs, feedback loops\n- Don't delegate when: first fix attempt, architectural root cause suspected"
     },
     "summarizer": {
-      // ELO:~1400 | ctx:262K | in:$0.10 out:$0.30 | blend(4:1):$0.12 | ELO:green
+      // ELO:~1400 | ctx:262K | in:$0.10 out:$0.30 | blend(4:1):$0.12 | ELO:green | usage:0.03 | wgtd:0.019
       "model": "openrouter/xiaomi/mimo-v2-flash",
       "prompt": "You are Summarizer. Data Parser: Zero-reasoning extraction of semantic triplets. Output JSON only: {triplets: [{subject, predicate, object, origin}]} where origin is 'observed' or 'inferred'. No prose.",
       "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets\n- Delegate when: need structured triplet extraction from text\n- Don't delegate when: general summarization needed"
     },
     "thinker": {
-      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green
+      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.09 | wgtd:0.080
       "model": "openrouter/deepseek/deepseek-v4-flash",
       "variant": "heavy",
       "prompt": "You are Thinker. Deep Reasoning: Extended chain-of-thought analysis for fundamentally stuck problems. Re-approach from first principles. Challenge all prior assumptions. Surface the root constraint, not just the symptom.",
       "orchestratorPrompt": "@thinker\n- Role: Deep Reasoning — first-principles re-approach when all lighter models have failed\n- Delegate when: stuck after 2+ failed fix attempts, root cause unknown, need to invert the problem\n- Don't delegate when: any standard debug/implement path is still untried"
     },
     "scout": {
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       "model": "openrouter/qwen/qwen3.5-9b",
       "variant": "lean",
       "prompt": "You are Scout. Codebase Search: Find and map relevant files, symbols, and patterns.\n\nSearch discipline:\n- Never output more than 40 lines of raw results. If matches exceed 40, show the first 20, then summarize the rest as: '[N more matches — all contain PATTERN]'\n- Group results by file, not by line number\n- Lead with a one-sentence finding before any list\n- If a single file has >10 matches, collapse to: 'FILE: N occurrences of PATTERN (lines X-Y)'\n- Never enumerate individual line numbers unless the caller explicitly asks for them\n- Read only — no edits. Cite exact files and line ranges.\n\nFor binary/asset file results (.png .jpg .tga .wav .mp3 .gif .bmp .dll .exe etc.) OR any result set > 40 items:\nNEVER list them individually. Return a describe-style summary ONLY:\n  Found N files.\n  First 5 (sorted): A, B, C, D, E\n  Last 5 (sorted): V, W, X, Y, Z\n  Directories: [group by parent dir with count each]\n  Provide a specific filename if you need to access one.",
