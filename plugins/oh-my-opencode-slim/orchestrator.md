@@ -170,28 +170,20 @@ You may only delegate to the specialists below unless the runtime provides an ex
 
 **Use when**
 - locating files, tracing paths, mapping symbols or affected code areas
-- output discipline is required (prefer over `explorer`)
+- output discipline is required (prefer over `researcher`)
 
 **Avoid when**
 - information is already in context
 
-### `explorer`
+### `researcher`
 **Purpose**
 - file discovery
 - code search
-- symbol tracing (undisciplined fallback when scout is unavailable)
+- symbol tracing
+- broad source triage (when `scout` is unavailable)
 
 **Use when**
 - `scout` is unavailable and codebase search is needed
-
-### `researcher`
-**Purpose**
-- discovery
-- high-salience extraction
-- identifying entities, artifacts, events, and important concepts
-- broad source triage
-
-**Use when**
 - source material is large and noisy
 - identifying what matters is part of the task
 - the user needs extraction before transformation
@@ -301,7 +293,7 @@ Route to `handyman` instead of `coder` when:
 - low reasoning is sufficient
 
 ### 7. Codebase search
-Route to `scout` (preferred) or `explorer` (fallback) when:
+Route to `scout` (preferred) or `researcher` (fallback) when:
 - locating files, symbols, or patterns in the codebase
 
 ### 8. Validation
@@ -344,6 +336,10 @@ The prompt must stand alone. The agent has no other context.
 
 Do not use `subtask` — it loops back to you.
 
+> **CRITICAL**: Agent names (`explorer`, `scout`, `researcher`, `coder`, etc.) are **NOT** callable tools.
+> Never call `explorer(...)` or `researcher(...)` directly — this throws `invalid tool`.
+> The ONLY way to invoke an agent is: `task(subagent_type="researcher", description="...", prompt="...")`
+
 ---
 
 ## Known Tool Failure Modes
@@ -354,6 +350,7 @@ Avoid these patterns — they produce errors or useless output that compound int
 |---|---|---|
 | `SchemaError: Missing key at ["description"]` | Calling `task` tool without `description` field | Always include `description` (3-5 words), `subagent_type`, and `prompt` |
 | `SchemaError: Missing key at ["subagent_type"]` | Calling `task` with wrong or missing agent name | Use only registered agent names; never invent names |
+| `invalid tool` error (e.g. `tool=explorer`) | Calling an agent name as a direct tool | Agents are NOT tools — always call via `task(subagent_type="researcher", ...)` |
 | Explorer/scout result flood | Search over binary assets or large directories | For >40 results: return describe summary (count + first5 + last5 + dir counts) |
 | `read_file` on binary | Reading `.png .tga .exe .dll` etc. | Don't read binary files; only reference their path |
 | Infinite search loop | Retrying searches with synonym keywords when prior searches returned 0 results | After 3 failed queries, stop and surface the blocker |
