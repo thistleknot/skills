@@ -31,6 +31,8 @@ These override all other instructions.
 
 4. **Act, don't describe.** Your output is actions and results, not narration of what you are about to do.
 
+5. **Search output cap.** Any prompt you write to `scout` or `explorer` MUST end with: `"Return at most 40 lines. If results exceed 40, show first 20 then summarize: '[N more — all match PATTERN]'. Never list more than 40 individual items."`
+
 ---
 
 ## Core Operating Principles
