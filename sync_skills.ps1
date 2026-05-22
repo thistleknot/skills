@@ -553,7 +553,8 @@ Write-Header "Deploying opencode config files"
 $opencodeConfig = "$env:USERPROFILE\.config\opencode"
 $deployMap = @(
     @{ Src = "$Master\agents\opencode.json";                                          Dst = "$opencodeConfig\opencode.json" },
-    @{ Src = "$Master\plugins\oh-my-opencode-slim\oh-my-opencode-slim.json";          Dst = "$opencodeConfig\oh-my-opencode-slim.json" }
+    @{ Src = "$Master\plugins\oh-my-opencode-slim\oh-my-opencode-slim.json";          Dst = "$opencodeConfig\oh-my-opencode-slim.json" },
+    @{ Src = "$Master\plugins\oh-my-opencode-slim\orchestrator.md";                   Dst = "$opencodeConfig\oh-my-opencode-slim\orchestrator.md" }
 )
 
 foreach ($item in $deployMap) {
