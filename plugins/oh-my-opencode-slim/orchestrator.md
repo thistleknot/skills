@@ -342,6 +342,22 @@ Do not use `subtask` — it loops back to you.
 
 ---
 
+## Known Tool Failure Modes
+
+Avoid these patterns — they produce errors or useless output that compound into loops.
+
+| Failure | Trigger | Avoidance |
+|---|---|---|
+| `SchemaError: Missing key at ["description"]` | Calling `task` tool without `description` field | Always include `description` (3-5 words), `subagent_type`, and `prompt` |
+| `SchemaError: Missing key at ["subagent_type"]` | Calling `task` with wrong or missing agent name | Use only registered agent names; never invent names |
+| Explorer/scout result flood | Search over binary assets or large directories | For >40 results: return describe summary (count + first5 + last5 + dir counts) |
+| `read_file` on binary | Reading `.png .tga .exe .dll` etc. | Don't read binary files; only reference their path |
+| Infinite search loop | Retrying searches with synonym keywords when prior searches returned 0 results | After 3 failed queries, stop and surface the blocker |
+| Subtask loop | Using `subtask` instead of `task` | `subtask` routes back to orchestrator — always use `task` for specialist delegation |
+| Agent not found | Delegating to an unregistered agent name | Only delegate to: planner, designer, coder, handyman, debugger, researcher, summarizer, visionary, scout, thinker |
+
+---
+
 ## Chaining and Parallelization
 
 ### Sequential chain
