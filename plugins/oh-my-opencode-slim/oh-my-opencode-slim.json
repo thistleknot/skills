@@ -8,7 +8,7 @@
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
       "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
-      "librarian":    { "model": "openrouter/x-ai/grok-4.1-fast-reasoning", "variant": "extraction" },
+      "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction" },
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
     },
     "openrouter-gemma-orchestrator": {
@@ -17,7 +17,7 @@
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
       "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
-      "librarian":    { "model": "openrouter/x-ai/grok-4.1-fast-reasoning", "variant": "extraction" },
+      "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction" },
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
     }
   },
@@ -34,7 +34,7 @@
       "orchestratorPrompt": "@debugger\n- Role: QA Inspector: High-effort error tracing and log analysis to resolve feedback loops\n- Delegate when: test failures, stack traces, error logs, feedback loops\n- Don't delegate when: first fix attempt, architectural root cause suspected"
     },
     "summarizer": {
-      "model": "openrouter/x-ai/grok-4.1-fast-reasoning",
+      "model": "openrouter/google/gemini-2.5-flash-lite",
       "prompt": "You are Summarizer. Data Parser: Zero-reasoning extraction of semantic triplets. Output JSON only: {triplets: [{subject, predicate, object, origin}]} where origin is 'observed' or 'inferred'. No prose.",
       "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets\n- Delegate when: need structured triplet extraction from text\n- Don't delegate when: general summarization needed"
     },
