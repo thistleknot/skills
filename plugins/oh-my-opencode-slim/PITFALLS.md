@@ -111,3 +111,23 @@ errors before OpenCode's compaction threshold is reached.
 | `presence_penalty` | Taxes any token that appeared at all â†’ broader novelty push | 0.2â€“0.3 |
 
 **Do NOT rely on prompt instructions alone to stop repetition.** Sampler-level suppression is the only reliable fix.
+
+
+---
+
+## ? PITFALL 6: Using displayName instead of slot key as subagent_type
+
+**Symptom:** Unknown agent type: planner is not a valid agent type (or researcher, coder, visionary)
+
+**Root cause:** displayName in the config is **cosmetic only** (UI label). OpenCode routes by the **slot key**.
+
+| Config slot key | displayName (UI only) | Correct subagent_type |
+|---|---|---|
+| oracle | planner | "oracle" |
+| ixer | coder | "fixer" |
+| explorer | researcher | "explorer" |
+| observer | visionary | "observer" |
+
+**Rule:** subagent_type = slot key. Always. The displayName is never a valid routing value.
+
+**Every orchestrator.md and orchestratorPrompt MUST use slot keys — never displayNames — in any example or routing table.**
