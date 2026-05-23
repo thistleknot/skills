@@ -280,6 +280,7 @@
       }
     },
     "aider": {
+      "timeout": 300000,
       "permission": {
         "read": "allow",
         "grep": "allow",

@@ -228,7 +228,20 @@ errors before OpenCode's compaction threshold is reached.
 
 ---
 
-## ❌ PITFALL 12: Orchestrator→coder→fixer chain stalls on simple codegen tasks
+## ❌ PITFALL 13: `--agent <name>` only works for npm-hardcoded primary agents
+
+**Symptom:** `opencode run --agent aider "task"` emits `! agent "aider" is a subagent, not a primary agent. Falling back to default agent`. Adding aider to preset config has no effect.
+
+**Root cause:** oh-my-opencode-slim enforces the primary/subagent distinction inside the npm package itself. Only the agents defined in its internal roster (orchestrator, oracle, designer, fixer, explorer, librarian, observer) are primary CLI targets. Agents in the JSON `agents` block are always subagents regardless of preset additions.
+
+**Workaround — orchestrator dispatch:**
+```powershell
+# agents/run_aider.ps1 wraps this pattern:
+opencode run "AIDER DIRECT: delegate this entire task to @aider with no additional routing. Task: <task>"
+```
+The `AIDER DIRECT:` prefix triggers aider's updated `orchestratorPrompt` rule, causing the orchestrator to forward immediately to @aider.
+
+**Rule:** Never use `--agent` with subagent-only names (aider, pi, handyman, patcher, debugger, summarizer, thinker, scout). Use the wrapper scripts `run_aider.ps1` or route via explicit `@agent` prefix in the prompt.
 
 **Symptom:** `opencode run "Implement X and save to file"` routes orchestrator→@coder→@fixer. Directory creation succeeds (handyman step). Then silence — no file written, session hangs for 4+ minutes.
 
