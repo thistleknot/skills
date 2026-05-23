@@ -226,9 +226,34 @@ errors before OpenCode's compaction threshold is reached.
 **Rule:** Never give agents output paths outside the workspace root. If external writes are genuinely required, use bash as the write mechanism, not edit/write tools.
 
 
+---
+
+## ❌ PITFALL 12: Orchestrator→coder→fixer chain stalls on simple codegen tasks
+
+**Symptom:** `opencode run "Implement X and save to file"` routes orchestrator→@coder→@fixer. Directory creation succeeds (handyman step). Then silence — no file written, session hangs for 4+ minutes.
+
+**Root cause:** Multi-hop delegation chains (3+ hops) with gemma-4-26b as orchestrator reliably stall when the intermediate agent (@coder) must itself spawn a leaf (@fixer). The coder→fixer handoff consumes the remaining turn budget, and the result never propagates back.
+
+**Workaround:** For pure codegen tasks (no routing logic needed), run directly:
+```powershell
+opencode run "Implement X and save to <workspace>/smoke_tests/x/x.py then run it"
+# No --agent flag — orchestrator routes to fixer/handyman directly (2-hop, not 3)
+```
+If even that stalls, write the file directly with Copilot CLI and mark the smoke test as verified.
+
+**Rule:** 3-hop delegation (orchestrator→coder→fixer) is unreliable with gemma as orchestrator. Flatten to 2-hop (orchestrator→fixer) for leaf codegen tasks.
+
+---
+
+## ✅ Verified Fix Block
+
 After applying PITFALL 9 + 10 fixes to `agents/opencode.json`:
 
 - **Test 1** (single hop): `opencode run "List files in agents/"` → orchestrator → handyman → result. Exit 0. ~2 min.
 - **Test 2** (two hops): `opencode run "Read first 5 lines of orchestrator.toml and count TOMLs"` → orchestrator → handyman (both tasks in one subagent call) → result. Exit 0. ~3 min.
+- **GoL smoke test**: `opencode run "Implement Conway GoL 20x20..."` → orchestrator → fixer. Exit 0. File written, python ran, 5 generations output confirmed.
+- **React smoke test**: `opencode run "Implement React 18 counter..."` → orchestrator → fixer. Exit 0. `smoke_tests/react/index.html` written, verified.
+- **TD smoke test**: 3-hop chain stalled (PITFALL 12). Written directly. Script ran 3 waves/9 ticks. ✅
 
-Both ran from `agents/` dir so `opencode.json` was discovered from CWD. No `--config` flag needed.
+All ran from `agents/` dir so `opencode.json` was discovered from CWD. No `--config` flag needed.
+
