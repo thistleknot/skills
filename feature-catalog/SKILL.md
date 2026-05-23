@@ -139,5 +139,5 @@ JOIN files f ON ff.file_id=f.file_id WHERE f.file_path LIKE '%cli.py%';
 - `con.commit()` is never optional.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[memory-bank]]  [[mcp-tool-registry]]  [[todo]]  [[auto-ingest]]  [[build-observability]]
+[[todo]]  [[arxiv-bridge]]  [[optuna-nested-cv]]
 <!-- consolidation:see-also:end -->

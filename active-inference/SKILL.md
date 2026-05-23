@@ -277,4 +277,5 @@ invariants:
 - `infer-actively/pymdp`: `pip install inferactively-pymdp`
 <!-- consolidation:see-also:start -->
 ## See Also
+[[continual-learning]]  [[spiral-radial-clustering-display]]  [[auto-ingest]]
 <!-- consolidation:see-also:end -->

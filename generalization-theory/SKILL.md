@@ -138,3 +138,7 @@ Use this as a design hypothesis and diagnostic target, not as proof that every s
 ## Evidence
 
 - Litman & Guo, "A Theory of Generalization in Deep Learning," arXiv:2605.01172
+<!-- consolidation:see-also:start -->
+## See Also
+[[debugging]]  [[memory-bank]]  [[class-balancing]]
+<!-- consolidation:see-also:end -->

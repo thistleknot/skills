@@ -350,5 +350,5 @@ Applicable to any domain with pre-trained embeddings. Fast (microseconds to seco
 **Dwarf Fortress artifact:** The sorted correlation heatmap + 3D cluster visualization is the masterpiece. Train the model to preserve what's already visible.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[gist_correlation_matrix]]  [[spiral-radial-clustering-display]]  [[cluster-quantized-knn]]  [[representation-pipeline]]  [[deep-q-rl]]
+[[nearest-neighbor-chain]]  [[hyper-parm_tuning]]  [[memory-architecture]]
 <!-- consolidation:see-also:end -->

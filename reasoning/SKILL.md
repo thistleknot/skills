@@ -58,5 +58,5 @@ Isolate by division: working vs broken, logic vs data vs environment, expected v
 Before responding: Observe (prior state) → Plan tools → Execute → Reason over results → Plan response → Respond.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[debugging]]  [[react-agent]]  [[agentic_kg_memory]]  [[agentic-harness]]  [[code]]
+[[agentic_kg_memory]]  [[skill-wiki]]  [[memory-bank]]
 <!-- consolidation:see-also:end -->

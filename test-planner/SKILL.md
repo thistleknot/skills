@@ -206,5 +206,5 @@ Regression: None (no changes since last merge)
 | Subject mismatch | Tests don't align with subjects | Report coverage as uncertain |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[diagnostic-scanner]]  [[code-extraction]]  [[doc-synthesizer]]  [[tdd-agent]]  [[validation-artifacts]]
+[[continuity-log]]  [[mcp-tool-registry]]  [[diagnostic-scanner]]
 <!-- consolidation:see-also:end -->

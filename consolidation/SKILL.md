@@ -240,5 +240,5 @@ The elbow is selected at the k with the most-negative second derivative (sharpes
 | Stale report | Docs changed since last run | Re-extract triplets for changed files only (content-hash check) |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[nearest-neighbor-chain]]  [[agentic_kg_memory]]  [[kg_ontology]]  [[agentic-harness]]  [[representation-pipeline]]
+[[code]]  [[openspec-archive-change]]  [[causal-inference]]
 <!-- consolidation:see-also:end -->

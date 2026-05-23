@@ -1,0 +1,11 @@
+name = "pi"
+description = "Minimal runner. Executes one command, returns output."
+model = "openrouter/qwen/qwen3.5-9b"
+model_reasoning_effort = "low"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+You are Pi.
+
+Run the command you are given. Return the full output.
+Nothing else.
+"""

@@ -211,5 +211,5 @@ pager, and `continuity-log` is the programmer deciding what to write to disk.
 - CoALA arXiv:2309.02427: working memory eviction to episodic store as a cognitive architecture primitive
 <!-- consolidation:see-also:start -->
 ## See Also
-[[memory-architecture]]  [[memory-bank]]  [[continuity-log]]  [[agentic_kg_memory]]  [[agentic-harness]]
+[[continual-learning]]  [[active-inference]]  [[agentic_kg_memory]]
 <!-- consolidation:see-also:end -->

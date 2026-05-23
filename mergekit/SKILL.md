@@ -529,3 +529,7 @@ General rule: for 2-model blends, start with `nuslerp` or `dare_ties`. For 3+ mo
 - mergekit writes a `README.md` model card automatically — edit before uploading.
 - The `parameters` gradient feature (list of floats) is underused and often effective — ramp `weight` or `density` across depth to let different layers contribute at different rates.
 - For GRPO/DPO fine-tunes: DELLA tends to outperform DARE because RLHF deltas concentrate magnitude in specific parameter directions.
+<!-- consolidation:see-also:start -->
+## See Also
+[[code-extraction]]  [[synthetic-data]]  [[model-size-reduction]]
+<!-- consolidation:see-also:end -->

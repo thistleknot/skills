@@ -150,3 +150,19 @@ errors before OpenCode's compaction threshold is reached.
 **Fix:** After any harness/config repair, start a fresh session against the synced config. Do not use `-s` until the new run has proven it can complete the target task.
 
 **Rule:** Config repair and stale-session recovery are separate steps. First sync the config, then launch a new session, then validate the task on that clean run.
+
+---
+
+## ❌ PITFALL 8: Scout search-loop from a weak exit contract
+
+**Symptom:** `scout` launches successfully, but it burns multiple internal turns repeating asset scans, broadening extensions, or re-scanning the same directories instead of handing back a bounded result.
+
+**Root cause:** The routing policy said "use scout first," but the scout prompt did not force a one-pass exit once useful directory counts or candidate files were already known. The model kept treating "maybe I can find something better" as permission for another search round.
+
+**Fix:** For CTP2/game-asset hunts, the scout prompt must require:
+- one bounded pass across `Scenarios\\*\\scen0000\\default\\graphics\\pictures` and `ctp2_data\\default\\graphics\\pictures`
+- at most one follow-up gamedata reference-file read
+- no repeated glob for the same extension
+- immediate `NEXT: handyman|fixer|observer` once directories, counts, or candidate files are known
+
+**Rule:** Search-first does not mean search-until-satisfied. A scout task that already found the likely directories must stop and hand off.

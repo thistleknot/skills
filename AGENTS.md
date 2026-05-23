@@ -15,6 +15,15 @@ If this repo is nested inside a larger workspace and you want that parent
 workspace governed instead, copy or adapt this file one level up into the
 parent repo root.
 
+### Foreign-repo guard
+
+If the current workspace is NOT `C:\Users\user\Documents\dev\skills` or one of its
+subdirectories, do not apply this file's repo-local memory-bank protocol, todo
+autotriggers, or skill-library maintenance rules to that foreign repo. In non-skills
+repos, use the target workspace's own instructions first and do not try to read,
+discover, or create a local memory bank unless that repo explicitly defines one or
+the user explicitly asks for that continuity layer.
+
 ## Memory Bank Structure
 
 Canonical readable memory lives under `~/memory-bank/` in separate lanes:
@@ -340,6 +349,7 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Architecture, greenfield design, abstract class planning | `architecture` |
 | Bug present, error reproducing, fix confirmed broken | `debugging` |
 | Autonomous fix-run-retry without human input | `debugging` (self-repair section) |
+| Error names one concrete missing/invalid item that may have siblings in the same file/template | `adjacent-surface-scan` |
 | Unknown format, config, or API schema — reverse-engineer from N examples | `schema-induction` |
 | Regression across instances (one works, one doesn't) — find the differentia | `schema-induction` |
 | Code generation, modification, or review | `code` |
@@ -355,6 +365,7 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Iterative output quality improvement (generate→critique→regenerate) | `evaluator-optimizer` |
 | Offline batch eval, golden dataset, CI-gated quality gate | `checklist` (eval-pipeline section) |
 | Multi-stage automated pipeline, harness routing, coherence gate | `agentic-harness` |
+| Pipeline output is wrong with no error; need to find the upstream cause | `pipeline-input-review` |
 | Hierarchical task decomposition, parallel sub-task dispatch | `agentic-harness` (HTP section) |
 | Coordinating multiple specialised agents in parallel | `multi-agent-coordination` |
 | Agent safety rails, tool-access policy, audit trail | `agent-governance` |

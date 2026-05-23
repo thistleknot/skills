@@ -273,4 +273,5 @@ def synthesize_with_verification(
 - `evalplus/evalplus`: `pip install evalplus` — HumanEval+, MBPP+
 <!-- consolidation:see-also:start -->
 ## See Also
+[[continual-learning]]  [[code-extraction]]  [[simplify]]
 <!-- consolidation:see-also:end -->

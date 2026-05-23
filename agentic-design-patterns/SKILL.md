@@ -29,15 +29,19 @@ This skill sits between `architecture`, `code`, and `agentic-harness`. Use it wh
 - **Evaluator-optimizer** — generator/evaluator loop until accepted or capped.
 - **Autonomous agent** — bounded tool loop with explicit budget and stop criteria.
 
-## Aider in LangGraph
-When `aider` appears inside the graph, treat it as a worker substrate rather than the orchestration framework.
+## Pi + Aider in LangGraph
+When `pi` or `aider` appears inside the graph, keep the roles separate.
+
+- `pi` is a **delegated harness node** — a bounded mini-manager for one subproblem.
+- `aider` is a **worker substrate** — a narrow editor/executor, not the orchestration framework.
 
 - **Manager** — owns plan, role routing, stop conditions, and final synthesis.
 - **Business analyst** — converts the user request into acceptance criteria, scope boundaries, and task cards.
+- **Pi node** — optional child harness that runs a local subgraph for one delegated scene.
 - **Developer** — runs Aider for implementation and repo edits.
 - **QA** — runs Aider or harness checks for tests, regressions, and acceptance evidence.
 
-Recommended rule: the manager owns the chatroom state, while each role writes a bounded artifact back into shared LangGraph state. Do not let Aider become the hidden graph controller.
+Recommended rule: the manager owns the chatroom state, while each role writes a bounded artifact back into shared LangGraph state. Do not let `pi` silently take over the outer graph, and do not let `aider` become the hidden graph controller.
 
 ## Lane parallelism rule
 
@@ -64,5 +68,5 @@ A **shared-UI lane** writes to a single shared stream (terminal stdout, a chat t
 - Use `code` when the task is concrete repo editing rather than workflow design.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-harness]]  [[substrate-selection]]  [[multi-agent-coordination]]  [[react-agent]]  [[evaluator-optimizer]]
+[[agent-governance]]  [[evaluator-optimizer]]  [[react-agent]]
 <!-- consolidation:see-also:end -->

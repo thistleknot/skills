@@ -41,6 +41,13 @@ When authoring a new skill, `SKILL.md` is mandatory; the others are added when t
 
 ## Memory Bank Protocol
 
+### Foreign-repo guard
+
+These instructions apply to the `C:\Users\user\Documents\dev\skills` repository. When
+working in any other repo, do not force the skills repo memory-bank workflow, do not
+look for a local memory bank there, and do not front-load memory-bank discovery unless
+the user explicitly asks for that continuity layer.
+
 At the start of every session, read all six memory bank files in order before acting:
 1. `~/memory-bank/projectbrief.md`
 2. `~/memory-bank/productContext.md`

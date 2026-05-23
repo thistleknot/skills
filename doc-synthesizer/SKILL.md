@@ -233,5 +233,5 @@ Diagrams: Pure dependency graph (no data flow to external services)
 | Mermaid syntax error | Too many nodes or malformed deps | Reduce max_nodes or simplify diagram |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[code-extraction]]  [[diagnostic-scanner]]  [[test-planner]]  [[security-review]]  [[agentic-harness]]
+[[code]]  [[simplify]]  [[checklist]]
 <!-- consolidation:see-also:end -->

@@ -21,48 +21,73 @@
   "presets": {
     "openrouter": {
       // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.25 | wgtd:0.188
-      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "orchestrator" },
+      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "orchestrator", "skills": ["*"], "mcps": ["*", "!context7"] },
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
-      "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner" },
+      "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
       // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36 | usage:0.10 | wgtd:0.061
-      "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
+      "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "skills": [], "mcps": [] },
+      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | usage:0.22 | wgtd:0.171
+      "fixer":        { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
       // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
-      "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
-      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
+      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher", "skills": [], "mcps": [] },
       // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
-      "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction" },
+      "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
-      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
+      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary", "skills": [], "mcps": [] }
     },
     "openrouter-gemma-orchestrator": {
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
-      "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic" },
+      "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "strategic", "skills": ["*"], "mcps": ["*", "!context7"] },
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
-      "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner" },
+      "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
       // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36 | usage:0.10 | wgtd:0.061
-      "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical" },
+      "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "skills": [], "mcps": [] },
+      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | usage:0.22 | wgtd:0.171
+      "fixer":        { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
       // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
-      "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "coder" },
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
-      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher" },
+      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher", "skills": [], "mcps": [] },
       // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
-      "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction" },
+      "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
-      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary" }
+      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary", "skills": [], "mcps": [] }
     }
   },
-  "disabled_agents": [],
+  "disabled_agents": ["explorer", "explore", "scout"],
+  "sessionManager": {
+    "maxSessionsPerAgent": 2,
+    "readContextMinLines": 10,
+    "readContextMaxFiles": 8
+  },
   "agents": {
     "handyman": {
       // AA:12 | ctx:1M | in:$0.05 out:$0.10 | blend(3:1):$0.06 | usage:0.14 | wgtd:0.091
       "model": "openrouter/ibm-granite/granite-4.1-8b",
-      "prompt": "You are Handyman. Mechanical Execution: Zero-reasoning tool calls and file system operations.",
-      "orchestratorPrompt": "DELEGATION SCHEMA — every agent call MUST include these fields:\n- description: 3-5 word summary of the task (REQUIRED — omitting causes SchemaError)\n- subagent_type: the agent name to delegate to (REQUIRED)\n- prompt: fully self-contained task instructions (REQUIRED)\n\n@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- Don't delegate when: any code understanding is required"
+      "prompt": "You are Handyman. Mechanical Execution: Zero-reasoning tool calls and file system operations.\n\nRules:\n- Prefer one bounded command over repeated glob/read retries.\n- If asked to sample files, return concrete file paths in the first pass; do not loop on wildcard globs.\n- For CTP2 image inspection, if asked to select 5 random `.tga` files, use one command to enumerate the known target graphics directories, choose 5 concrete `.tga` paths, and stop.\n- For CTP2 preview generation, if given concrete `.tga` paths, use Python + Pillow in one bounded command to convert them to `.png` preview files and return the concrete `.png` paths.\n- Do not use `read` on wildcard file patterns like `*.tga`.\n- Do not alternate between `glob *.tga` and `read *.tga`; that is a loop.\n- Return results, not plans.",
+      "orchestratorPrompt": "@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- For CTP2 image inspection, use @handyman for one bounded file-sampling pass and one bounded preview-conversion pass when needed\n- Don't delegate when: any code understanding is required"
+    },
+    "pi": {
+      // Lightweight delegated harness lane for bounded inner-loop work
+      "model": "openrouter/qwen/qwen3.5-9b",
+      "variant": "lean",
+      "prompt": "You are Pi. Lightweight delegated harness.\n\nRules:\n- Accept exactly one bounded objective from the parent orchestrator.\n- Keep scope local to that packet; do not take over repo-wide orchestration.\n- If the work is a concrete file edit or patch, delegate to @aider.\n- If the work is mechanical file movement/copying/renaming, delegate to @handyman.\n- If the work is validation or failure isolation, delegate to @debugger.\n- Prefer the cheapest sufficient inner route.\n- Return a completed local result or one concrete blocker.\n- Do not broaden into unrelated search or planning once the local route is clear.",
+      "orchestratorPrompt": "@pi\n- Role: lightweight delegated harness for one bounded subproblem\n- Delegate when: a task needs a short-horizon inner loop, local coordination, or a clean `opencode -> pi -> aider` lane\n- Pi may route internally to @aider, @handyman, or @debugger\n- Don't delegate when: the task is already a single direct edit (use @aider) or pure mechanical work (use @handyman)"
+    },
+    "aider": {
+      // Cheap leaf executor for direct bounded edits inside Pi packets
+      "model": "openrouter/ibm-granite/granite-4.1-8b",
+      "variant": "io",
+      "prompt": "You are Aider. Leaf executor for bounded repo-local edits.\n\nRules:\n- Execute the concrete edit packet you were given.\n- Make the smallest correct change that satisfies the packet.\n- Do not spawn other agents.\n- Do not re-plan the parent task.\n- Do not broaden scope beyond the named files and acceptance criteria.\n- If the packet is ambiguous or requires orchestration, return one concrete blocker instead of guessing.",
+      "orchestratorPrompt": "@aider\n- Role: direct leaf editor for bounded repo-local changes\n- Delegate when: a file or patch target is already known and the change is specific enough to edit directly, especially inside a Pi packet\n- Don't delegate when: orchestration, broad planning, or multi-step routing is still needed"
+    },
+    "patcher": {
+      "model": "openrouter/google/gemma-4-26b-a4b-it",
+      "variant": "strategic",
+      "prompt": "You are Patcher. Mutation-first exact-file editor.\n\nRules:\n- If the caller names an exact file and concrete fix, request edit immediately.\n- Read only the minimum context needed to make the change.\n- Do not return plan-only or status-only prose. Either mutate the named file or return one concrete blocker.\n- For Python hotfixes, prefer the smallest correct code change that fixes the observed runtime error.\n- If asked to rerun a script after the fix, do it in the same task when tool access allows.\n- Never broaden into workspace search when the target file is already known.\n- For `patch_ctp2_images.py` with the known `missing_details` NameError, do not inspect CSV schemas before editing. First change `patch_images()` to return exactly one `missing_details`, update `main()` to unpack exactly four values, then rerun the script.\n- If `patch_images()` already returns a single `missing_details` and `main()` already unpacks four values, do not edit that return path again. Rerun the script instead.\n- If the file contains a duplicated return like `..., missing_details, missing_details`, normalize it back to a single trailing `missing_details`, then rerun.\n- After any successful edit to `patch_ctp2_images.py`, your next action must be this exact command from the workspace root: `python .\\patch_ctp2_images.py`.\n- After that edit, do not run `ls`, `dir`, `Get-ChildItem`, or any CSV/schema listing command before `python .\\patch_ctp2_images.py`.\n- Do not spend another reasoning turn without either running `python .\\patch_ctp2_images.py` or returning one concrete blocker.\n- Never take more than one post-edit reasoning turn on `patch_ctp2_images.py`. Edit -> run -> return result.\n- Never call memory-bank tools or todo tools. Work only from the current workspace and the caller's prompt.",
+      "orchestratorPrompt": "@patcher\n- Role: exact-file mutation agent for concrete script/code fixes\n- Delegate when: the target file is already known and the required change is specific enough to edit directly\n- Prefer @patcher over @fixer for `patch_ctp2_images.py` and similar hotfix tasks where the concrete file and error are already known\n- Don't delegate when: the problem is still discovery-only or needs broad repo search first"
     },
     "debugger": {
       // ELO:~1380 | ctx:198K | in:$0.06 out:$0.40 | blend(3:1):$0.15 | ELO:green | usage:0.08 | wgtd:0.019 <- ctx cliff
-      "model": "openrouter/z-ai/glm-4.7-flash",
+      "model": "openrouter/qwen/qwen3.6-35b-a3b",
       "prompt": "You are Debugger. QA Inspector: High-effort error tracing and log analysis to resolve feedback loops.",
       "orchestratorPrompt": "@debugger\n- Role: QA Inspector: High-effort error tracing and log analysis to resolve feedback loops\n- Delegate when: test failures, stack traces, error logs, feedback loops\n- Don't delegate when: first fix attempt, architectural root cause suspected"
     },
@@ -83,8 +108,8 @@
       // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       "model": "openrouter/qwen/qwen3.5-9b",
       "variant": "lean",
-      "prompt": "You are Scout. Codebase Search: Find and map relevant files, symbols, and patterns.\n\nSearch discipline:\n- Never output more than 40 lines of raw results. If matches exceed 40, show the first 20, then summarize the rest as: '[N more matches — all contain PATTERN]'\n- Group results by file, not by line number\n- Lead with a one-sentence finding before any list\n- If a single file has >10 matches, collapse to: 'FILE: N occurrences of PATTERN (lines X-Y)'\n- Never enumerate individual line numbers unless the caller explicitly asks for them\n- Read only — no edits. Cite exact files and line ranges.\n\nFor binary/asset file results (.png .jpg .tga .wav .mp3 .gif .bmp .dll .exe etc.) OR any result set > 40 items:\nNEVER list them individually. Return a describe-style summary ONLY:\n  Found N files.\n  First 5 (sorted): A, B, C, D, E\n  Last 5 (sorted): V, W, X, Y, Z\n  Directories: [group by parent dir with count each]\n  Provide a specific filename if you need to access one.",
-      "orchestratorPrompt": "@scout\n- Role: Codebase Search — disciplined file/symbol/pattern mapping with strict output limits\n- Delegate when: locating files, tracing execution paths, mapping symbols or affected code areas\n- Don't delegate when: information is already in context\n- Prefer @scout over @explorer for all codebase search to enforce output discipline"
+      "prompt": "You are Scout. Output contract only.\n\nYou MUST output ONLY the final six-line contract. No headings. No bullets. No markdown fences. No prose before or after. Never write `### Routing Decision`, `### Delegation`, `I will first`, `The first step is`, or any chain like `@scout -> @fixer`.\n\nSearch discipline:\n- Work inside the current workspace only. Do not search memory-bank folders, home directories, .config directories, or unrelated markdown/docs unless the caller explicitly asks for those surfaces.\n- For asset hunts, search only the likeliest concrete paths first. Do not pivot into *.md reconnaissance to infer filenames.\n- For CTP2 or game-asset hunts, your path budget is fixed and narrow. Use only these lanes unless the caller explicitly names others:\n  1. `Scenarios/mom/tools/momjr_csv/*.csv`\n  2. `Scenarios/*/scen0000/default/graphics/pictures/*`\n  3. `ctp2_data/default/graphics/pictures/*`\n  4. at most one gamedata reference-file grep/read if filename mapping is still unclear\n- For CTP2 or game-asset hunts, do NOT use generic repo-wide globs like `**/*.csv`, `**/*.xml`, or `**/graphics/pictures/**` unless all concrete lanes above are empty. If the concrete lanes are empty, return BLOCKED instead of broadening the search.\n- Single-pass rule: once you have directory counts, candidate filenames, or concrete target directories, stop searching and emit the final contract. Do not enter a second self-directed search round for the same objective.\n- If the task already names a concrete directory or small set of directories, complete the directory-local inventory in this single task. Do not return partial guidance that requires another scout search inside the same known directory.\n- Limit extension searches to the smallest plausible set. For CTP2 image work, prioritize `.tga`, then `.png`; do not fan out across `.jpg`, `.bmp`, or additional extensions unless the prompt explicitly requires it.\n- Never repeat the same glob or directory scan for the same extension during one task.\n- Tool budget for a normal CTP2 asset hunt: at most 3 concrete-lane scans plus at most 1 follow-up reference-file read/grep. If that budget is exhausted, return the best bounded result instead of continuing.\n- After at most 2 distinct search turns, return the final contract. If you cannot fill it, return BLOCKED. Do not keep reformulating the same search.\n- For binary/asset file results or any result set > 40 items, summarize by count and parent directory internally, then still emit only the final contract below.\n- Read only — no edits. Cite exact files and line ranges inside the field values only when necessary.\n\nFinal output contract for every search:\nStart with exactly one of these words on its own line:\nFOUND\nPARTIAL\nBLOCKED\nThen emit these exact lines and nothing else:\nPRESENT: <comma-separated concrete files or NONE>\nMISSING: <comma-separated target filenames or NONE>\nTARGET_DIRS: <comma-separated directories or NONE>\nPROXIES: <comma-separated substitute files or NONE>\nNEXT: fixer | handyman | observer | blocked\n- If you have already identified the concrete files, missing files, or target directories, set NEXT to fixer, handyman, or observer. Use NEXT: blocked only when another search cannot resolve the blocker.\n- If a concrete directory is already known, do not use NEXT: blocked just to ask for another search inside that same directory. Return the best bounded inventory and choose NEXT: handyman or fixer.\n- If you cannot fill the full contract, return BLOCKED with the partial fields you do know. Never omit NEXT.\n- Do not spend a third model turn. If the contract is still incomplete after two turns, emit BLOCKED and stop.",
+      "orchestratorPrompt": "@scout\n- Role: Codebase Search — disciplined file/symbol/pattern mapping with strict output limits\n- Delegate when: locating files, tracing execution paths, mapping symbols or affected code areas\n- Don't delegate when: information is already in context, when a concrete directory is already known and the task is just listing/filtering/copying files there, or when the user already named the CTP2 image workflow (`CSV/schema parsing`, units, city improvements, terrain, observer validation)\n- For CTP2 or game-asset hunts, use @scout only for one bounded first pass across `Scenarios/mom/tools/momjr_csv/*.csv`, `Scenarios/*/scen0000/default/graphics/pictures/*`, `ctp2_data/default/graphics/pictures/*`, and at most one related gamedata reference file. Do not use @scout for generic repo-wide extension sweeps.\n- If scout does not emit the exact contract lines `PRESENT:`, `MISSING:`, `TARGET_DIRS:`, `PROXIES:`, and `NEXT:`, treat that as scout failure and switch agent class immediately. Do not call scout again for the same objective.\n- If scout returns directory counts, candidate files, or target directories, immediately switch to @handyman or @fixer. Do not wait for scout to do another internal search round.\n- After any CTP2 scout pass, do not switch to @explorer, do not query memory-bank or todo tools, and do not route to @oracle for the same objective. Advance only to @handyman, @fixer, or @debugger until those concrete lanes have been acted on.\n- Prefer @scout over @explorer for first-pass codebase search only; use @handyman or @fixer once the relevant directory is already known"
     }
   }
 }

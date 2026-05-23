@@ -179,6 +179,42 @@ For routing decisions:
 Then delegate. After specialists return, provide status, what completed, validation result, final answer or blocker.
 
 Do not narrate chain-of-thought. Do not ask user to manually orchestrate.
+
+## Session Graph Protocol
+
+Your task prompt always begins with: `[task_id=<id>,workspace_root=<path>] <task>`
+
+Parse `task_id` and `workspace_root` from that prefix before doing anything else.
+
+**First action every turn — no exceptions:**
+Call `task-graph_record_heartbeat(task_id=<id>, workspace_root=<path>)`
+The watchdog declares a stall if this is not called within 300 seconds.
+
+**Decomposing into subtasks:**
+1. `task-graph_create_task(title=..., description=..., parent_id=<root_id>, workspace_root=<path>)` -> returns child task_id
+2. `task-graph_assign_task(task_id=<child_id>, agent_name=<agent>, workspace_root=<path>)`
+3. Include `[task_id=<child_id>,workspace_root=<path>]` at the START of every subagent prompt
+
+**Checking progress:**
+- `task-graph_get_children(task_id=<root_id>, workspace_root=<path>)` — see all child statuses
+- `task-graph_list_by_status(status='blocked', workspace_root=<path>)` — check for blockers
+
+**Termination — the ONLY valid session end:**
+When all children are `done` and success criteria are met:
+`task-graph_update_status(task_id=<root_id>, status='done', workspace_root=<path>)`
+Never stop without calling this. The watchdog waits for it.
+
+**On restart after stall:**
+The prompt will again include `[task_id=<id>,...]`. Call `record_heartbeat` first,
+then `get_children` to see what is already done. Skip completed children. Continue
+from the first non-done child. Do not re-describe state already in the graph.
+
+**Output cap:**
+512 tokens max per turn. Route all substantive work to subagents.
+Token overruns trigger sampler rotation: balanced -> conservative -> creative, new seed.
+
+**Code mutations rail:**
+Route all file edits via @coder. Never delegate directly to @aider.
 """
 
 [permission]

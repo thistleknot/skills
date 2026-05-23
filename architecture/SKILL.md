@@ -65,5 +65,5 @@ Lock the spec before starting implementation. Reopening requirements mid-impleme
 - Gather real requirements, not assumptions
 <!-- consolidation:see-also:start -->
 ## See Also
-[[design-patterns]]  [[code]]  [[react-agent]]  [[deep-research]]  [[codebase-knowledge-graph]]
+[[design-patterns]]  [[schema-induction]]  [[react-fastapi-sqlite]]
 <!-- consolidation:see-also:end -->

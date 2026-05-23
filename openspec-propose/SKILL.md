@@ -110,5 +110,5 @@ After completing all artifacts, summarize:
 - Verify each artifact file exists after writing before proceeding to next
 <!-- consolidation:see-also:start -->
 ## See Also
-[[openspec-archive-change]]
+[[openspec-archive-change]]  [[stratified-quota-sampling]]  [[code-extraction]]
 <!-- consolidation:see-also:end -->

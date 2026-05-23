@@ -354,5 +354,5 @@ Last-write-wins is **banned** for status fields.
 - Data Interpreter arXiv:2402.18679: +25% InfiAgent-DABench with hierarchical task graph decomposition
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-harness]]  [[agentic-design-patterns]]  [[react-agent]]  [[agent-governance]]  [[openspec-workflow]]
+[[substrate-selection]]  [[cua-desktop-agent]]  [[memory-bank]]
 <!-- consolidation:see-also:end -->

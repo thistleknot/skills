@@ -278,4 +278,5 @@ def causal_counterfactual_query(
 - pywhy-llm `py-why/pywhy-llm` (experimental): `pip install pywhyllm`
 <!-- consolidation:see-also:start -->
 ## See Also
+[[checklist]]  [[gist_correlation_matrix]]  [[nearest-neighbor-chain]]
 <!-- consolidation:see-also:end -->

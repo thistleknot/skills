@@ -264,5 +264,5 @@ If the same class of error keeps reappearing, stop patching. Collapse the interv
 - A known-good control can be identified on the same surface
 <!-- consolidation:see-also:start -->
 ## See Also
-[[debugging]]  [[reasoning]]  [[validation]]  [[git-workflow]]  [[skill-wiki]]
+[[stratified-quota-sampling]]  [[synthetic-data]]  [[tdd-agent]]
 <!-- consolidation:see-also:end -->

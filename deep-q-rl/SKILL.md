@@ -585,5 +585,5 @@ Validation protocol per epoch:
 | Declaring done after 1 epoch | Validate on OOD inputs; watch variance; run ≥ 2–3 epochs |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[evaluator-optimizer]]  [[autoresearch]]  [[agentic-harness]]  [[agentic_kg_memory]]  [[react-agent]]
+[[agent-governance]]  [[skill-wiki]]  [[deep-research]]
 <!-- consolidation:see-also:end -->

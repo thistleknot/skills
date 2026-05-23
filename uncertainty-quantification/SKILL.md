@@ -287,4 +287,5 @@ invariants:
 - Vashurin et al. arXiv:2406.15627 (TACL 2025): LM-Polygraph 20+ method benchmark
 <!-- consolidation:see-also:start -->
 ## See Also
+[[tdd-agent]]  [[evaluator-optimizer]]  [[memory-bank]]
 <!-- consolidation:see-also:end -->

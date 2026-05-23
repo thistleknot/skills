@@ -292,4 +292,5 @@ class PromptOptimizationOutput:
 - `zou-group/textgrad` (active): `pip install textgrad`
 <!-- consolidation:see-also:start -->
 ## See Also
+[[synthetic-data]]  [[hyper-parm_tuning]]  [[react-agent]]
 <!-- consolidation:see-also:end -->

@@ -491,5 +491,5 @@ Avoid:
 - Tuning all layers jointly before layerwise baselines exist
 <!-- consolidation:see-also:start -->
 ## See Also
-[[optuna-nested-cv]]  [[siamese_from_correlation_matrix]]  [[cluster-quantized-knn]]  [[agentic_kg_memory]]  [[hyper-parm_tuning]]
+[[checklist]]  [[memory-architecture]]  [[codebase-knowledge-graph]]
 <!-- consolidation:see-also:end -->

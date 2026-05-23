@@ -136,3 +136,7 @@ After simplifying, confirm:
 - [ ] No unrelated files were refactored
 - [ ] No error handling was weakened or removed
 - [ ] The result is simpler to review than the original
+<!-- consolidation:see-also:start -->
+## See Also
+[[code]]  [[doc-synthesizer]]  [[code-extraction]]
+<!-- consolidation:see-also:end -->

@@ -23,6 +23,47 @@
                 "enabled": true
               }
             },
+            "orchestrator": {
+              "limit": { "output": 512 },
+              "reasoning": {
+                "effort": "medium",
+                "enabled": true
+              },
+              "modelKwargs": {
+                "frequency_penalty": 0.4,
+                "presence_penalty": 0.2
+              }
+            },
+            "orchestrator_balanced": {
+              "limit": { "output": 512 },
+              "reasoning": { "effort": "medium", "enabled": true },
+              "modelKwargs": {
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "frequency_penalty": 0.3,
+                "presence_penalty": 0.1
+              }
+            },
+            "orchestrator_conservative": {
+              "limit": { "output": 512 },
+              "reasoning": { "effort": "low", "enabled": false },
+              "modelKwargs": {
+                "temperature": 0.1,
+                "top_p": 1.0,
+                "frequency_penalty": 0.0,
+                "presence_penalty": 0.0
+              }
+            },
+            "orchestrator_creative": {
+              "limit": { "output": 512 },
+              "reasoning": { "effort": "medium", "enabled": true },
+              "modelKwargs": {
+                "temperature": 1.2,
+                "top_p": 0.95,
+                "frequency_penalty": 0.5,
+                "presence_penalty": 0.4
+              }
+            },
             "fast": {
               "reasoning": {
                 "effort": "minimal",
@@ -43,6 +84,26 @@
                 "effort": "high",
                 "enabled": true
               }
+            },
+            "orchestrator": {
+              "limit": { "output": 512 },
+              "reasoning": { "effort": "medium", "enabled": true },
+              "modelKwargs": { "frequency_penalty": 0.4, "presence_penalty": 0.2 }
+            },
+            "orchestrator_balanced": {
+              "limit": { "output": 512 },
+              "reasoning": { "effort": "medium", "enabled": true },
+              "modelKwargs": { "temperature": 0.7, "top_p": 0.9, "frequency_penalty": 0.3, "presence_penalty": 0.1 }
+            },
+            "orchestrator_conservative": {
+              "limit": { "output": 512 },
+              "reasoning": { "effort": "low", "enabled": false },
+              "modelKwargs": { "temperature": 0.1, "top_p": 1.0, "frequency_penalty": 0.0, "presence_penalty": 0.0 }
+            },
+            "orchestrator_creative": {
+              "limit": { "output": 512 },
+              "reasoning": { "effort": "medium", "enabled": true },
+              "modelKwargs": { "temperature": 1.2, "top_p": 0.95, "frequency_penalty": 0.5, "presence_penalty": 0.4 }
             }
           }
         },
@@ -57,6 +118,16 @@
               "reasoning": {
                 "effort": "medium"
               }
+            },
+            "heavy": {
+              "reasoning": {
+                "effort": "high",
+                "enabled": true
+              },
+              "modelKwargs": {
+                "frequency_penalty": 0.4,
+                "presence_penalty": 0.2
+              }
             }
           }
         },
@@ -68,12 +139,20 @@
           },
           "variants": {
             "lean": {
-              "reasoning": {
-                "effort": "minimal"
-              },
-              "modelKwargs": {
-                "frequency_penalty": 0.7
-              }
+              "reasoning": { "effort": "minimal" },
+              "modelKwargs": { "frequency_penalty": 0.7, "presence_penalty": 0.2 }
+            },
+            "balanced": {
+              "reasoning": { "effort": "low" },
+              "modelKwargs": { "temperature": 0.7, "top_p": 0.9, "frequency_penalty": 0.3, "presence_penalty": 0.1 }
+            },
+            "conservative": {
+              "reasoning": { "effort": "minimal" },
+              "modelKwargs": { "temperature": 0.1, "top_p": 1.0, "frequency_penalty": 0.0, "presence_penalty": 0.0 }
+            },
+            "creative": {
+              "reasoning": { "effort": "low" },
+              "modelKwargs": { "temperature": 1.2, "top_p": 0.95, "frequency_penalty": 0.5, "presence_penalty": 0.4 }
             }
           }
         },
@@ -163,6 +242,14 @@
         "C:\\Users\\user\\Documents\\dev\\skills\\todo\\todo_mcp.py"
       ],
       "enabled": true
+    },
+    "task-graph": {
+      "type": "local",
+      "command": [
+        "python",
+        "C:\\Users\\user\\Documents\\dev\\skills\\todo\\task_graph_mcp.py"
+      ],
+      "enabled": true
     }
   },
   "plugin": [
@@ -170,13 +257,36 @@
   ],
   "agent": {
     "orchestrator": {
+      "timeout": 60000,
       "permission": {
         "read": "deny",
         "grep": "deny",
         "glob": "deny",
         "list": "deny",
-        "bash": "deny",
-        "edit": "deny",
+        "bash": "allow",
+        "edit": "allow",
+        "subtask": "allow"
+      }
+    },
+    "coder": {
+      "permission": {
+        "read": "allow",
+        "grep": "allow",
+        "glob": "allow",
+        "list": "allow",
+        "bash": "allow",
+        "edit": "allow",
+        "subtask": "allow"
+      }
+    },
+    "aider": {
+      "permission": {
+        "read": "allow",
+        "grep": "allow",
+        "glob": "allow",
+        "list": "allow",
+        "bash": "allow",
+        "edit": "allow",
         "subtask": "deny"
       }
     }

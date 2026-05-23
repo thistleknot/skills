@@ -108,5 +108,5 @@ Based on [trycua/cua](https://github.com/trycua/cua):
 - Consider adding OCR (Tesseract) for text-based verification alongside vision
 <!-- consolidation:see-also:start -->
 ## See Also
-[[headless-browser-verification]]  [[openspec-workflow]]  [[agentic-harness]]  [[validation-artifacts]]  [[react-agent]]
+[[multi-agent-coordination]]  [[git-workflow]]  [[memory-bank]]
 <!-- consolidation:see-also:end -->

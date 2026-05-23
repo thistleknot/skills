@@ -185,5 +185,5 @@ fabro validate workflow.fabro            # validate only
 {{user_input}}
 <!-- consolidation:see-also:start -->
 ## See Also
-[[openspec-workflow]]  [[agentic-harness]]  [[react-agent]]  [[agentic-design-patterns]]  [[cua-desktop-agent]]
+[[evaluator-optimizer]]  [[openspec-apply-change]]  [[git-workflow]]
 <!-- consolidation:see-also:end -->

@@ -220,4 +220,6 @@ list endpoints: + pagination: { page, per_page, total }
 - **`validation`** — the induced minimum schema becomes a validation contract
 
 <!-- consolidation:see-also:start -->
+## See Also
+[[react-fastapi-sqlite]]  [[semantic-search-enrichment]]  [[code-extraction]]
 <!-- consolidation:see-also:end -->

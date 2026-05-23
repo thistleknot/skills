@@ -6,6 +6,14 @@ After each reset, I rely ENTIRELY on the Memory Bank to understand the project
 and continue work effectively. I MUST read ALL memory bank files at the start
 of EVERY task - this is not optional.
 
+## Foreign-repo guard
+
+These instructions are for the `C:\Users\user\Documents\dev\skills` repository. If the
+current workspace is a different repo, do not apply the skills repo memory-bank,
+todo-autotrigger, or skill-maintenance rules there. Use the target repo's own
+instructions and workspace evidence first, and do not attempt to read, discover, or
+create a local memory bank in that foreign repo unless the user explicitly asks for it.
+
 ## Memory Bank Structure
 
 Files are located in ~/memory-bank/ and build on each other in this order:

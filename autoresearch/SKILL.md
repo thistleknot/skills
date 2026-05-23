@@ -350,5 +350,5 @@ RETRIEVAL_CONFIG_SPACE = {
 - Self-debugging arXiv:2304.05128 — execution feedback loop, +12%
 <!-- consolidation:see-also:start -->
 ## See Also
-[[deep-q-rl]]  [[evaluator-optimizer]]  [[agentic-harness]]  [[debugging]]  [[tdd-agent]]
+[[react-agent]]  [[stratified-quota-sampling]]  [[synthetic-data]]
 <!-- consolidation:see-also:end -->

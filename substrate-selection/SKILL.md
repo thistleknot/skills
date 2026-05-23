@@ -17,10 +17,10 @@ validation_method: session
 - **opencode** — orchestrator substrate; strongest fit for planning/exploration and delegated subtask framing
 - **claw-code** — orchestration/runtime candidate; interactive controller with provider routing
 - **openclaw** — keep in scope as a gateway/control-plane or monitoring candidate, not the default coding substrate
-- **aider** — leaf executor; best for manager-directed one-shot editing with a chosen model and prompt
+- **pi** — lightweight delegated external harness; use when the outer orchestrator should hand off one bounded scene to a second harness that stays lighter than the main control plane
+- **aider** — leaf executor; best for manager-directed one-shot editing with a chosen model and prompt, including as a worker inside `pi`
 - **Copilot agent / Copilot CLI** — currently grounded here as a skill/authoring surface, not yet as a verified harness runtime substrate
 - **Claude Code** — treat as provisional until direct evidence is gathered in this repo; do not hard-code stronger claims from analogy alone
-- **Pi** — unresolved; do not encode architectural claims until the exact project/runtime is identified
 
 ## Working Rules
 - skills choose substrates; adapters invoke substrates
@@ -30,8 +30,9 @@ validation_method: session
 
 ## Integration Rule
 - Do not stop at a comparison matrix. A backend stack only counts as integrated when the harness resolves it into a run-visible contract.
-- The harness should record at least two lanes per run:
+- The harness should record at least these lanes per run:
   - **orchestrator lane** — default current recommendation: `opencode`
+  - **delegated external-harness lane** — default current recommendation: `pi`
   - **leaf-agent lane** — default current recommendation: `aider`
 - Each lane should bind through the model registry to a concrete endpoint/model pair, then serialize that binding into state, logs, or CLI output so the active stack is inspectable.
 - Runtime choice remains configurable, but the default split should be explicit rather than implied.
@@ -53,9 +54,10 @@ Rules:
 
 ## Default Recommendation
 - Use `opencode` / `claw-code` when you need orchestration
-- Use `aider` when a manager needs a leaf code executor
-- Keep `openclaw`, Copilot, Claude Code, and Pi in the comparison set with explicit confidence labels
+- Use `pi` when the orchestrator should delegate a bounded sub-harness instead of a single worker call
+- Use `aider` when a manager or delegated harness needs a leaf code executor
+- Keep `openclaw`, Copilot, and Claude Code in the comparison set with explicit confidence labels
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-design-patterns]]  [[agentic-harness]]  [[build-observability]]  [[agentic_kg_memory]]  [[multi-agent-coordination]]
+[[agentic-harness]]  [[pi]]  [[codebase-knowledge-graph]]  [[code]]
 <!-- consolidation:see-also:end -->

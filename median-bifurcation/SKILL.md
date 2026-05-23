@@ -148,4 +148,6 @@ cross-entropy; the boundary pressure comes from the data layout.
 - `class-balancing` — handles imbalance that arises *after* a split
 
 <!-- consolidation:see-also:start -->
+## See Also
+[[continual-learning]]  [[continuity-log]]  [[program-synthesis]]
 <!-- consolidation:see-also:end -->

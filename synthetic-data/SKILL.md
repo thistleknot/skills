@@ -286,4 +286,5 @@ invariants:
 - `argilla-io/distilabel`: `pip install distilabel[openai,hf-inference-endpoints,vllm]`
 <!-- consolidation:see-also:start -->
 ## See Also
+[[model-size-reduction]]  [[tdd-agent]]  [[agentic-harness]]
 <!-- consolidation:see-also:end -->

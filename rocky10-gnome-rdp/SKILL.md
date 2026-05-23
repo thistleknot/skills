@@ -135,3 +135,7 @@ If you must use CLI, export both vars first:
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
 export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus
 ```
+<!-- consolidation:see-also:start -->
+## See Also
+[[openspec-workflow]]  [[gist-retriever]]  [[stratified-quota-sampling]]
+<!-- consolidation:see-also:end -->

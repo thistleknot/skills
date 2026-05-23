@@ -157,3 +157,7 @@ Typical stacked workflow:
 - access to the source checkpoint files and, for LoRA extraction or sparsification, the matching base checkpoint
 - enough disk space for at least one additional full checkpoint copy per pipeline stage
 - `torch`, `transformers`, `safetensors`, and optionally `peft` are available
+<!-- consolidation:see-also:start -->
+## See Also
+[[synthetic-data]]  [[tdd-agent]]  [[agentic_kg_memory]]
+<!-- consolidation:see-also:end -->

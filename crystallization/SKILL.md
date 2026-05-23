@@ -179,4 +179,7 @@ Periodic automated crystallization avoids requiring manual triggering after ever
 5. Each crystal's extracted `lessons[]` trigger `lesson-save` automatically
 
 The grouping heuristic keeps related work chains together — same parent task or same project — rather than crystallizing every isolated action as its own digest.
-
+<!-- consolidation:see-also:start -->
+## See Also
+[[synthetic-data]]  [[checklist]]  [[agentic-harness]]
+<!-- consolidation:see-also:end -->

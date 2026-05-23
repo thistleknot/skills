@@ -161,3 +161,7 @@ A high-performance, low-latency agent orchestration plugin for OpenCode, focusin
 | `src/features/` | Core logic for tmux integration and session state. | [View Map](src/features/codemap.md) |
 | `src/config/` | Implements the configuration loading pipeline and environment variable injection. | [View Map](src/config/codemap.md) |
 ```
+<!-- consolidation:see-also:start -->
+## See Also
+[[codebase-knowledge-graph]]  [[code-extraction]]  [[substrate-selection]]
+<!-- consolidation:see-also:end -->

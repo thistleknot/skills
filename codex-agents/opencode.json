@@ -57,6 +57,16 @@
               "reasoning": {
                 "effort": "medium"
               }
+            },
+            "heavy": {
+              "reasoning": {
+                "effort": "high",
+                "enabled": true
+              },
+              "modelKwargs": {
+                "frequency_penalty": 0.4,
+                "presence_penalty": 0.2
+              }
             }
           }
         },
@@ -172,9 +182,9 @@
         "grep": "deny",
         "glob": "deny",
         "list": "deny",
-        "bash": "deny",
-        "edit": "deny",
-        "subtask": "deny"
+        "bash": "allow",
+        "edit": "allow",
+        "subtask": "allow"
       }
     }
   },

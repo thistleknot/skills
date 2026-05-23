@@ -394,7 +394,7 @@ The action:
 5. Deletes the original merged branch
 <!-- consolidation:see-also:start -->
 ## See Also
-[[react-agent]]  [[agentic-harness]]  [[git-workflow]]  [[fabro-create-workflow]]  [[cua-desktop-agent]]
+[[openspec-apply-change]]  [[code-extraction]]  [[auto-ingest]]
 <!-- consolidation:see-also:end -->
 
 ---

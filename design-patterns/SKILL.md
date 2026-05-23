@@ -63,5 +63,5 @@ Distinct from a simple pipeline: the key property is that the agent never self-r
 Use this skill with `code`: `code` owns the edit mechanics; `design-patterns` chooses the relationship shape and contract.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[architecture]]  [[codebase-knowledge-graph]]  [[agentic-design-patterns]]  [[code]]  [[agentic-harness]]
+[[code]]  [[synthetic-data]]  [[memory-architecture]]
 <!-- consolidation:see-also:end -->

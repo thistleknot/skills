@@ -1378,5 +1378,5 @@ python extract_methods.py papers\post_processed\2601_09113.md
 - `agentic_kg_memory` — throughline schema, q-score update cycle, fingerprint dedup semantics
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic_kg_memory]]  [[react-fastapi-sqlite]]  [[optuna-nested-cv]]  [[mlflow]]  [[representation-pipeline]]
+[[business-writing]]  [[checklist]]  [[code]]
 <!-- consolidation:see-also:end -->

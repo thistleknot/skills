@@ -376,5 +376,5 @@ The sorted correlation matrix is not a means to retrieval. It IS the complete re
 - The true "masterpiece artifact" 🏰
 <!-- consolidation:see-also:start -->
 ## See Also
-[[siamese_from_correlation_matrix]]  [[spiral-radial-clustering-display]]  [[cluster-quantized-knn]]  [[representation-pipeline]]  [[agentic_kg_memory]]
+[[checklist]]  [[siamese_from_correlation_matrix]]  [[causal-inference]]
 <!-- consolidation:see-also:end -->

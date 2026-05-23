@@ -260,5 +260,5 @@ Cut from the bottom if context is tight. Never cut the active task specification
 - Copilot CLI: `copilot-instructions.md` as primary context injection point
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic-harness]]  [[agentic_kg_memory]]  [[react-agent]]  [[tdd-agent]]  [[debugging]]
+[[substrate-selection]]  [[codebase-knowledge-graph]]  [[simplify]]
 <!-- consolidation:see-also:end -->

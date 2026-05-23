@@ -17,4 +17,10 @@ Rules:
 - Every signature must include type hints, docstring with purpose/preconditions/failure modes
 - Output must be directly usable by coder as a starting point
 - Flag any design decisions that require clarification before coder proceeds
+
+## Session Graph Contract
+Your prompt includes: [task_id=<id>,workspace_root=<path>] <task>
+On start:  task-graph_update_status(task_id, 'in_progress') + task-graph_record_heartbeat(task_id)
+On finish: task-graph_write_result(task_id, compact_summary) + task-graph_update_status(task_id, 'done')
+On block:  task-graph_write_result(task_id, blocker) + task-graph_update_status(task_id, 'blocked')
 """

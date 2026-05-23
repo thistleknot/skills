@@ -112,11 +112,17 @@ function Show-Diff($masterFile, $mirrorFile) {
     }
 }
 
+# Normalize line endings to LF only to prevent false conflicts on Windows.
+function Normalize-LineEndings([string]$text) {
+    if ($null -eq $text) { return $null }
+    return $text -replace "`r`n", "`n" -replace "`r", "`n"
+}
+
 # Returns the base content of a tracked file at last commit, or $null if not tracked.
 function Get-BaseContent($relPath) {
     $base = git -C $Master show "HEAD:$($relPath.Replace('\','/'))" 2>$null
     if ($LASTEXITCODE -ne 0) { return $null }
-    return ($base -join "`n")
+    return (Normalize-LineEndings ($base -join "`n"))
 }
 
 function Test-PathEverTracked($relPath) {
@@ -153,26 +159,26 @@ function Invoke-LlmMerge($relPath, $baseContent, $masterContent, $mirrorContent)
         Set-Content $tmpMaster $masterContent -Encoding UTF8 -NoNewline
         Set-Content $tmpMirror $mirrorContent -Encoding UTF8 -NoNewline
 
-        $diffA = git diff --no-index --unified=5 -- $tmpBase $tmpMaster 2>&1 | Out-String
-        $diffB = git diff --no-index --unified=5 -- $tmpBase $tmpMirror 2>&1 | Out-String
+        $diffA = git -c core.autocrlf=false diff --no-index --unified=5 -- $tmpBase $tmpMaster 2>&1 | Where-Object { $_ -notmatch '^warning:' } | Out-String
+        $diffB = git -c core.autocrlf=false diff --no-index --unified=5 -- $tmpBase $tmpMirror 2>&1 | Where-Object { $_ -notmatch '^warning:' } | Out-String
 
         # Emit the merge context block for the agent (skill-sync protocol)
         Write-Host ""
-        Write-Host "  ═══ SKILL-SYNC LLM MERGE CONTEXT: $relPath ═══" -ForegroundColor Magenta
-        Write-Host "  ── Base document ──────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host "  === SKILL-SYNC LLM MERGE CONTEXT: $relPath ===" -ForegroundColor Magenta
+        Write-Host "  -- Base document --------------------------------------------------" -ForegroundColor DarkGray
         Write-Host $baseContent -ForegroundColor DarkGray
-        Write-Host "  ── Changes from Side A (master) ───────────────────────" -ForegroundColor Cyan
+        Write-Host "  -- Changes from Side A (master) -----------------------------------" -ForegroundColor Cyan
         Write-Host $diffA -ForegroundColor Cyan
-        Write-Host "  ── Changes from Side B (mirror) ───────────────────────" -ForegroundColor Yellow
+        Write-Host "  -- Changes from Side B (mirror) -----------------------------------" -ForegroundColor Yellow
         Write-Host $diffB -ForegroundColor Yellow
-        Write-Host "  ═══ END MERGE CONTEXT ═════════════════════════════════" -ForegroundColor Magenta
+        Write-Host "  === END MERGE CONTEXT =============================================" -ForegroundColor Magenta
         Write-Host ""
         Write-Host "  [skill-sync] Agent: produce the merged file and paste below." -ForegroundColor Magenta
         Write-Host "  [skill-sync] Paste merged content, then enter a line with only: ###END" -ForegroundColor Magenta
 
         if ($Yes) {
-            # Autopilot: cannot interactively collect LLM output — flag for follow-up
-            Write-Host "  [AUTO] Conflict flagged for manual LLM merge — skipping auto-copy." -ForegroundColor Yellow
+            # Autopilot: aider merge archived - skip conflicts in -Yes mode
+            Write-Host "  [AUTO] Conflict skipped (aider merge not wired in -Yes mode)." -ForegroundColor Yellow
             return $null
         }
 
@@ -184,7 +190,7 @@ function Invoke-LlmMerge($relPath, $baseContent, $masterContent, $mirrorContent)
         }
         $merged = $lines -join "`n"
         if ([string]::IsNullOrWhiteSpace($merged) -or $merged -eq $baseContent) {
-            Write-Host "  [WARN] Merged output empty or identical to base — skipping." -ForegroundColor Yellow
+            Write-Host "  [WARN] Merged output empty or identical to base - skipping." -ForegroundColor Yellow
             return $null
         }
         return $merged
@@ -304,8 +310,8 @@ if ($skipReconciliation) {
             $mfTime       = (Get-Item $mf).LastWriteTime
 
             if ($mfTime -gt $lastCommit) {
-                $masterContent = if (Test-Path $masterFile) { Get-Content $masterFile -Raw } else { $null }
-                $mirrorContent = Get-Content $mf -Raw
+                $masterContent = if (Test-Path $masterFile) { Normalize-LineEndings (Get-Content $masterFile -Raw) } else { $null }
+                $mirrorContent = Normalize-LineEndings (Get-Content $mf -Raw)
                 if ($masterContent -ne $mirrorContent) {
                     $count++
                     Write-Host ("  [NEWER] {0,-55} {1}" -f $rel, $mfTime.ToString("yyyy-MM-dd HH:mm")) -ForegroundColor Yellow
@@ -378,8 +384,8 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
         $fastForwards = [System.Collections.Generic.List[hashtable]]::new()
         foreach ($item in $needsMerge) {
             $baseContent   = Get-BaseContent $item.Rel
-            $masterContent = if ($item.MasterExists) { Get-Content $item.MasterFile -Raw } else { $null }
-            $mirrorContent = Get-Content $item.MirrorFile -Raw
+            $masterContent = if ($item.MasterExists) { Normalize-LineEndings (Get-Content $item.MasterFile -Raw) } else { $null }
+            $mirrorContent = Normalize-LineEndings (Get-Content $item.MirrorFile -Raw)
             $case = Get-SyncCase $masterContent $mirrorContent $baseContent
             $item['SyncCase']    = $case
             $item['BaseContent'] = $baseContent
@@ -412,8 +418,8 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
 
             $syncCase      = $item['SyncCase']
             $baseContent   = $item['BaseContent']
-            $masterContent = if ($item.MasterExists) { Get-Content $item.MasterFile -Raw } else { $null }
-            $mirrorContent = Get-Content $item.MirrorFile -Raw
+            $masterContent = if ($item.MasterExists) { Normalize-LineEndings (Get-Content $item.MasterFile -Raw) } else { $null }
+            $mirrorContent = Normalize-LineEndings (Get-Content $item.MirrorFile -Raw)
 
             $caseLabel = switch ($syncCase) {
                 'fast-forward-mirror'  { '[FAST-FWD]' }
@@ -437,7 +443,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
                         Write-ToMaster $item $merged
                         Write-Host "  $caseLabel Merged  : $($item.Rel)" -ForegroundColor Green
                         if ($merged -match '<!--\s*MERGE-CONFLICT') {
-                            Write-Host "  [WARN] MERGE-CONFLICT marker present — flag for human review before commit." -ForegroundColor Yellow
+                            Write-Host "  [WARN] MERGE-CONFLICT marker present - flag for human review before commit." -ForegroundColor Yellow
                         }
                     } else {
                         Write-Host "  $caseLabel Skipped : $($item.Rel) (LLM merge not available in autopilot)" -ForegroundColor Yellow
@@ -469,7 +475,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
                         Write-ToMaster $item $merged
                         Write-Host "  Merged : $($item.Rel)" -ForegroundColor Green
                         if ($merged -match '<!--\s*MERGE-CONFLICT') {
-                            Write-Host "  [WARN] MERGE-CONFLICT marker present — review before committing." -ForegroundColor Yellow
+                            Write-Host "  [WARN] MERGE-CONFLICT marker present - review before committing." -ForegroundColor Yellow
                         }
                     }
                 } else {

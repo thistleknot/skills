@@ -301,4 +301,5 @@ invariants:
 - `aimagelab/mammoth`: 70+ methods, clone + requirements install
 <!-- consolidation:see-also:start -->
 ## See Also
+[[synthetic-data]]  [[tdd-agent]]  [[program-synthesis]]
 <!-- consolidation:see-also:end -->

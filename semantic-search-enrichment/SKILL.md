@@ -374,5 +374,5 @@ pattern = build_search_pattern(
 - Applied in information retrieval literature (Voorhees, 1994; Sanderson, 2000)
 <!-- consolidation:see-also:start -->
 ## See Also
-[[kg_ontology]]  [[agentic_kg_memory]]  [[gist-retriever]]  [[deep-q-rl]]  [[agentic-harness]]
+[[schema-induction]]  [[react-fastapi-sqlite]]  [[code-extraction]]
 <!-- consolidation:see-also:end -->

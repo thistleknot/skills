@@ -197,5 +197,5 @@ When using this skill, the final answer should report:
 - any remaining uncertainty or overfit risk
 <!-- consolidation:see-also:start -->
 ## See Also
-[[optuna-nested-cv]]  [[agentic-hyperparm]]  [[mlflow]]  [[gist-retriever]]  [[agentic_kg_memory]]
+[[nearest-neighbor-chain]]  [[synthetic-data]]  [[mad-dynamic-batching]]
 <!-- consolidation:see-also:end -->

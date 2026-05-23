@@ -162,5 +162,5 @@ Under heavy-tailed data, calibrate the MAD multiplier empirically.
 | `stratified-quota-sampling` users | Residual class weighting after quota-based subset selection |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[stratified-quota-sampling]]  [[mad-dynamic-batching]]  [[optuna-nested-cv]]  [[timeout-guard]]  [[mlflow]]
+[[openspec-archive-change]]  [[stratified-quota-sampling]]  [[timeout-guard]]
 <!-- consolidation:see-also:end -->

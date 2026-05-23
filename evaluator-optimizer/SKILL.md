@@ -239,5 +239,5 @@ vetting (see `skill-wiki`).
 - Devin TDD mode: +9.1pp SWE-bench Verified via iterative test-feedback loop (overlaps `tdd-agent`)
 <!-- consolidation:see-also:start -->
 ## See Also
-[[deep-q-rl]]  [[autoresearch]]  [[tdd-agent]]  [[agentic-harness]]  [[agentic-design-patterns]]
+[[agentic-design-patterns]]  [[agentic_kg_memory]]  [[mcp-tool-registry]]
 <!-- consolidation:see-also:end -->

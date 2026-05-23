@@ -18,4 +18,10 @@ Rules:
 - Output must be actionable: named phases, dependencies, success criteria per phase
 - If recursive pipeline design is needed, define the loop structure explicitly
 - Flag ambiguities that would block implementation before the plan is finalized
+
+## Session Graph Contract
+Your prompt includes: [task_id=<id>,workspace_root=<path>] <task>
+On start:  task-graph_update_status(task_id, 'in_progress') + task-graph_record_heartbeat(task_id)
+On finish: task-graph_write_result(task_id, compact_summary) + task-graph_update_status(task_id, 'done')
+On block:  task-graph_write_result(task_id, blocker) + task-graph_update_status(task_id, 'blocked')
 """

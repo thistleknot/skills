@@ -226,7 +226,8 @@ outer delivery loop and the inner harness-repair loop cannot be maintained indep
 Treat external tools as substrates, not as the harness itself.
 
 - `opencode` and `claw-code` are orchestration/runtime candidates.
-- `aider` is a leaf code executor that a manager can drive as an API-like one-shot with its own model and prompt.
+- `pi` is a lightweight delegated external harness that can sit under the outer orchestrator for one bounded scene.
+- `aider` is a leaf code executor that a manager or delegated harness can drive as an API-like one-shot with its own model and prompt.
 - skills decide when to use a substrate; adapters decide how it is invoked.
 
 ## Integrated Runtime Stack
@@ -237,6 +238,7 @@ When the harness claims to support multiple substrates, each run should resolve 
 record an explicit backend stack:
 
 - **orchestrator** — the backbone runtime for planning / interactive control
+- **delegated external harness** — optional bounded child harness for one subproblem
 - **leaf agent** — the narrow code executor for manager-issued one-shot work
 
 Minimum integration standard:
@@ -249,6 +251,7 @@ Minimum integration standard:
 Current working default:
 
 - `opencode` for the orchestrator lane
+- `pi` for the delegated external-harness lane when the outer manager wants a second lightweight harness
 - `aider` for the leaf-agent lane
 
 This keeps the stack inspectable and prevents "backend support" from meaning
@@ -1699,5 +1702,5 @@ Reference concept: TencentDB-Agent-Memory L0–L3 pyramid (reference architectur
 - The pipeline produces artifacts that can be inspected for gate-passing criteria
 <!-- consolidation:see-also:start -->
 ## See Also
-[[react-agent]]  [[agentic_kg_memory]]  [[agentic-design-patterns]]  [[multi-agent-coordination]]  [[deep-research]]
+[[agentic_kg_memory]]  [[substrate-selection]]  [[synthetic-data]]
 <!-- consolidation:see-also:end -->

@@ -27,6 +27,7 @@ skills/
 │   ├── test-planner                 # coverage-aware test plan generation (green/yellow/red status); regression detection
 │   ├── doc-synthesizer              # AST-based documentation with Mermaid dependency/data-flow diagrams
 │   ├── debugging                    # error isolation, salience tiers, diagnostic strategy, self-repair loop
+│   │   └── adjacent-surface-scan    # one-degree-out sibling scan when one missing item likely belongs to a local family
 │   ├── validation                   # test design, verification protocol, behavior contracts
 │   │   └── uncertainty-quantification  # 3-tier UQ protocol (fast/standard/thorough); semantic entropy, SelfCheckGPT, conformal prediction, LM-Polygraph; abstain/escalate table
 │   ├── architecture                 # system design, abstract-class planning, domain → code mapping
@@ -41,6 +42,7 @@ skills/
 │   ├── agentic-harness              # dark-task control plane; backbone = OpenClaw/Claude Code/OpenCode/Copilot CLI; structured-response contracts + HTP
 │   │   ├── checklist                # LLM-as-judge validation pattern; structured findings with novelty proof
 │   │   ├── continuity-log           # compact-safe session memory; distilled decisions, resume points
+│   │   ├── pipeline-input-review    # partition a pipeline problem to its minimal failing unit; materialise inputs before harness dispatch; hyper-focused task statements
 │   │   └── deep-research            # multi-source web evidence pipeline; LangGraph planner→researcher→synthesizer
 │   ├── openspec-workflow            # spec-driven change lifecycle with OpenSpec artifacts and Fabro handoff
 │   │   ├── openspec-propose         # create proposal/design/spec/tasks for a new change
@@ -48,7 +50,8 @@ skills/
 │   │   ├── openspec-apply-change    # implement tasks from an OpenSpec change
 │   │   └── openspec-archive-change  # archive a completed OpenSpec change
 │   ├── fabro-create-workflow        # author Fabro `.fabro` + `.toml` workflows from natural-language requirements
-│   ├── substrate-selection          # runtime substrate policy: OpenCode / claw-code / aider / provider boundary
+│   ├── substrate-selection          # runtime substrate policy: OpenCode / claw-code / pi / aider / provider boundary
+│   ├── pi                           # lightweight delegated external harness; sits under opencode/agentic-harness and can host aider-like workers
 │   ├── evaluator-optimizer          # LLM-generates→LLM-critiques→LLM-regenerates loop; MBR selection; stopping criteria
 │   │   └── prompt-optimization      # automatic prompt self-improvement; DSPy (MIPROv2), TextGrad (text-space gradients), OPRO, APE; labeled-trainset → MIPROv2 vs no-trainset → TextGrad decision tree
 │   ├── multi-agent-coordination     # peer messaging, plan-approval gates, task ownership, dynamic spawning
@@ -117,7 +120,7 @@ skills/
 1. `react-agent` is the outer execution OS. All other skills are invoked from inside it.
 2. `design-patterns` is the code-facing pattern selector. `code` owns edit mechanics; `design-patterns` chooses the relationship shape and contract.
 3. `agentic-design-patterns` chooses LangGraph workflow shape and role topology. It is where routing, prompt chaining, parallel sectioning, voting, orchestrator-workers, evaluator-optimizer, and bounded autonomous loops belong.
-4. `substrate-selection` decides which runtime sits behind the graph or harness boundary: OpenCode, claw-code, aider, or another provider surface. Current integrated default: `opencode` for the orchestrator lane, `aider` for the leaf-agent lane.
+4. `substrate-selection` decides which runtime sits behind the graph or harness boundary: OpenCode, claw-code, `pi`, aider, or another provider surface. Default integrated stack: `opencode` for the orchestrator lane, optional `pi` for a delegated external-harness lane, and `aider` for the leaf-agent lane.
 5. `agentic-harness` is the programmatic train station for coding frameworks (Claude Code, OpenCode, GitHub Copilot CLI, OpenClaw). It routes, gates, and reconciles work; each framework is a worker line, and the resolved runtime stack should be visible in state/logs rather than hidden in helper code.
 6. `continuity-log` is a child of `agentic-harness`. It holds the compact-safe distilled state that lets the harness resume without re-deriving decisions.
 7. `deep-research` is a child of `agentic-harness`. It decomposes a question into parallel subquestions, gathers web evidence via a 3-tier fetch pipeline (httpx → retry → Selenium), and synthesizes a claim-backed report seeding the harness TaskSpec.
