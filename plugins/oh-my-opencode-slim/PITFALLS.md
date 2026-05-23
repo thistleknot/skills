@@ -166,3 +166,47 @@ errors before OpenCode's compaction threshold is reached.
 - immediate `NEXT: handyman|fixer|observer` once directories, counts, or candidate files are known
 
 **Rule:** Search-first does not mean search-until-satisfied. A scout task that already found the likely directories must stop and hand off.
+
+---
+
+## ❌ PITFALL 9: Orchestrator `timeout` set too low (60s)
+
+**Symptom:** Session silently dies after a single subagent dispatch. No error shown. Appears as a stall.
+
+**Root cause:** `opencode.json` `agent.orchestrator.timeout` was set to 60000ms (60s). A single subagent call (especially planner or fixer hitting a slow model) can take 90–180s. When the orchestrator turn exceeds the timeout, the session terminates mid-chain.
+
+**Fix:** Set `agent.orchestrator.timeout` to at least 300000 (5 minutes).
+
+```jsonc
+"agent": {
+  "orchestrator": {
+    "timeout": 300000,   // ← was 60000; subagent calls can take 90-180s
+    ...
+  }
+}
+```
+
+**Rule:** Never set orchestrator `timeout` below 300000. The bottleneck is subagent latency, not orchestrator thinking time.
+
+---
+
+## ❌ PITFALL 10: `orchestrator_conservative` variant has zero penalties
+
+**Symptom:** After two stall resets (balanced → conservative sampler rotation), the session immediately enters a repetition loop and stalls again. The stall recovery makes things worse.
+
+**Root cause:** `orchestrator_conservative` was set to `frequency_penalty: 0.0, presence_penalty: 0.0` to maximise determinism. But a model with zero penalties that hesitates once will repeat that hesitation indefinitely.
+
+**Fix:** Even the conservative variant must have minimum repetition penalties:
+
+```jsonc
+"orchestrator_conservative": {
+  "modelKwargs": {
+    "temperature": 0.1,
+    "top_p": 1.0,
+    "frequency_penalty": 0.4,   // ← was 0.0
+    "presence_penalty": 0.2     // ← was 0.0
+  }
+}
+```
+
+**Rule:** `frequency_penalty >= 0.4` on ALL orchestrator variants, including conservative. Zero-penalty conservative is the stall rotation that makes things worse, not better.

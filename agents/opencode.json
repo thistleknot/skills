@@ -50,8 +50,8 @@
               "modelKwargs": {
                 "temperature": 0.1,
                 "top_p": 1.0,
-                "frequency_penalty": 0.0,
-                "presence_penalty": 0.0
+                "frequency_penalty": 0.4,
+                "presence_penalty": 0.2
               }
             },
             "orchestrator_creative": {
@@ -98,7 +98,7 @@
             "orchestrator_conservative": {
               "limit": { "output": 512 },
               "reasoning": { "effort": "low", "enabled": false },
-              "modelKwargs": { "temperature": 0.1, "top_p": 1.0, "frequency_penalty": 0.0, "presence_penalty": 0.0 }
+              "modelKwargs": { "temperature": 0.1, "top_p": 1.0, "frequency_penalty": 0.4, "presence_penalty": 0.2 }
             },
             "orchestrator_creative": {
               "limit": { "output": 512 },
@@ -173,7 +173,7 @@
         "z-ai/glm-4.7-flash": {
           "name": "GLM 4.7 Flash",
           "limit": {
-            "context": 2000000,
+            "context": 202752,
             "output": 131072
           },
           "variants": {
@@ -257,7 +257,7 @@
   ],
   "agent": {
     "orchestrator": {
-      "timeout": 60000,
+      "timeout": 300000,
       "permission": {
         "read": "deny",
         "grep": "deny",
