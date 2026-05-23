@@ -210,3 +210,14 @@ errors before OpenCode's compaction threshold is reached.
 ```
 
 **Rule:** `frequency_penalty >= 0.4` on ALL orchestrator variants, including conservative. Zero-penalty conservative is the stall rotation that makes things worse, not better.
+
+---
+
+## ✅ Verified fix: 2026-05-23
+
+After applying PITFALL 9 + 10 fixes to `agents/opencode.json`:
+
+- **Test 1** (single hop): `opencode run "List files in agents/"` → orchestrator → handyman → result. Exit 0. ~2 min.
+- **Test 2** (two hops): `opencode run "Read first 5 lines of orchestrator.toml and count TOMLs"` → orchestrator → handyman (both tasks in one subagent call) → result. Exit 0. ~3 min.
+
+Both ran from `agents/` dir so `opencode.json` was discovered from CWD. No `--config` flag needed.
