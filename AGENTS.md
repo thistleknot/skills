@@ -50,6 +50,7 @@ For this repo, also read the repo/local memory-bank files in the same order:
 4. `~/memory-bank/projects/skills/systemPatterns.md`
 5. `~/memory-bank/projects/skills/techContext.md`
 6. `~/memory-bank/projects/skills/progress.md`
+7. `~/memory-bank/projects/skills/last_session.md` — short-term per-repo conversation continuity (≤50 lines); read to orient on where the prior session left off
 
 Legacy compatibility: `~/.codex/memory-bank/` and `~/.codex/memory-library/` are legacy import sources, not canonical state.
 
@@ -58,6 +59,7 @@ Legacy compatibility: `~/.codex/memory-bank/` and `~/.codex/memory-library/` are
 At the start of EVERY task:
 - Read ALL six global `~/memory-bank/*.md` files before doing anything else
 - Read ALL six repo/local `~/memory-bank/projects/skills/` files when working in this repo
+- Read `~/memory-bank/projects/skills/last_session.md` for recent conversation continuity
 - Read relevant `~/memory-bank/global/*.md` topical files when reusable cross-project context matters
 - If any canonical file is missing, create it using the templates implied by its purpose
 - Build a complete picture of the project before responding
@@ -69,6 +71,8 @@ Update memory bank files when:
 2. After implementing significant changes
 3. When the user says "update memory bank" - MUST review and update ALL files
 4. When context needs clarification
+
+Always update `~/memory-bank/projects/skills/last_session.md` at the end of every significant exchange (cap: 50 lines). Sections: What Was Worked On, Current State, Key Decisions, Open Threads.
 
 Use the update_memory tool to append timestamped entries. Do not overwrite
 history. Keep entries factual and concise.

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Counter CDN</title>
+    <!-- React 18 and ReactDOM via CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- Babel for JSX transformation in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .counter-value {
+            font-size: 3rem;
+            margin: 1rem 0;
+            color: #1c1e21;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            transition: opacity 0.2s;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+        .btn-inc { background-color: #4caf50; color: white; }
+        .btn-dec { background-color: #f44336; color: white; }
+        .btn-reset { background-color: #2196f3; color: white; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        function Counter() {
+            const [count, setCount] = useState(0);
+
+            const increment = () => setCount(prev => prev + 1);
+            const decrement = () => setCount(prev => (prev > 0 ? prev - 1 : 0));
+            const reset = () => setCount(0);
+
+            return (
+                <div className="card">
+                    <h1>React Counter</h1>
+                    <div className="counter-value">{count}</div>
+                    <div className="button-group">
+                        <button className="btn-dec" onClick={decrement}>Decrement</button>
+                        <button className="btn-reset" onClick={reset}>Reset</button>
+                        <button className="btn-inc" onClick={increment}>Increment</button>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Counter />);
+    </script>
+</body>
+</html>

@@ -213,7 +213,18 @@ errors before OpenCode's compaction threshold is reached.
 
 ---
 
-## ✅ Verified fix: 2026-05-23
+## ❌ PITFALL 11: `edit`/`write` tool auto-rejects paths outside workspace
+
+**Symptom:** Agent tries to save a file to an external path (e.g. `C:\Temp\...`); opencode emits `permission requested: external_directory — auto-rejecting`. Session ends with no output file.
+
+**Root cause:** opencode's permission sandbox treats any path outside the session working directory as `external_directory` and rejects `edit`/`write` tool calls to it by default, even if `"edit": "allow"` is set.
+
+**Workaround — bash:** The `bash` permission is not path-scoped. An agent with `"bash": "allow"` can write anywhere via `powershell -Command "Set-Content ..."` or `python -c "open(...).write(...)"`. TD test succeeded this way.
+
+**Correct fix:** Always target paths **inside the workspace** (the dir opencode was launched from, or a subdir of it). For smoke tests: use `<workspace>/smoke_tests/` not `C:\Temp\`.
+
+**Rule:** Never give agents output paths outside the workspace root. If external writes are genuinely required, use bash as the write mechanism, not edit/write tools.
+
 
 After applying PITFALL 9 + 10 fixes to `agents/opencode.json`:
 
