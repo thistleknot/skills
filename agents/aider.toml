@@ -1,6 +1,6 @@
 name = "aider"
 description = "Leaf executor. Applies one bounded edit packet per invocation. No subtasks."
-model = "openrouter/qwen/qwen3-14b"
+model = "openrouter/qwen/qwen3.5-9b"
 model_reasoning_effort = "low"
 sandbox_mode = "workspace-write"
 developer_instructions = """

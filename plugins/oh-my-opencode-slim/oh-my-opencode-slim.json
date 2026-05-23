@@ -35,7 +35,7 @@
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary", "skills": [], "mcps": [] },
       // Leaf editor: bounded single-file codegen, no subtask routing
-      "aider":        { "model": "openrouter/ibm-granite/granite-4.1-8b", "variant": "io", "skills": [], "mcps": [] }
+      "aider":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "io", "skills": [], "mcps": [] }
     },
     "openrouter-gemma-orchestrator": {
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
@@ -53,7 +53,7 @@
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "visionary", "skills": [], "mcps": [] },
       // Leaf editor: bounded single-file codegen, no subtask routing
-      "aider":        { "model": "openrouter/ibm-granite/granite-4.1-8b", "variant": "io", "skills": [], "mcps": [] }
+      "aider":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "io", "skills": [], "mcps": [] }
     }
   },
   "disabled_agents": ["explorer", "explore", "scout"],
@@ -78,7 +78,7 @@
     },
     "aider": {
       // Cheap leaf executor for direct bounded edits inside Pi packets
-      "model": "openrouter/ibm-granite/granite-4.1-8b",
+      "model": "openrouter/qwen/qwen3.5-9b",
       "variant": "io",
       "prompt": "You are Aider. Leaf executor for bounded repo-local edits.\n\nRules:\n- Execute the concrete edit packet you were given.\n- Make the smallest correct change that satisfies the packet.\n- Do not spawn other agents.\n- Do not re-plan the parent task.\n- Do not broaden scope beyond the named files and acceptance criteria.\n- If the packet is ambiguous or requires orchestration, return one concrete blocker instead of guessing.",
       "orchestratorPrompt": "@aider\n- Role: direct leaf editor — implement or patch a named file immediately\n- Delegate when: prompt starts with 'AIDER DIRECT' OR a specific file path + concrete change is named\n- Priority: prefer @aider over @fixer/@coder when the target file is already known and the task is self-contained\n- Don't delegate when: orchestration, broad repo search, or multi-step planning is still needed"
