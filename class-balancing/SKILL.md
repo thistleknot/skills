@@ -1,166 +1,160 @@
 ---
-name: class-balancing
+name: reasoning_curation_sampler
 description: >
-  Box-Cox log-ratio class weighting protocol for imbalanced classification.
-  Use when computing per-class weights for CrossEntropyLoss (PyTorch) or
-  class_weight in sklearn. Provides mathematically grounded weights that
-  outperform inverse-frequency for heavy-tailed distributions. Called by
-  pdf-extraction skill for layout classifier training.
-status: active
-last_validated: 2026-05-02
+  Construct a stratified, token-efficient training distribution for reasoning
+  transfer using **conditional stratification**. Used when mixing disparate 
+  linguistic classes (jokes, prose, definitions) into a single regimen. 
+  Enforces strict length filtering per class and token-budget equality 
+  to stabilize gradients and maximize structural transfer between classes.
+metadata:
+  status: active
+  last_validated: 2026-05-09
+  validation_method: logic
 ---
 
-# Class Balancing Skill
+# Reasoning Curation Sampler
 
-## When to Use This vs Alternatives
+## When to Use
 
-| Situation | Recommended approach |
-|-----------|---------------------|
-| Mild imbalance (worst ratio < 10:1) | `class_weight='balanced'` (sklearn) or inverse-frequency |
-| Heavy-tail / power-law counts | **Box-Cox log-ratio** (this skill) |
-| Very small minority classes (< 5 samples) | SMOTE or oversampling first, then Box-Cox |
-| Multi-label or ordinal targets | Per-label inverse frequency; Box-Cox per class |
-| Regression imbalance (target density) | Kernel density reweighting instead |
+Use this skill when:
+
+- preparing a multi-class SFT dataset where one goal is **reasoning transfer** (e.g., teaching a smaller model to associate puns with logic or irony)
+- mixing highly disparate data types (e.g., short puns vs. long philosophical quotes)
+- gradient variance is unstable due to mixed context lengths
+- you need to force a "soft" balance across classes without drowning rare formats in volume
+
+Do **not** use this skill when:
+
+- the dataset is already homogenous in length and structure -> use standard random sampling
+- you are doing raw continued pretraining (SMP) on pure text -> use `corpus_distributor` instead
+- the goal is purely lexical retrieval without logical inference
 
 ---
 
 ## Scope Boundary and Paired Skills
 
-Use this skill for **loss weighting after sample selection**, not for choosing
-which records enter a batch or epoch.
+This skill owns the **sampling distribution** and **batch construction** protocols.
 
-| Need | Owner |
-|------|-------|
-| Choose records from an imbalanced pool under a fixed coverage budget | `stratified-quota-sampling` |
-| Reweight class loss after the sample has already been chosen | `class-balancing` |
-| Tune sample fraction, quota ratios, or weighting knobs against a scalar objective | `optuna-nested-cv` |
+It owns:
 
-Rules:
-- Do **not** use class weights as a substitute for a no-replacement coverage scheduler.
-- Do use this skill after quota sampling when the selected subset still has meaningful residual skew.
-- If the weighting policy is part of the model-selection surface, namespace the Optuna study separately from runs that use a different sampler or weighting contract.
+- **Conditional Stratification:** Defining length filters *per class* to preserve natural length profiles
+- calculating token-balance weights to ensure equal token exposure across genres
+- pairing "short/abstract" reasoning (jokes) with "long/grounded" reasoning (prose) via isomorphism
+- generating the final batched stream
 
----
+It does **not** own:
 
-## Box-Cox Log-Ratio Protocol
-
-### Rationale
-
-Raw inverse-frequency `N/count_c` over-penalises the majority class and
-under-penalises moderate minorities. Taking the log compresses the range;
-Box-Cox then finds the optimal power transform so the weight distribution
-is closer to Gaussian — giving smoother gradient signals than either raw
-inverse-frequency or log-inverse alone.
-
-### Algorithm
-
-```python
-from collections import Counter
-from scipy.stats import boxcox
-import numpy as np
-
-def boxcox_class_weights(labels: list) -> dict:
-    """
-    Compute per-class weights via Box-Cox transform of log-inverse-frequency.
-
-    Require: at least 2 distinct classes; all counts >= 1.
-    Guarantee: returns {class_name: weight}; weights are non-negative.
-    Failure modes:
-        - Single class: returns {class: 1.0}
-        - boxcox ValueError: falls back to raw log-inv
-    """
-    counts = Counter(labels)
-    if len(counts) < 2:
-        return {c: 1.0 for c in counts}
-
-    N = len(labels)
-    classes = sorted(counts)
-
-    # Step 1: log-inverse-frequency (strictly positive for all minority classes)
-    log_inv = np.array([np.log(N / counts[c]) for c in classes], dtype=float)
-    log_inv = np.clip(log_inv, 1e-6, None)   # majority class may be ~0; add eps
-
-    # Step 2: Box-Cox transform (finds optimal lambda automatically)
-    try:
-        bc, lam = boxcox(log_inv)
-    except Exception:
-        bc = log_inv   # fallback
-
-    # Step 3: clip negatives, normalize to sum=1
-    bc = np.clip(bc, 0.0, None)
-    total = bc.sum()
-    if total < 1e-9:
-        bc = np.ones_like(bc)
-        total = bc.sum()
-
-    return {c: float(bc[i] / total) for i, c in enumerate(classes)}
-```
-
-### PyTorch usage
-```python
-import torch
-import torch.nn as nn
-
-weights = boxcox_class_weights(train_labels)
-classes = sorted(weights)
-w_tensor = torch.tensor([weights[c] for c in classes], dtype=torch.float32).to(device)
-criterion = nn.CrossEntropyLoss(weight=w_tensor)
-```
-
-### sklearn usage
-```python
-from sklearn.linear_model import LogisticRegression
-
-weights = boxcox_class_weights(train_labels)
-sample_weights = np.array([weights[lbl] for lbl in train_labels])
-clf = LogisticRegression()
-clf.fit(X_train, y_train, sample_weight=sample_weights)
-```
+- the actual model training loop -> `training_engine`
+- semantic graph storage or fact extraction -> `agentic_kg_memory`
+- skill promotion or procedural updates -> `skill-wiki`
 
 ---
 
-## Comparison: Weighting Methods
+## Core Principles
 
-| Method | Formula | When it works |
-|--------|---------|---------------|
-| Inverse frequency | `N / count_c` | Mild imbalance; linear scale acceptable |
-| Log-inverse | `log(N / count_c)` | Moderate imbalance; compresses extremes |
-| **Box-Cox log-inverse** | `BC(log(N/count_c))` | Heavy-tail; optimal transform per dataset |
-| Effective samples | `(1-β^n)/(1-β)` | Few-shot; small N per class |
-| SMOTE | Synthetic oversample | Minority too sparse for reweighting |
+- **Conditional Stratification:** Do not force all data into global bins. Instead, sample the *class first*, then apply the length filter within that class. This preserves the natural `P(length | class)` distribution.
+- **Token Budget Equality:** Weights must scale by the inverse of the *expected length within your filter threshold*. This ensures that dense short formats (jokes) and sparse long formats (prose) contribute equally to the total token budget.
+- **Isomorphic Anchoring:** Transfer "reasoning capability" by pairing structurally identical but semantically distinct formats (e.g., an irony-laden quote next to an ironic pun) rather than mixing them randomly.
+- **Temperature Scheduling:** Use Softmax temperature as a curriculum dial—starting high for "exploration" (rare/long formats) and lowering it for "convergence" (grounded formats).
 
 ---
 
-## IQR / MAD Relationship (for outlier-robust counts)
+## Curation Protocol
 
-When label counts themselves contain outliers (e.g., corpus sampling bias),
-apply robust preprocessing before weighting:
+1.  **Define Class-Length Profiles.**
+    *   For each data class (Joke, Quote, Prose, etc.), calculate the conditional statistics:
+        *   `μ_i`: Average token count for records *within your filter threshold*.
+        *   `σ_i`: Variance within the threshold (to define the bins).
+    *   *Note:* This step prevents "genre-length collision" where a short prose passage would be binned with long jokes in a global sort.
 
-```python
-import numpy as np
+2.  **Calculate Class-Equalized Weights.**
+    *   Calculate weights based on the inverse of the expected token cost: `W_class = 1 / μ_i`.
+    *   Apply Softmax Balancing with Temperature `T` to get `P_class`:
+        *   `P_class_i = exp((log(W_class_i)) / T) / Σ exp((log(W_class_j)) / T)`
+    *   *Effect:* This ensures every *token* has equal probability of being sampled, regardless of whether it came from a short joke or a long quote.
 
-counts_arr = np.array(list(counts.values()), dtype=float)
-median = np.median(counts_arr)
-mad = np.median(np.abs(counts_arr - median))
-upper_fence = median + 4.0 * mad   # ≈ Tukey IQR*1.5 under normality (~2.7σ)
-# Cap runaway majority classes
-capped = {c: min(v, upper_fence) for c, v in counts.items()}
-```
+3.  **Iterative Sampling Loop (The "Outer Filter").**
+    *   **Step A (Class Draw):** Select a class `C` from the distribution `P_class`.
+    *   **Step B (Record Draw):** Draw a random record from class `C`.
+    *   **Step C (Inner Filter):** Check if the record's length falls within your 95% interval window for class `C`.
+        *   If *Yes*: Proceed to batch assembly.
+        *   If *No*: Reject and return to Step A.
 
-Note: `IQR * 1.5 ≈ median + 4 * MAD` under normality (2.698 × 1.4826 ≈ 4.0).
-Under heavy-tailed data, calibrate the MAD multiplier empirically.
+4.  **Batch Assembly.**
+    *   Maintain a running `current_batch_tokens`.
+    *   Add record tokens until `current_batch_tokens` reaches the target batch size (or hits the `max_tokens_of_bin` for the drawn class).
+    *   *Constraint:* Pad only to the `max_tokens_of_bin` (or the length of the longest record in the current batch). Do not pad to the absolute global maximum, or you waste compute.
+
+5.  **Stream and Verify.**
+    *   Output the batch stream. Ensure that the final distribution of "Reasoning" classes (Jokes/Logic) matches the `P_class` target.
 
 ---
 
-## Used By
+## Output Artifacts
 
-| Consumer | Usage |
-|----------|-------|
-| `pdf-extraction` | `train_layout_classifier.py` — EfficientNet-B0 layout region classifier |
-| Any PyTorch classifier | Drop-in `CrossEntropyLoss(weight=...)` |
-| Any sklearn estimator | Drop-in `sample_weight=` array |
-| `stratified-quota-sampling` users | Residual class weighting after quota-based subset selection |
-<!-- consolidation:see-also:start -->
-## See Also
-[[openspec-archive-change]]  [[stratified-quota-sampling]]  [[timeout-guard]]
-<!-- consolidation:see-also:end -->
+- **Batch Stream:** A generator yielding strictly padded, token-balanced batches.
+- **Weight Map (`sampling_weights.json`):** A JSON mapping of Class to its final Softmax probability (based on length-normalized weights).
+- **Filter Map (`length_filters.json`):** A lookup table defining the min/max token thresholds for each class.
+- **Pairing Index (`isomorphic_map.json`):** A lookup table linking specific short-form reasoning to long-form reasoning for curriculum pairing.
+
+---
+
+## Routing Rules
+
+| Artifact kind | Destination |
+| --- | --- |
+| Binned and weighted data | `training_engine` (or raw torch DataLoader) |
+| Isomorphic Pairing Map | `dataset_augmentation` (for synthesis) |
+| Sampling weights | `training_config.yaml` |
+
+---
+
+## Example: The "Joke-to-Prose" Transfer
+
+A smaller model is being trained on a mix of "Laffy Taffy" puns and Brown Corpus prose. The goal is to teach the model **abductive inference**.
+
+1.  **Class-First Sampling:** The sampler draws a class. Let's say it draws "Joke" with probability `0.4` and "Prose" with probability `0.6`.
+2.  **Conditional Filtering:**
+    *   For the **Joke** draw: The system applies the "Joke Length Filter" (e.g., 10–50 tokens). It rejects a 60-token joke but accepts a 30-token pun.
+    *   For the **Prose** draw: The system applies the "Prose Length Filter" (e.g., 200–600 tokens). It rejects a 50-token definition.
+3.  **Token Equalization:** Because Jokes are short (μ_joke = 20) and Prose is long (μ_prose = 400), the sampler up-weights the Jokes by a factor of 20.
+4.  **Pairing:** The sampler finds a specific Joke about a "Doctor" and pairs it with a Prose passage about a "Doctor" (e.g., a medical metaphor).
+5.  **Result:** The model is forced to process high-entropy tokens (jokes) and low-entropy tokens (prose) in equal quantities, learning the *abductive structure* rather than just the vocabulary.
+
+---
+
+## Dead Ends — Do Not Use
+
+### Global Length Binning
+Forcing all classes into a single set of quartiles (e.g., Q1 = 10-50 tokens) creates semantic mismatches. A 40-token joke and a 40-token definition belong to different reasoning classes and should not be binned together if your goal is class-balanced transfer.
+
+### Uniform Class Sampling
+If you assign a "25% chance" to each class regardless of length, you will drown the model in short data (jokes/definitions) and starve it of long context. Always weight by **inverse token cost**.
+
+### Pairing Semantically, Not Structurally
+Don't pair a joke about a "doctor" with a medical quote about a "doctor." That is just topic clustering. You must pair based on **logical structure** (e.g., logic of deception, logic of paradox) to achieve reasoning transfer.
+
+---
+
+## Applicability Envelope
+
+**Works well when:**
+
+- you have a "weaker" or smaller model that requires high-information-density signals to learn logic
+- the dataset contains mixed-length formats with distinct genre profiles
+- you need to balance "creativity" (jokes) with "precision" (prose)
+
+**Fails or degrades when:**
+
+- the model has a very small context window (< 2k tokens) -> Conditional Stratification is less useful than standard truncation
+- the "reasoning" in the data is purely factual and not structural (e.g., simple Q&A)
+- you are training a massive model (70B+) that can naturally absorb the variance without forced binning
+
+## Auto-Binning Trigger
+
+If the dataset size exceeds 1 million records:
+
+1.  Sample a random 10,000-record subset *per class*.
+2.  Estimate the conditional token distribution (mean/variance) for each class.
+3.  Pre-compute the `sampling_weights.json` and `length_filters.json`.
+4.  Store the map so the training loop can reference it without re-sorting the full million-record dataset.

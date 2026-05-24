@@ -87,7 +87,7 @@ skills/
 │   ├── hyper-parm_tuning            # superseded predecessor; canonical home for Weighted Stage Allocation pattern
 │   ├── agentic-hyperparm            # behavioral knob tuning for agentic systems; instantiates Stage Allocation for L1-L4 layers
 │   ├── parm-tuning-as-lp            # discrete hyperparameter tuning via linear/mixed-integer programming; orthogonal lever factorization, irreducible-ratio perturbation basis, global optimality
-│   ├── class-balancing              # log inverse freq → Box-Cox normalize → ratio weights for imbalanced classifiers
+│   ├── class-balancing              # conditional stratification + token-equal weighting for multi-class reasoning transfer; inference pairing; temperature curriculum
 │   ├── stratified-quota-sampling    # coverage-bounded no-replacement sampler; Box-Cox tiers + quota allocation
 │   │   └── synthetic-data           # LLM-generated training data; 8 paradigms (Self-Instruct/Evol-Instruct/GLAN/Magpie/UltraFeedback/FireAct/distilabel); 6 mandatory quality gates; handoff to stratified-quota-sampling + class-balancing
 │   ├── cluster-quantized-knn        # O(1) approximate distance for KNN via cluster-quantization; fast interactive retrieval
