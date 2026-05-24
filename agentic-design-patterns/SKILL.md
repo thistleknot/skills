@@ -1,8 +1,8 @@
 ---
 name: agentic-design-patterns
-description: LangGraph-centered workflow-selection protocol for agentic systems. Use when choosing among Anthropic-style agent patterns, structuring router/gate/worker graphs, or embedding Aider inside a manager-led chatroom with business-analyst, developer, and QA roles.
+description: LangGraph-centered workflow-selection protocol for agentic systems. Use when choosing among Anthropic-style agent patterns, structuring router/gate/worker graphs, or embedding Aider inside a manager-led chatroom with business-analyst, developer, and QA roles. Includes a 5-question decision tree for principled pattern selection before any code is written.
 status: active
-last_validated: 2026-04-29
+last_validated: 2026-05-23
 supersedes: []
 validation_method: session
 ---
@@ -10,6 +10,78 @@ validation_method: session
 
 ## Role
 This skill sits between `architecture`, `code`, and `agentic-harness`. Use it when the hard part is not a single prompt or a single edit, but the workflow shape of a LangGraph system: which nodes exist, how state flows, where gates sit, and when a worker should loop or stop.
+
+## Pattern Selection: Decision Tree
+
+Run these five questions **before writing any code**. Each branch narrows the pattern space by a concrete task property. Mistakes are cheapest to fix here.
+
+### Q1 — Is the solution path known in advance?
+A *known* path means the full step-by-step process can be defined before execution (e.g. invoice processing, onboarding flows). An *unknown* path means each step depends on prior outputs (research, debugging, branching support).
+
+- **Known** → Q2a
+- **Unknown** → Q2b
+
+### Q2a — Is this a fixed, deterministic workflow?
+Use **Sequential Workflow**. Agent executes ordered steps; use the model only for interpretation or generation, deterministic code for everything else. Main failure mode: over-engineering with ReAct-style reasoning where every step is already defined. If edge cases start breaking it, move to Q2b.
+
+### Q2b — Does the task require tool access or external information?
+Almost always yes. Tool use is foundational — it adds capability without changing the reasoning layer. A ReAct agent with tools is still ReAct; a planning agent with tools is still planning. Proceed to Q3 with tool use assumed unless the task is genuinely self-contained.
+
+### Q3 — Is the task structure articulable before execution begins?
+A task is *structurally articulable* when it can be broken into ordered subtasks with clear dependencies before execution (e.g. design → implement → test). Structure being articulable enables early dependency exposure and avoids mid-execution surprises. But it has costs: upfront planning step, plan quality dependence, reduced flexibility.
+
+- **Structure clear upfront** → **Planning + ReAct inside steps**
+- **Structure only emerges during execution** → **ReAct**, then Q4
+
+### Q4 — Does output quality matter more than response speed?
+Reflection (generate → critique → refine) is worth adding only when:
+1. Clear, verifiable quality criteria exist (valid SQL, correct contract, passing tests)
+2. The cost of errors justifies an extra pass (deployed code, client-facing docs)
+
+**Critic independence is critical** — a critic that mirrors the generator agrees rather than evaluates. Strong reflection often requires separate framing or a different model.
+
+- **Quality priority + clear criteria** → add **Reflection** on top
+- **Speed priority or vague criteria** → skip, go to Q5
+
+### Q5 — Does the task have a specialization or scale problem a single agent can't handle?
+The trigger must be a **concrete bottleneck** that specialization or scale actually solves — not architectural preference. Multi-agent adds coordination overhead, shared state complexity, and more failure points.
+
+Use Multi-agent when:
+- Task is too large for a single context window
+- Different stages need clearly different reasoning styles (legal vs. financial, coding vs. security audit)
+- Parallel execution materially reduces wall-clock time
+
+If none of those apply, a single strong agent is usually better.
+
+- **Real specialization or scale bottleneck** → **Multi-Agent**
+- **No bottleneck** → stay single-agent
+
+### Decision tree → pattern map
+
+| Destination Pattern | When to Use | Why It Works |
+|---|---|---|
+| **Single Agent + Tools + ReAct** | Unknown path, no clear upfront structure, no strict quality constraints, no specialization needs | Best default. Flexible exploration, inexpensive failure detection, iterative improvement |
+| **Planning Agent + ReAct** | Structure knowable upfront; each step still requires adaptive reasoning | Planner defines stages + deps; ReAct handles local uncertainty. Reduces mid-execution failure |
+| **Single Agent + Reflection** | High-quality output required, latency acceptable, evaluation criteria explicit | Generate → Critique → Refine. Works best when verifiable criteria exist |
+| **Multi-Agent Specialist System** | Strong specialization needs OR scale exceeds single-agent capacity | Coordinator routes to specialists; enables parallelism + domain expertise, but adds coordination overhead |
+
+## Pattern assumptions (what each pattern asserts about the task)
+
+| Pattern | Core assumption | Breaks down when |
+|---|---|---|
+| **ReAct** | Next best action not fully knowable in advance; reason + tool interleaved improves decisions | Task has a fixed structure — you're burning compute on decisions that don't need to be made |
+| **Planning** | Major task structure identifiable upfront; roadmap improves downstream reliability | Structure only emerges during execution — plan becomes a lie mid-run |
+| **Reflection** | First-pass outputs often incomplete or flawed; iterative self-critique justifies added cost | No clear evaluation criteria; critic mirrors generator too closely and just agrees |
+| **Multi-agent** | Task benefits from specialization/decomposition; parallel or modular execution > coordination overhead | No real specialization needed — overhead outweighs benefit |
+
+## Failure signals and fixes
+
+| Signal | What it means | Fix |
+|---|---|---|
+| ReAct looping excessively | Too many steps; agent uncertain about progress or structure | Task likely needs planning, better tool structure, or a clearer stopping condition |
+| Planning agent abandoning plan | Plan created but execution diverges | Task less structured than assumed; switch to lightweight planning + ReAct |
+| Reflection not improving output | Critique cycles don't meaningfully change output | Evaluation criteria are unclear or critic too aligned with generator; refine the critique setup or use a different model as critic |
+| Multi-agent routing failures | Wrong specialist selection or outputs don't combine downstream | Routing logic issue; use deterministic rules for predictable cases instead of LLM routing |
 
 ## LangGraph contract
 - Keep shared state typed and explicit.
