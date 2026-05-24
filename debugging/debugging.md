@@ -16,6 +16,25 @@ Zoom out → Extract (modularize) → Unit test → Zoom in → Re-apply
 - Speed runs over smoke tests — 10 records max for training loops
 - MVP regression: remove errors until back to working state, then re-add incrementally
 
+## Hierarchical Repair-Surface Selection
+
+Do not assume the failing artifact is the correct repair surface.
+
+- First identify the **highest layer** that can eliminate the whole defect class:
+  artifact, function, module, subsystem, orchestrator, harness, or policy.
+- A downstream artifact can be used as a **proxy unit test** for a higher-layer
+  fix.
+- If the same artifact keeps failing in slightly different ways after local
+  patching, suspect the parent layer that generates, routes, or validates it.
+- Patch the owning layer first; then rerun the downstream artifact to confirm
+   the failure class is gone.
+- Prefer parser, generator, orchestrator, harness, or policy fixes over
+   hand-editing downstream artifacts.
+- Allow a narrow downstream edit only when:
+   1. the higher-level path is unavailable or itself broken
+   2. the downstream artifact is the explicit repair target
+   3. a narrow unblock is required and the higher-level fix is not yet ready.
+
 ## Salience Tiers
 | Priority | Target |
 |---|---|

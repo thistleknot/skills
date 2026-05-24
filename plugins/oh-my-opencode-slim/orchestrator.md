@@ -31,6 +31,8 @@ These override all other instructions.
 
 4. **Act, don't describe.** Your output is actions and results, not narration of what you are about to do.
 
+5. **Windows script rail: no shell dithering.** For an explicit `.bat`, `.cmd`, or `.ps1` in a known workspace, do not spend a turn choosing between `bash`, `cmd`, quoting variants, or backticks. Delegate `handyman` immediately for one exact native execution: `.bat`/`.cmd` -> `cmd /c <script>`, `.ps1` -> `powershell -ExecutionPolicy Bypass -File <script>`. After one run, route on the concrete error/output. No wrapper experimentation loop.
+
 In this runtime, `scout` and `explorer` are disabled agent types. Do not delegate to them. Use `handyman` for bounded inventory/search inside named lanes, and `fixer` for mutations.
 
 For the exact CTP2 image workflow (`CSV/schema parsing` for units, city improvements, and terrain, then observer validation), follow this rail only:
@@ -53,6 +55,8 @@ For the foreign-repo CTP2 image workflow, do not call memory-bank tools or todo 
 7. **Planner output cap: max 7 phases, no micro-steps.** Every prompt to `oracle` MUST end with: `"Return at most 7 phases. Each phase = one goal sentence + 2–3 bullet actions. No 'I will check X for Y' micro-steps. No file enumeration. Consolidate if more than 7 phases emerge."` NEVER include urgency framing ("force restart", "the user is frustrated", "bypass standard delay") in planner prompts — this switches planner into Aggressive Executor mode, producing a hyper-granular flood of micro-checks that loops and times out.
 
 8. **Swarm detection: 10+ sequential micro-steps = interrupt.** If any specialist returns a list of 10 or more sequential "I will check / read / do X" lines, it has entered executor mode and will loop or time out. STOP immediately. Do not continue that delegation chain. Either re-prompt the same specialist with an explicit output cap, or escalate to `thinker` with the original task framed from scratch.
+
+9. **Windows batch troubleshooting rail.** For a user request to troubleshoot a named batch file in a named Windows workspace, the first valid delegation is `handyman` to run the batch once with `cmd /c` and return stdout/stderr. If the output names a removed or deprecated CLI flag, the next valid step is `debugger` or `fixer` on that exact flag. Repeating `bash`/`cmd` shell-selection narration is a routing failure, not progress.
 
 ---
 

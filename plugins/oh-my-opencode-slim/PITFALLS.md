@@ -270,3 +270,26 @@ After applying PITFALL 9 + 10 fixes to `agents/opencode.json`:
 
 All ran from `agents/` dir so `opencode.json` was discovered from CWD. No `--config` flag needed.
 
+---
+
+## ❌ PITFALL 14: Windows batch troubleshooting loops on shell selection
+
+**Symptom:** The orchestrator prints variants of `Wait, I'll use bash to run spec_dec.bat` / `Actually, I'll use bash to run cmd /c spec_dec.bat` instead of executing the batch file and returning the real error.
+
+**Root cause:** There was no hard Windows script rail in the orchestration prompts. Gemma treated shell choice as an open reasoning problem, so the 512-token turn budget was spent on wrapper indecision instead of one native execution.
+
+**Fix:** Add an explicit Windows-native command rail:
+
+- `.bat` / `.cmd` -> `cmd /c <script>`
+- `.ps1` -> `powershell -ExecutionPolicy Bypass -File <script>`
+- one execution attempt only, then route on stdout/stderr
+- if stderr names a removed flag, stop shell experimentation and debug the flag
+
+**Smoke test:** `C:\Users\user\Documents\dev\spec_dec.bat`
+
+Expected behavior:
+- run once from workspace `C:\Users\user\Documents\dev`
+- no `bash` vs `cmd` narration loop
+- return the concrete llama.cpp flag error (currently `--draft-min` removed -> use `--spec-draft-n-min` or `--spec-ngram-mod-n-min`)
+
+**Rule:** For explicit Windows script troubleshooting in a known workspace, shell selection is not a planning task. Execute once with the native launcher and move directly to the concrete failure.

@@ -12,7 +12,7 @@ description: >
   core contract: set a coherence=False todo at task start and iterate until you can
   flip it to True.
 status: active
-last_validated: 2026-04-28
+last_validated: 2026-05-24
 supersedes: []
 validation_method: session
 ---
@@ -367,6 +367,75 @@ This skill is explicitly **anti ad-hoc repair**.
 
 If the only way to "fix" the system is to hand-edit each bad output, the harness
 is still incoherent.
+
+## Silent Bounded-Edit Stall Protocol
+
+Treat a bounded edit run as a **dead-end stall**, not "still working", when all of
+the following are true after one short wait window or one bounded retry:
+
+- the task is a bounded edit packet, not a known long-running job class
+- there is no stdout or materially informative progress signal
+- there is no file diff or other mutation evidence
+- there is no interactive or steerable intermediate state
+
+Protocol:
+
+1. preserve any discovered source-of-truth, family shape, or acceptance criteria
+2. terminate the stalled run instead of waiting indefinitely
+3. escalate to the next permitted repair path:
+   - tighter reprompt with the exact source-of-truth and acceptance criteria
+   - if still silent, supervised/manual patch or alternate agent path
+4. record the stall as a harness failure class rather than treating it as user or
+   artifact failure
+
+Do not apply this rule to legitimate long-running work such as installs, builds,
+large test suites, or broad data jobs that have an expected runtime profile or
+continue emitting meaningful progress.
+
+This rule exists for **bounded edit runs with no observable progress**, not for
+generic slow jobs.
+
+## Hierarchical Repair-Surface Selection
+
+When the user brings a broken downstream artifact as evidence, first ask which
+layer actually owns the failure class.
+
+- If the repeated defect is in routing, orchestration, sampler policy, retry
+  policy, shell selection, or context discipline, the fix belongs at the
+  **harness / orchestrator layer**.
+- Use the downstream artifact only as a **proxy test** for the higher layer.
+  The artifact is the unit test input/output surface, not necessarily the place
+  where the repair lives.
+- A proxy artifact is valid when it is cheap to rerun, deterministically exposes
+  the orchestration bug, and gives a binary pass/fail signal after the harness
+  change.
+- Do not confuse "the artifact that failed" with "the layer that should be
+  edited." The artifact may be only the witness.
+- Prefer harness-as-code, parser, generator, orchestrator, or policy fixes over
+  hand-editing downstream artifacts.
+- Allow a narrow downstream edit only when:
+  1. the higher-level generator/parser path is unavailable or itself broken
+  2. the downstream artifact is the explicit repair target
+  3. a narrow unblock is required and the higher-level fix is not yet ready
+
+Example:
+
+- repeated `bash` vs `cmd /c` dithering while troubleshooting `spec_dec.bat`
+  is a harness/orchestrator failure
+- `spec_dec.bat` is the downstream proxy artifact that proves whether the
+  orchestrator now takes the first grounded action and surfaces the real error
+
+This is the hierarchy rule:
+
+1. identify the highest layer that can eliminate the whole failure class
+2. patch that layer
+3. rerun the proxy artifact as the regression test
+4. only patch the artifact itself when a remaining concrete artifact-local error
+   still exists after the harness fix
+
+Cross-reference: `debugging` owns the general root-cause / layer-isolation
+method. `agentic-harness` owns the harness-specific case where the orchestrator,
+retry policy, or pipeline contract is the real defect surface.
 
 ## Artifact-Backed Coherence Gate
 
@@ -1702,5 +1771,5 @@ Reference concept: TencentDB-Agent-Memory L0–L3 pyramid (reference architectur
 - The pipeline produces artifacts that can be inspected for gate-passing criteria
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agentic_kg_memory]]  [[substrate-selection]]  [[synthetic-data]]
+[[agentic_kg_memory]]  [[substrate-selection]]  [[synthetic-data]]  [[debugging]]
 <!-- consolidation:see-also:end -->

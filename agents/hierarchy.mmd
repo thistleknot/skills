@@ -3,35 +3,35 @@ title: OpenCode Agent Hierarchy
 ---
 flowchart TD
     %% ── Entry Points ──────────────────────────────────────────────
-    HUMAN(["👤 Human / Copilot CLI"])
-    RAG(["📜 run_aider.ps1 -FromGraph"])
-    HB(["⏱ heartbeat.ps1\n(stall watchdog)"])
-    DB[("🗄 .task_graph.db")]
+    HUMAN(["Human / Copilot CLI"])
+    RAG(["run_aider.ps1 -FromGraph"])
+    HB(["heartbeat.ps1\n(watchdog: seed/profile restart)"])
+    DB[(".task_graph.db")]
 
     %% ── opencode shell ────────────────────────────────────────────
-    OC["🚀 opencode run\n(oh-my-opencode-slim)"]
+    OC["opencode run\n(oh-my-opencode-slim)"]
 
     %% ── Primary agents ────────────────────────────────────────────
-    ORCH["🎯 orchestrator\ngemma-4-26b\n─────────────────\nRoutes · never codes\nOwns heartbeat"]
+    ORCH["orchestrator\ngemma-4-26b / orchestrator\n-----------------\nRoutes - never codes\nEmits heartbeat/status"]
 
-    ORACLE["🧠 oracle / planner\nqwen3.6-35b\nSpec planning"]
-    DESIGNER["✏️ designer\nqwen3.6-35b\nSigs + stubs"]
-    FIXER["📦 fixer / coder\nqwen3.6-35b\n──────────────────\nSpec translation only\nBreaks → packets\nDispatches to aider"]
-    LIBRARIAN["🌐 librarian\ngemini-2.5-flash-lite\nWeb + docs search"]
-    OBSERVER["👁 observer / visionary\nqwen-vl-30b\nScreenshots"]
+    ORACLE["oracle / planner\nqwen3.6-35b\nSpec planning"]
+    DESIGNER["designer\nqwen3.6-35b\nSigs + stubs"]
+    FIXER["fixer / coder\nqwen3.6-35b\n------------------\nSpec translation only\nBreaks -> packets\nDispatches to aider"]
+    LIBRARIAN["librarian\ngemini-2.5-flash-lite\nWeb + docs search"]
+    OBSERVER["observer / visionary\nqwen-vl-30b\nScreenshots"]
 
     %% ── Subagents ─────────────────────────────────────────────────
-    PI["🔬 pi\nqwen3.5-9b\n──────────────────\nSMOKE TESTS\nInner harness loop\nRuns scripts · returns output"]
-    AIDER["⚡ aider\nqwen3.5-9b\n──────────────────\nLEAF EDITOR\n2-pass: Reason → Edit\n1 packet · 1 file\nsubtask = DENY"]
-    HANDYMAN["🔧 handyman\ngranite-4.1-8b\nFile ops · mechanical"]
-    PATCHER["🩹 patcher\ngemma-4-26b\nExact hotfix\nknown-file only"]
-    DEBUGGER["🔍 debugger\nqwen3.6-35b\nStack traces · QA"]
-    SUMMARIZER["📋 summarizer\nmimo-v2-flash\nContext compression"]
+    PI["pi\nqwen3.5-9b\n------------------\nSMOKE TESTS\nInner harness loop\nRuns scripts - returns output"]
+    AIDER["aider\nqwen3.5-9b\n------------------\nLEAF EDITOR\n2-pass: Reason -> Edit\n1 packet - 1 file\nsubtask = DENY"]
+    HANDYMAN["handyman\ngranite-4.1-8b\nFile ops - mechanical"]
+    PATCHER["patcher\ngemma-4-26b\nExact hotfix\nknown-file only"]
+    DEBUGGER["debugger\nqwen3.6-35b\nStack traces - QA"]
+    SUMMARIZER["summarizer\nmimo-v2-flash\nContext compression"]
 
     %% ── Entry → shell ─────────────────────────────────────────────
     HUMAN -->|"task prompt"| OC
     RAG -->|"AIDER DIRECT: [task_id=X]"| OC
-    HB -->|"stall → kill+relaunch"| OC
+    HB -->|"stall -> kill+relaunch"| OC
 
     %% ── shell → orchestrator ──────────────────────────────────────
     OC --> ORCH

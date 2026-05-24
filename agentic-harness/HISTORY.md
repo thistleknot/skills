@@ -5,6 +5,26 @@ Current version of the contract is always in SKILL.md; this file records what ch
 
 ---
 
+## 2026-05-24 — Silent bounded-edit stalls promoted to a reusable harness rule
+**Changed:** Added `## Silent Bounded-Edit Stall Protocol` to `SKILL.md` and
+retitled the adjacent hierarchy section to `## Hierarchical Repair-Surface Selection`.
+The new contract distinguishes dead-end silent bounded-edit runs from legitimate
+long-running jobs and defines the escalation ladder: preserve discovered context,
+terminate the stalled run, escalate to the next permitted repair path, and record
+the stall as a harness failure class. The repair-surface rule was tightened so
+downstream edits are explicitly limited to narrow exception cases.
+**Reason:** Repeated bounded edit packets can fail with no stdout, no diff, and no
+steerable state even though the source-of-truth has already been found. Treating
+that shape as "still working" causes indefinite waiting and hides a harness failure
+class. The adjacent repair-layer rule also needed a clearer exception boundary so
+the skill stays anti-artifact-patching without becoming impractical.
+**Evidence:** Tier 4 session crystallization from OpenCode bounded-edit stall and
+repair-layer investigations; existing `No Band-Aid Repair Rule` and hierarchy
+sections in the same skill.
+**Supersedes:** Implicit "loop or timeout" handling for silent bounded edit runs.
+
+---
+
 ## 2026-05-06 — Structured responses promoted to the default harness contract
 **Changed:** Added a new `Structured Responses Are the Default Wire Format` section to
 `SKILL.md`. Updated the backbone behaviors, canonical split, TaskSpec discussion, and

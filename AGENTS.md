@@ -117,6 +117,86 @@ Important current surfaces:
 - `pdf-extraction` is the standalone PDF -> enriched-Markdown workflow and uses
   `class-balancing` for its layout-classifier training path.
 
+## Agentic Memory Embedding Queue Architecture
+
+The skills corpus is pre-computed with triplet embeddings and BM25 KG columns so that
+memory queries do not need to extract features on-the-fly. This architecture decouples
+embedding ingestion from consolidation runs to avoid coupling infrequent analysis with
+frequent skill updates.
+
+### Workflow
+
+1. **Skills change** (edit, add, delete):
+   - File system watcher or git post-hook detects change
+   - Emit embedding task to fastmcp/fastapi queue server (skill name, timestamp, action)
+
+2. **Queue server** (fastmcp or fastapi backend):
+   - Receives embedding tasks; records pending state with timestamp in SQLite checkpoint
+   - Does NOT block on execution; returns immediately to caller
+   - Processes queue asynchronously (in-process worker pool or background thread)
+   - Per-skill tasks: extract triplets → compute premise embeddings → update BM25 KG column
+   - Checkpoint: save computed embeddings to `consolidation/.checkpoint.db` keyed by (skill_name, content_hash)
+
+3. **Consolidation run** (`python consolidate.py ...`):
+   - Before starting, emit cancel-pending-tasks signal to queue server
+   - Queue server returns count of cancelled tasks and list of skills in pending state
+   - Consolidation fetches embedding checkpoint; identifies stale entries (not in checkpoint, or timestamp < last skill edit)
+   - Submit all stale skills as a single batch task to queue server with priority boost
+   - Wait for batch completion or proceed async (depends on consolidate flags)
+   - Continue with similarity matrix, chain decomposition, and graph analysis as usual
+
+### Idempotency
+
+- Embedding tasks are keyed by `(skill_name, content_hash)` — resubmitting the same skill with unchanged content is a no-op
+- Timestamp ordering ensures consolidation can identify which skills have been updated since last embedding run
+- No churn: embedding updates only when skills actually change, not every time consolidation runs
+
+### Implementation Notes
+
+- Queue checkpoint lives at `consolidation/.checkpoint.db` — same as consolidation's run log, can coexist in one schema
+- Add `embeddings` and `embedding_metadata` tables:
+  ```sql
+  CREATE TABLE embeddings (
+    skill_name TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    premise_embeddings BLOB,  -- numpy array serialized
+    bm25_kg_column BLOB,      -- BM25 scores for KG triplet matching
+    computed_at TEXT,
+    PRIMARY KEY (skill_name, content_hash)
+  );
+  
+  CREATE TABLE embedding_queue (
+    task_id TEXT PRIMARY KEY,
+    skill_name TEXT NOT NULL,
+    action TEXT,  -- 'update' | 'delete' | 'batch'
+    submitted_at TEXT,
+    completed_at TEXT,
+    status TEXT   -- 'pending' | 'running' | 'done' | 'error'
+  );
+  ```
+
+- Queue server exposes two endpoints (fastmcp-style or fastapi):
+  - `POST /queue/task` — submit embedding task(s)
+  - `POST /queue/cancel-pending` — cancel all pending tasks, return summary
+  - `GET /queue/status` — query embedding status for a skill
+
+- Post-edit hook (git or file watcher):
+  ```bash
+  # pseudo-code; integrate into your workflow
+  git diff --name-only HEAD~1 | grep "skills/.*\.md" | while read skill; do
+    curl -X POST http://localhost:8000/queue/task \
+      -d "{\"skill_name\": \"$skill\", \"action\": \"update\"}"
+  done
+  ```
+
+### Benefits
+
+- **Lazy ingestion**: embeddings compute as skills change, not when consolidation runs
+- **No coupling**: consolidation remains focused on triplet correlation; embedding production is independent
+- **Batch efficiency**: consolidation can flush pending queue in one shot instead of triggering fresh extractions
+- **Observable progress**: queue server provides status/timing so you can see what is pending vs done
+- **Checkpoint reuse**: future consolidation runs skip already-computed embeddings, avoiding redundant work
+
 # Operating Contract
 
 How I understand and use language: through the lens of necessary facts in support of a conclusion — by understanding user intent/goal - formulating one or more hypothesis, identifying testable conditions that would negate those premises, identify observed premises (articulate inferred), and delivering the move towards the objective.

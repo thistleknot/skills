@@ -2,7 +2,7 @@
 name: substrate-selection
 description: Runtime substrate selection protocol. Use when deciding which external coding runtime should sit behind the harness. Keep orchestrators separate from leaf executors, keep skills separate from adapters, and only encode claims that are grounded in verified docs or local runs.
 status: active
-last_validated: 2026-04-29
+last_validated: 2026-05-24
 supersedes: []
 validation_method: session
 ---
@@ -27,6 +27,43 @@ validation_method: session
 - provider bridges normalize endpoints; they do not decide policy
 - prefer first-party contracts and replaceable adapters over adopting an external runtime as the project identity
 - when evidence is indirect, mark it provisional instead of smuggling it in as fact
+
+## Provider vs Harness Delta
+
+Do not confuse a **model/provider delta** with a **harness/runtime delta**.
+
+- A first-party runtime such as GitHub Copilot CLI may bundle stronger session,
+  tool, checkpoint, and recovery behavior around the model.
+- A provider-routed stack such as OpenRouter + OpenCode may expose similar models
+  while still lacking those runtime guarantees by default.
+- Therefore: if behavior quality differs, first ask whether the missing capability
+  lives in the harness contract rather than in the model itself.
+
+Working rule:
+
+1. treat provider choice and harness choice as separate axes
+2. do not assume model parity implies workflow parity
+3. when moving from a first-party runtime to a provider-routed runtime, make the
+   missing harness features explicit and reconstruct them in skills/config rather
+   than blaming the provider generically
+
+## Compensating Controls for Weaker Provider-Routed Stacks
+
+When the cheaper or weaker substrate is OpenRouter-backed or otherwise lacks the
+same first-party runtime behavior, shore up the harness explicitly:
+
+- use stricter role split between orchestrator, delegated harness, and leaf editor
+- require structured response packets instead of freeform progress prose
+- add bounded retries, timeout guards, and restart/reseed policies
+- require observable progress signals: stdout, file diff, heartbeat, or steerable
+  intermediate state
+- classify silent bounded-edit runs as harness stalls and escalate instead of
+  waiting indefinitely
+- preserve source-of-truth and acceptance criteria so a stronger/manual fallback
+  can resume from the same boundary
+
+The default stance is: **rebuild missing runtime guarantees in the harness before
+concluding that the provider/model gap is the whole problem.**
 
 ## Integration Rule
 - Do not stop at a comparison matrix. A backend stack only counts as integrated when the harness resolves it into a run-visible contract.
@@ -57,6 +94,10 @@ Rules:
 - Use `pi` when the orchestrator should delegate a bounded sub-harness instead of a single worker call
 - Use `aider` when a manager or delegated harness needs a leaf code executor
 - Keep `openclaw`, Copilot, and Claude Code in the comparison set with explicit confidence labels
+- When comparing OpenRouter/OpenCode against GitHub Copilot CLI, separate:
+  - **model quality delta**
+  - **runtime/harness delta**
+  - **which compensating controls are already present in the skills/config**
 <!-- consolidation:see-also:start -->
 ## See Also
 [[agentic-harness]]  [[pi]]  [[codebase-knowledge-graph]]  [[code]]

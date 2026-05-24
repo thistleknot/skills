@@ -5,10 +5,11 @@ description: >
   subject-predicate-object triplet overlap, run greedy nearest-neighbor chain
   decomposition to surface merge candidates and cross-reference opportunities,
   and emit sorted group reports for living knowledge bases and skill libraries.
+  Embeddings are pre-computed lazily via async queue to decouple from consolidation runs.
 status: active
-last_validated: 2026-05-04
+last_validated: 2026-05-24
 supersedes: []
-validation_method: run against skills repo; verify groups are semantically coherent
+validation_method: run against skills repo; verify groups are semantically coherent; verify embedding queue is async and non-blocking
 ---
 
 # Consolidation Skill
@@ -48,6 +49,32 @@ if len(changed) < 2:
 **Why ≥2?** A single changed skill only shifts the correlation scores for pairs involving that one skill. Unless that skill sits exactly on τ, the group structure won't change. Two changes guarantee at least one pair relationship could plausibly cross the τ boundary in either direction.
 
 Override with `--force` when you need to re-run regardless (e.g., after changing τ itself or after a bulk import).
+
+---
+
+## Embedding Queue Separation
+
+**Embeddings are NOT computed on-demand during consolidation runs.** Instead, they are pre-computed lazily as skills change via an async queue service (`embedding_queue_server.py`). This decouples embedding ingestion from the consolidation pipeline and prevents embeddings from going stale.
+
+### Architecture
+
+- **Skills change** → emit task to queue server (via git hook or file watcher)
+- **Queue server** (fastapi, port 8000) → process tasks asynchronously; checkpoint to `.checkpoint.db`
+- **Consolidation run** → cancel pending queue, batch-flush stale skills, continue with similarity matrix
+
+### Before running consolidation
+
+If you have the queue server running:
+```bash
+curl -X POST http://localhost:8000/queue/cancel-pending
+```
+
+This cancels pending tasks and lets consolidation submit them as a batch. If the queue server is not running, consolidation proceeds normally using the last-cached embeddings.
+
+### See Also
+
+- `embedding_queue_server.py` — fastapi service that owns the embedding queue checkpoint
+- `AGENTS.md` — "Agentic Memory Embedding Queue Architecture" section in the skills repo root
 
 ---
 

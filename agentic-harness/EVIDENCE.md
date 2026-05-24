@@ -20,6 +20,8 @@ Grounding citations for behavioral contracts in `agentic-harness/SKILL.md`.
 | 5 | Anthropic Building Effective Agents (blog) | Orchestrator-workers is one of 5 canonical agentic patterns; the harness embodies this at the control-plane level | Programmatic train station thesis |
 | 3 | `stanfordnlp/dspy` optimizer + refine docs | Metric/reward-bound compile-refine loops with trace-aware optimization and explicit error budgets are reusable evaluation patterns for LM programs | Evaluation stack |
 | 3 | `zou-group/textgrad` README + evaluation docs | Natural-language loss functions, textual-gradient update loops, noisy-objective hygiene, and sandbox caution are reusable evaluation patterns for harness repair loops | Evaluation stack |
+| 4 | Session crystallization: bounded edit runs with no stdout, no diff, and no steerable state | A bounded edit packet that produces no observable progress after a short wait or one retry should be treated as a dead-end stall, preserving discovered context and escalating to the next allowed repair path instead of waiting indefinitely | Silent Bounded-Edit Stall Protocol |
+| 4 | Session crystallization: repeated artifact symptoms resolved at parser/generator/orchestrator layers | Durable fixes often belong at the higher repair surface, while the downstream artifact remains a proxy regression test; downstream hand-edits should be exception-only | Hierarchical Repair-Surface Selection |
 
 ## Contradiction Count: 0
 

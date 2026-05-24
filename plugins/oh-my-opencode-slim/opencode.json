@@ -28,6 +28,7 @@
               }
             },
             "orchestrator": {
+              "limit": { "output": 512 },
               "reasoning": {
                 "effort": "medium",
                 "enabled": true
