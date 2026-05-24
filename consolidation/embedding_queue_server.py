@@ -107,15 +107,16 @@ async def process_embedding_task(task_id: str, skill_name: str, content_hash: st
 
         # Extract triplets and compute embeddings
         # In real usage, invoke skill_similarity module for triplet extraction
-        from skill_similarity import build_skill_documents, build_similarity_matrix
+        from skill_similarity import build_skill_documents
         
         # Load the skill file and extract document
         skill_path = Path(__file__).parent.parent / skill_name / "SKILL.md"
         if not skill_path.exists():
             raise FileNotFoundError(f"Skill file not found: {skill_path}")
         
-        # Build document triplets (skill_similarity handles this)
-        docs = build_skill_documents([skill_path])
+        # Build document triplets (skill_similarity discovers from skill directory)
+        skill_dir = skill_path.parent
+        docs = build_skill_documents(skill_dir)
         if docs:
             # docs is a list of SkillDocument; extract triplets from first (only) doc
             doc = docs[0]
