@@ -38,8 +38,8 @@ import numpy as np
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# Placeholder: in real usage, import from skill_similarity
-# from skill_similarity import extract_triplets, compute_embeddings
+# Real triplet extraction imported in process_embedding_task() on demand
+# from skill_similarity import build_skill_documents, build_similarity_matrix
 
 
 class EmbeddingTask(BaseModel):
