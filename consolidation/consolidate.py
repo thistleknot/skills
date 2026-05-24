@@ -192,10 +192,28 @@ def main() -> None:
     parser.add_argument("--graph", action="store_true",
                         help="run graph analysis (Louvain, k-means elbow, betweenness, "
                              "DWPC, spring layout) after main pipeline")
+    parser.add_argument("--cancel-pending", action="store_true",
+                        help="cancel pending embedding queue tasks before running consolidation; "
+                             "requires embedding_queue_server running at http://localhost:8000")
     args = parser.parse_args()
 
     root: Path = args.root
     db_path: Path = Path(__file__).resolve().parent / ".checkpoint.db"
+
+    # -- embedding queue pre-flight: cancel pending tasks if requested -----------
+    if args.cancel_pending:
+        try:
+            import requests
+            resp = requests.post("http://localhost:8000/queue/cancel-pending", timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                cancelled = data.get("cancelled_count", 0)
+                print(f"[Embedding Queue] Cancelled {cancelled} pending task(s)")
+            else:
+                print(f"[Embedding Queue] Warning: cancel-pending returned {resp.status_code}")
+        except Exception as e:
+            print(f"[Embedding Queue] Warning: could not cancel pending tasks ({e})")
+            print("  Continuing with consolidation anyway (queue server may be unavailable)")
 
     # -- collect skill files ---------------------------------------------------
     documents = build_skill_documents(root)
