@@ -71,6 +71,10 @@ curl -X POST http://localhost:8000/queue/cancel-pending
 
 This cancels pending tasks and lets consolidation submit them as a batch. If the queue server is not running, consolidation proceeds normally using the last-cached embeddings.
 
+### Idempotency Guarantee
+
+Embedding tasks are keyed by (skill_name, content_hash). Resubmitting the same skill with unchanged content is a no-op if already done or already queued. This prevents queue bloat and ensures embeddings are computed exactly once per skill revision.
+
 ### See Also
 
 - `embedding_queue_server.py` — fastapi service that owns the embedding queue checkpoint
