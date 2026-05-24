@@ -86,6 +86,7 @@ skills/
 │   ├── optuna-nested-cv             # search engine + methodology primer: inner tune / outer unbiased estimate
 │   ├── hyper-parm_tuning            # superseded predecessor; canonical home for Weighted Stage Allocation pattern
 │   ├── agentic-hyperparm            # behavioral knob tuning for agentic systems; instantiates Stage Allocation for L1-L4 layers
+│   ├── parm-tuning-as-lp            # discrete hyperparameter tuning via linear/mixed-integer programming; orthogonal lever factorization, irreducible-ratio perturbation basis, global optimality
 │   ├── class-balancing              # log inverse freq → Box-Cox normalize → ratio weights for imbalanced classifiers
 │   ├── stratified-quota-sampling    # coverage-bounded no-replacement sampler; Box-Cox tiers + quota allocation
 │   │   └── synthetic-data           # LLM-generated training data; 8 paradigms (Self-Instruct/Evol-Instruct/GLAN/Magpie/UltraFeedback/FireAct/distilabel); 6 mandatory quality gates; handoff to stratified-quota-sampling + class-balancing
@@ -121,7 +122,7 @@ skills/
 1. `react-agent` is the outer execution OS. All other skills are invoked from inside it.
 2. `design-patterns` is the code-facing pattern selector. `code` owns edit mechanics; `design-patterns` chooses the relationship shape and contract.
 3. `agentic-design-patterns` chooses LangGraph workflow shape and role topology. It is where routing, prompt chaining, parallel sectioning, voting, orchestrator-workers, evaluator-optimizer, and bounded autonomous loops belong.
-4. `substrate-selection` decides which runtime sits behind the graph or harness boundary: OpenCode, claw-code, `pi`, aider, or another provider surface. Default integrated stack: `opencode` for the orchestrator lane, optional `pi` for a delegated external-harness lane, and `aider` for the leaf-agent lane.
+4. `substrate-selection` decides which runtime sits behind the graph or harness boundary: OpenCode, claw-code, `pi`, aider, or another provider surface. Default integrated stack: `opencode` for the orchestrator lane, optional `pi` for a delegated external-harness lane, and `aider` for the leaf-agent lane. It also owns the rule that model/provider parity does not imply harness/runtime parity — first-party surfaces like GitHub Copilot CLI may bundle stronger runtime guarantees that provider-routed OpenRouter stacks must recreate explicitly in skills/config.
 5. `agentic-harness` is the programmatic train station for coding frameworks (Claude Code, OpenCode, GitHub Copilot CLI, OpenClaw). It routes, gates, and reconciles work; each framework is a worker line, and the resolved runtime stack should be visible in state/logs rather than hidden in helper code.
 6. `continuity-log` is a child of `agentic-harness`. It holds the compact-safe distilled state that lets the harness resume without re-deriving decisions.
 7. `deep-research` is a child of `agentic-harness`. It decomposes a question into parallel subquestions, gathers web evidence via a 3-tier fetch pipeline (httpx → retry → Selenium), and synthesizes a claim-backed report seeding the harness TaskSpec.
