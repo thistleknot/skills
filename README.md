@@ -38,6 +38,7 @@ skills/
 │   └── react-fastapi-sqlite         # full-stack scaffold: React (TanStack Query) + FastAPI (SQLModel ORM) + SQLite; SPA + REST backend
 │
 ├── orchestration/                   # route work, enforce policy, manage cross-session state
+│   ├── agentic-orchestration        # unified: 5-Q decision tree + live agent roster + Aider architect/editor reference impl + Anthropic pattern taxonomy
 │   ├── agentic-design-patterns      # LangGraph workflow shape, router/gate topology, manager/BA/dev/QA rooms
 │   ├── agentic-harness              # dark-task control plane; backbone = OpenClaw/Claude Code/OpenCode/Copilot CLI; structured-response contracts + HTP
 │   │   ├── checklist                # LLM-as-judge validation pattern; structured findings with novelty proof

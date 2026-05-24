@@ -371,6 +371,7 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Multi-stage automated pipeline, harness routing, coherence gate | `agentic-harness` |
 | Pipeline output is wrong with no error; need to find the upstream cause | `pipeline-input-review` |
 | Hierarchical task decomposition, parallel sub-task dispatch | `agentic-harness` (HTP section) |
+| Designing or debugging a multi-agent system; choosing which pattern before writing code | `agentic-orchestration` |
 | Coordinating multiple specialised agents in parallel | `multi-agent-coordination` |
 | Agent safety rails, tool-access policy, audit trail | `agent-governance` |
 | AI quality checks as CI status gates (merge-blocking) | `agent-governance` (agent-as-ci-gate section) |

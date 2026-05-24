@@ -140,5 +140,5 @@ A **shared-UI lane** writes to a single shared stream (terminal stdout, a chat t
 - Use `code` when the task is concrete repo editing rather than workflow design.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[agent-governance]]  [[evaluator-optimizer]]  [[react-agent]]
+[[agentic-orchestration]]  [[agent-governance]]  [[evaluator-optimizer]]  [[react-agent]]
 <!-- consolidation:see-also:end -->
