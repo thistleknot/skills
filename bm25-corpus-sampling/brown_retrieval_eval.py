@@ -4,6 +4,8 @@ Compares six retrieval systems:
   dense_only      — nomic-embed-text cosine similarity (Ollama, embeddings only)
   bm25_full       — BM25 over full corpus (rank_bm25, BM25Okapi)
   hybrid_rrf      — Reciprocal Rank Fusion: dense + bm25_full
+  bm25_proxy      — BM25Okapi fitted on 2k PI-stratified proxy sample only;
+                    retrieval restricted to proxy pool; measures IDF-preservation lift
   proxy_louvain   — k-means on TF-IDF wordpiece → BM25 score matrix
                     → Pearson correlation matrix → Louvain community rerank
   proxy_wcc       — same BM25 correlation graph → WCC (weakly connected component)
@@ -770,6 +772,15 @@ def main():
     proxy_tfidf.fit([docs[i]["text"] for i in sample_idx])
     print(f"  Proxy vocab: {len(proxy_tfidf.vocabulary_):,} terms")
 
+    # ── proxy BM25: BM25Okapi fitted on the 2k sample only ───────────────────
+    # Measures IDF-preservation claim: does proxy IDF produce similar rankings
+    # to full-corpus BM25? Retrieval pool is restricted to proxy sample docs.
+    print("Building proxy BM25 index (2k sample)...")
+    bm25_proxy = BM25Okapi([docs[i]["tokens"] for i in sample_idx])
+    proxy_set = set(sample_idx)
+    # global_idx → position in sample_idx list (for score lookup)
+    proxy_pos = {gi: pi for pi, gi in enumerate(sample_idx)}
+
     # ── query set (PI-stratified, different seed) ─────────────────────────────
     print(f"Sampling {N_QUERIES}-query evaluation set (PI-stratified, seed=99)...")
     query_idx = pi_stratified_sample(docs, n_sample=N_QUERIES, seed=99)
@@ -780,7 +791,7 @@ def main():
     # ── evaluation loop ───────────────────────────────────────────────────────
     METRICS = ["context_precision", "context_recall", "avg_bm25", "community_density"]
     systems = [
-        "dense_only", "bm25_full", "hybrid_rrf",
+        "dense_only", "bm25_full", "hybrid_rrf", "bm25_proxy",
         "bm25_louvain", "bm25_wcc", "bm25_dwpc",
         "jac_louvain",  "jac_wcc",  "jac_dwpc",
         "ae_louvain",   "ae_wcc",   "ae_dwpc",
@@ -823,6 +834,17 @@ def main():
         bm25_scores[qidx] = -1.0
         bm25_10 = list(np.argsort(bm25_scores)[::-1][:K])
 
+        # proxy BM25 top-K (retrieval restricted to 2k proxy sample)
+        proxy_scores_raw = bm25_proxy.get_scores(qtoks)  # len == N_PROXY
+        # build (global_idx, score) pairs; exclude self if in proxy set
+        proxy_scored = [
+            (sample_idx[pi], sc)
+            for pi, sc in enumerate(proxy_scores_raw)
+            if sample_idx[pi] != qidx
+        ]
+        proxy_scored.sort(key=lambda x: x[1], reverse=True)
+        bm25_proxy_10 = [gi for gi, _ in proxy_scored[:K]]
+
         # hybrid RRF
         rrf_10 = rrf_fuse([dense50, bm25_10])[:K]
 
@@ -845,6 +867,7 @@ def main():
             (dense10,      0.0),
             (bm25_10,      0.0),
             (rrf_10,       0.0),
+            (bm25_proxy_10, 0.0),
             (bm25_lou_10,  bm25_lou_dens),
             (bm25_wcc_10,  bm25_wcc_dens),
             (bm25_dw_10,   bm25_dw_dens),
@@ -881,7 +904,7 @@ def main():
     bm25_range = max(all_bm25) - min(all_bm25) + 1e-9
 
     # separator rows: baselines → BM25-correlation → Hash-Jaccard → Multi-view AE
-    separators = {3: "── BM25-correlation ──", 6: "── Hash-Jaccard (dual) ──", 9: "── Multi-view AE ──"}
+    separators = {4: "── BM25-correlation ──", 7: "── Hash-Jaccard (dual) ──", 10: "── Multi-view AE ──"}
 
     for si, sys_name in enumerate(systems):
         if si in separators:
@@ -899,6 +922,16 @@ def main():
     print("=" * len(hdr))
     best = max(composite_scores, key=composite_scores.__getitem__)
     print(f"\nBest composite: {best}  ({composite_scores[best]:.4f})")
+
+    # IDF-preservation lift: proxy BM25 vs full-corpus BM25
+    # Note: bm25_proxy retrieves from proxy pool only (2k docs), bm25_full from full corpus.
+    # Positive lift = proxy IDF preserves enough signal to match full-corpus quality.
+    proxy_lift = composite_scores["bm25_proxy"] - composite_scores["bm25_full"]
+    print(f"\n── IDF-preservation lift (bm25_proxy − bm25_full) ──")
+    print(f"  composite Δ: {proxy_lift:>+.4f}  "
+          f"({'proxy IDF preserves signal' if proxy_lift >= 0 else 'proxy IDF degrades vs full'})")
+    print(f"  Note: bm25_proxy restricted to {N_PROXY}-doc proxy pool; "
+          f"bm25_full scores all {len(docs):,} docs.")
 
     # delta table: Jaccard vs BM25 vs AE per community method
     print("\n── Δ composite per community method ──")
