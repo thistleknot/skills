@@ -119,11 +119,18 @@ x = (x - med) / (mad + 1e-9)
 pt = PowerTransformer(method='yeo-johnson', standardize=False)
 x = pt.fit_transform(x.reshape(-1, 1)).ravel()
 
-# weighted sum = 1: shift to positive, normalize linearly
-# (NOT softmax — softmax is exponential and amplifies the largest cell into near-monopoly)
-# Shift ensures all categories (including negative z-score tail) get quota.
-x = x - x.min() + 1e-9
-weights = x / x.sum()   # sum to 1
+# weighted sum = 1: CDF bin areas (consecutive Gaussian CDF differences sorted by z_yj)
+# Each category gets the Gaussian probability mass between its z-score and the previous one.
+# Categories near z=0 (median-sized) get the most mass; extreme outliers land in thin tails.
+# "news should get 97%" = news's bin starts at the ~97th percentile (learned's CDF ≈ 96.7%)
+from scipy.stats import norm
+order = np.argsort(x)
+z_sorted = x[order]
+cdf_vals = norm.cdf(z_sorted)
+weights_sorted = np.diff(cdf_vals, prepend=0.0)
+weights_sorted /= weights_sorted.sum()
+weights = np.empty_like(weights_sorted)
+weights[order] = weights_sorted
 
 # 3. Allocate quota across categories proportionally
 N = 2000
@@ -149,28 +156,28 @@ for i, cat in enumerate(cats):
 
 **Expected cell structure:** 15 topics × ~7 log2 length bins = up to 105 cells. In practice ~90 non-empty (some short-para × rare-genre cells are empty). News (`A`) and Learned (`J`) dominate by paragraph count; Science Fiction (`M`) and Humor (`R`) are the tail.
 
-**Actual paragraph counts and quota allocation** (Brown corpus, 2000-paragraph target):
+**Actual paragraph counts and quota allocation** (Brown corpus, 2000-paragraph target, CDF-difference weights):
 
-| NLTK key | Total paras | % corpus | Quota | % sample |
-|---|---|---|---|---|
-| `adventure` | 1,385 | 8.9% | 187 | 9.3% |
-| `belles_lettres` | 1,403 | 9.0% | 190 | 9.5% |
-| `editorial` | 1,002 | 6.4% | 128 | 6.4% |
-| `fiction` | 1,042 | 6.7% | 134 | 6.7% |
-| `government` | 850 | 5.4% | 108 | 5.4% |
-| `hobbies` | 1,118 | 7.1% | 145 | 7.2% |
-| `humor` | 254 | 1.6% | 1 | 0.1% |
-| `learned` | 1,411 | 9.0% | 192 | 9.6% |
-| `lore` | 1,203 | 7.7% | 158 | 7.9% |
-| `mystery` | 1,163 | 7.4% | 152 | 7.6% |
-| `news` | 2,233 | 14.3% | 313 | 15.7% |
-| `religion` | 369 | 2.4% | 29 | 1.5% |
-| `reviews` | 629 | 4.0% | 76 | 3.8% |
-| `romance` | 1,251 | 8.0% | 166 | 8.3% |
-| `science_fiction` | 334 | 2.1% | 21 | 1.1% |
-| **TOTAL** | **15,647** | **100%** | **2,000** | **100%** |
+| NLTK key | z_yj | CDF | Δ CDF (bin) | Total paras | Quota | % sample |
+|---|---|---|---|---|---|---|
+| `humor` | −5.68 | 0.000 | 0.000 | 254 | 1 | 0.1% |
+| `science_fiction` | −4.87 | 0.000 | 0.000 | 334 | 1 | 0.1% |
+| `religion` | −4.56 | 0.000 | 0.000 | 369 | 1 | 0.1% |
+| `reviews` | −2.72 | 0.003 | 0.003 | 629 | 7 | 0.4% |
+| `government` | −1.46 | 0.072 | 0.068 | 850 | 137 | 6.9% |
+| `editorial` | −0.65 | 0.259 | 0.187 | 1,002 | **370** | **18.5%** |
+| `fiction` | −0.43 | 0.334 | 0.075 | 1,042 | 150 | 7.5% |
+| `hobbies` | +0.00 | 0.500 | 0.166 | 1,118 | **332** | **16.6%** |
+| `mystery` | +0.27 | 0.606 | 0.106 | 1,163 | 212 | 10.6% |
+| `lore` | +0.51 | 0.697 | 0.091 | 1,203 | 181 | 9.0% |
+| `romance` | +0.81 | 0.792 | 0.096 | 1,251 | 192 | 9.6% |
+| `adventure` | +1.67 | 0.952 | 0.160 | 1,385 | **320** | **16.0%** |
+| `belles_lettres` | +1.78 | 0.963 | 0.010 | 1,403 | 21 | 1.1% |
+| `learned` | +1.83 | 0.967 | 0.004 | 1,411 | 8 | 0.4% |
+| `news` | +6.64 | 1.000 | 0.034 | 2,233 | 67 | **3.4%** |
+| **TOTAL** | | | | **15,647** | **2,000** | **100%** |
 
-`humor` rounds to 1 (rounding artifact from 254 paragraphs producing a very small linear weight). The `maximum(quotas, 1)` floor ensures it is included. The overall % sample column tracks % corpus closely — confirming proportional representation.
+**Reading the table:** Categories with z_yj near 0 (editorial, hobbies, mystery) get the highest quota because the Gaussian PDF peaks at the center. News is at z=6.64 — its bin starts at the 97th percentile (learned's CDF=96.7%) and runs to +∞, a region with only 3.4% of Gaussian mass. The three extreme-negative categories (humor, sci-fi, religion) fall in the near-zero tail and each receive the minimum floor of 1.
 
 ---
 
@@ -205,14 +212,29 @@ x = pt.fit_transform(x.reshape(-1, 1)).ravel()
 
 Why Yeo-Johnson over Box-Cox: Yeo-Johnson accepts zero and negative values (which appear after median/MAD centering). Box-Cox requires strictly positive input.
 
-### Step 4 — Probability simplex (shift-positive, linear normalize)
+### Step 4 — Probability simplex (CDF bin areas)
+
+Sort categories by z-score. The weight for each category is the probability mass of the standard normal that falls between its z-score and the previous category's z-score — i.e., the area under the Gaussian curve for that "bin." Categories near z=0 (median-sized) get the most mass; extreme outliers land in the thin tails.
 
 ```python
-x = x - x.min() + 1e-9    # shift so minimum is just above 0; preserves all cells
-weights = x / x.sum()      # sum to 1
+from scipy.stats import norm
+order = np.argsort(x)
+z_sorted = x[order]
+cdf_vals = norm.cdf(z_sorted)
+
+# Consecutive CDF differences: each bin owns the Gaussian mass from the
+# previous threshold to its own. Sums to cdf(max) ≈ 1.0.
+weights_sorted = np.diff(cdf_vals, prepend=0.0)
+weights_sorted /= weights_sorted.sum()   # normalize to exactly 1.0
+
+# Restore original category order
+weights = np.empty_like(weights_sorted)
+weights[order] = weights_sorted
 ```
 
-Why **not** softmax: softmax applies `exp()`, which is exponential. A dominant category with z≈2 produces `e²≈7.4` while a tail category with z≈-1 produces `e⁻¹≈0.37` — a 20× gap that compounds the original count imbalance rather than correcting it. In practice, softmax collapses >96% of the quota into the single largest category. Shift-positive + linear normalize preserves relative ordering while keeping the tail viable.
+**How to read "news should get 97%":** After Yeo-Johnson, news lands at z=6.64. The previous category (learned) is at z=1.83, CDF≈96.7%. News's bin starts at the ~97th percentile of the distribution and runs to +∞. The Gaussian tail past 97% is thin — news gets only 3.4% of quota (67 paragraphs of 2000). The "97%" names where news's bin *begins*, not how much it receives.
+
+**Why this beats linear normalize:** Linear preserve the Yeo-Johnson rank but treat z-score differences as linear distances. CDF differences use the Gaussian to weight each gap — so a 4-sigma gap between learned (z=1.83) and news (z=6.64) correctly maps to a tiny probability mass (the tail is nearly empty there), while a 0.2-sigma gap near the center maps to large mass. The normalization is *geometry-aware*.
 
 ---
 
@@ -309,15 +331,21 @@ def bm25_corpus_sample(
     pt = PowerTransformer(method='yeo-johnson', standardize=False)
     x = pt.fit_transform(x.reshape(-1, 1)).ravel()
 
-    # 5. Probability simplex via shift-positive + linear normalize
-    # Variance from normal IS the signal. Shift-positive preserves all cells
-    # (including negative z-score tail = under-represented). Linear normalize
-    # keeps relative proportions without exponential amplification.
-    x = x - x.min() + 1e-9
-    weights = x / x.sum()
+    # 5. Probability simplex via CDF bin areas
+    # Sort by z-score; each category's weight = Gaussian probability mass between
+    # its z-score and the previous one. Categories near z=0 (median-sized) get the
+    # most mass; extreme outliers land in thin tails and get small (but nonzero) weight.
+    from scipy.stats import norm as _norm
+    order = np.argsort(x)
+    z_sorted = x[order]
+    cdf_vals = _norm.cdf(z_sorted)
+    weights_sorted = np.diff(cdf_vals, prepend=0.0)
+    weights_sorted /= (weights_sorted.sum() + 1e-12)
+    weights = np.empty_like(weights_sorted)
+    weights[order] = weights_sorted
 
-    # Also expose shifted weights for downstream reranking / ensemble use
-    z_scores = {key: float(x_val) for key, x_val in zip(keys, x)}
+    # Expose cell weights for downstream reranking / ensemble use
+    z_scores = {key: float(w) for key, w in zip(keys, weights)}
 
     # 6. Quota allocation
     quotas = np.round(weights * n_sample).astype(int)

@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import median_abs_deviation
+from scipy.stats import median_abs_deviation, norm
 from sklearn.preprocessing import PowerTransformer
 from nltk.corpus import brown
 
@@ -23,10 +23,17 @@ x = (x - med) / (mad + 1e-9)
 pt = PowerTransformer(method='yeo-johnson', standardize=False)
 x = pt.fit_transform(x.reshape(-1, 1)).ravel()
 
-# weighted sum = 1: shift to positive, normalize linearly (NOT softmax)
-# preserves relative ordering while compressing range so tail gets quota
-x = x - x.min() + 1e-9
-weights = x / x.sum()
+# weighted sum = 1: CDF bin areas (consecutive Gaussian CDF differences sorted by z_yj)
+# Categories near z=0 (median-sized) get the most Gaussian mass.
+# Extreme outliers (news z=+6.64, humor z=-5.68) land in thin tails → small quota.
+# "news starts at 97%" = learned is at CDF≈96.7%; news's bin runs from there to +∞.
+order = np.argsort(x)
+z_sorted = x[order]
+cdf_vals = norm.cdf(z_sorted)
+weights_sorted = np.diff(cdf_vals, prepend=0.0)
+weights_sorted /= weights_sorted.sum()
+weights = np.empty_like(weights_sorted)
+weights[order] = weights_sorted
 
 N = 2000
 quotas = np.round(weights * N).astype(int)
@@ -42,11 +49,13 @@ total = int(counts.sum())
 print(f"Total paragraphs (full corpus): {total:,}")
 print(f"Target sample:                  {N:,}  ({N/total*100:.1f}% of corpus)")
 print()
-print(f"{'Category':<20} {'Total':>7} {'%corpus':>8} {'Quota':>7} {'%sample':>8} {'ratio':>7}")
-print("-" * 62)
+print(f"{'Category':<20} {'z_yj':>7} {'CDF':>7} {'Δ CDF':>7} {'Total':>7} {'Quota':>6} {'%sample':>8}")
+print("-" * 72)
+cdf_by_cat = dict(zip(cats, norm.cdf(x)))
+delta_by_cat = dict(zip(cats, weights))
 for i, cat in enumerate(cats):
     c = int(counts[i])
     q = int(quotas[i])
-    print(f"{cat:<20} {c:>7,} {c/total*100:>7.1f}%  {q:>7} {q/N*100:>7.1f}%   {q/c*100:>5.1f}%")
-print("-" * 62)
-print(f"{'TOTAL':<20} {total:>7,} {'100.0%':>8}  {quotas.sum():>7} {'100.0%':>8}")
+    print(f"{cat:<20} {x[i]:>7.2f} {cdf_by_cat[cat]:>7.3f} {delta_by_cat[cat]:>7.3f} {c:>7,} {q:>6} {q/N*100:>7.1f}%")
+print("-" * 72)
+print(f"{'TOTAL':<20} {'':>7} {'':>7} {'':>7} {total:>7,} {quotas.sum():>6} {'100.0%':>8}")
