@@ -290,6 +290,17 @@
         "edit": "allow",
         "subtask": "deny"
       }
+    },
+    "summarizer": {
+      "permission": {
+        "read": "allow",
+        "grep": "deny",
+        "glob": "deny",
+        "list": "deny",
+        "bash": "deny",
+        "edit": "deny",
+        "subtask": "deny"
+      }
     }
   },
   "lsp": true

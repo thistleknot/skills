@@ -16,7 +16,7 @@ flowchart TD
 
     ORACLE["oracle / planner\nqwen3.6-35b\nSpec planning"]
     DESIGNER["designer\nqwen3.6-35b\nSigs + stubs"]
-    FIXER["fixer / coder\nqwen3.6-35b\n------------------\nSpec translation only\nBreaks -> packets\nDispatches to aider"]
+    FIXER["fixer / coder\nqwen3.5-9b\n------------------\nSpec translation only\nBreaks -> packets\nDispatches to aider"]
     LIBRARIAN["librarian\ngemini-2.5-flash-lite\nWeb + docs search"]
     OBSERVER["observer / visionary\nqwen-vl-30b\nScreenshots"]
 
@@ -49,6 +49,7 @@ flowchart TD
     ORCH -->|"known-file hotfix"| PATCHER
     ORCH -->|"pure file ops"| HANDYMAN
     ORCH -->|"trace / test fail"| DEBUGGER
+    ORCH -->|"compress context"| SUMMARIZER
 
     %% ── fixer → aider (packet chain) ─────────────────────────────
     FIXER -->|"bounded edit packet\n(1 file · 1 concern)"| AIDER

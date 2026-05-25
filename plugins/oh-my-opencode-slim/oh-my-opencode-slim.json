@@ -26,8 +26,9 @@
       "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
       // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36 | usage:0.10 | wgtd:0.061
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "skills": [], "mcps": [] },
-      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | usage:0.22 | wgtd:0.171
-      "fixer":        { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
+      // Packet decomposer only — dispatches to @aider; same model to avoid competing coding intent
+      "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
       // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher", "skills": [], "mcps": [] },
       // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
@@ -44,8 +45,9 @@
       "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
       // AA:43 | ctx:1M | in:$0.15 out:$1.00 | blend(3:1):$0.36 | usage:0.10 | wgtd:0.061
       "designer":     { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "skills": [], "mcps": [] },
-      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | usage:0.22 | wgtd:0.171
-      "fixer":        { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
+      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
+      // Packet decomposer only — dispatches to @aider; same model to avoid competing coding intent
+      "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
       // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher", "skills": [], "mcps": [] },
       // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
