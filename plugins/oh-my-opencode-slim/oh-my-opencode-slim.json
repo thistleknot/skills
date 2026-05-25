@@ -27,8 +27,9 @@
       // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       // Packet decomposer only — dispatches to @aider; same model to avoid competing coding intent
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
-      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher", "skills": [], "mcps": [] },
+      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.22 | wgtd:0.171
+      // Map-reduce pair with @summarizer: researcher gathers raw evidence, summarizer compresses to SPO triplets
+      "explorer":     { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "displayName": "researcher", "skills": [], "mcps": [] },
       // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
       "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
@@ -45,8 +46,9 @@
       // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       // Packet decomposer only — dispatches to @aider; same model to avoid competing coding intent
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
-      "explorer":     { "model": "openrouter/qwen/qwen3.5-9b", "variant": "lean", "displayName": "researcher", "skills": [], "mcps": [] },
+      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.22 | wgtd:0.171
+      // Map-reduce pair with @summarizer: researcher gathers raw evidence, summarizer compresses to SPO triplets
+      "explorer":     { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "displayName": "researcher", "skills": [], "mcps": [] },
       // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
       "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
@@ -104,7 +106,14 @@
       // ELO:~1400 | ctx:262K | in:$0.10 out:$0.30 | blend(4:1):$0.12 | ELO:green | usage:0.03 | wgtd:0.019
       "model": "openrouter/xiaomi/mimo-v2-flash",
       "prompt": "You are Summarizer. Data Parser: Zero-reasoning extraction of semantic triplets. Output JSON only: {triplets: [{subject, predicate, object, origin}]} where origin is 'observed' or 'inferred'. No prose.",
-      "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets\n- Delegate when: need structured triplet extraction from text\n- Don't delegate when: general summarization needed"
+      "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets from researcher output\n- Agentic design pattern: researcher→summarizer map-reduce; researcher gathers raw evidence, summarizer compresses it to structured triplets before returning to orchestrator\n- Delegate when: researcher has returned raw evidence that needs structured compression, or any raw text needs triplet extraction\n- Don't delegate when: general summarization needed (summarizer is triplet extraction only, not prose compression)"
+    },
+    "explorer": {
+      // DeepSeek V4 Flash: strong reasoning at low cost; preferred for multi-hop evidence gathering
+      "model": "openrouter/deepseek/deepseek-v4-flash",
+      "variant": "lean",
+      "prompt": "You are Researcher. Evidence Gathering: multi-hop search, document retrieval, and web research. Collect raw evidence only — do not compress or synthesize.\n\nRules:\n- Accept a research objective from orchestrator.\n- Search broadly across available sources (files, web, docs) using multi-hop traversal.\n- Return raw evidence: source text, file references, URL citations. Do not paraphrase or summarize.\n- Emit a structured evidence block: {sources: [{content, origin, citation}]}.\n- Do not interpret or conclude. That is @summarizer's job.\n- After gathering, hand off the raw evidence block to @summarizer for SPO triplet compression.",
+      "orchestratorPrompt": "@researcher\n- Role: Evidence Gathering — multi-hop search and raw source collection\n- Agentic design pattern: researcher→summarizer map-reduce; researcher collects raw evidence, then always hands off to @summarizer for structured compression\n- Delegate when: need to gather evidence from files, web, or docs before synthesis\n- Do not delegate when: information is already in context — go directly to @summarizer or @oracle"
     },
     "thinker": {
       // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.09 | wgtd:0.080

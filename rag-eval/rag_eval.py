@@ -152,6 +152,7 @@ def evaluate(
     ground_truth: Optional[str] = None,
     base_url: str = OLLAMA_BASE_URL,
     model: str = DEFAULT_MODEL,
+    timeout: float = 300.0,
 ) -> RAGEvalResult:
     """
     Evaluate a RAG response across 10 metrics in a single model call.
@@ -162,6 +163,9 @@ def evaluate(
         context      string or list[str] — lists are newline-joined
         ground_truth optional; when None, correctness is forced to 0.5 post-hoc
                      rather than trusting the model to honour the prompt instruction
+        timeout      seconds to wait for Ollama response; default 300 covers first-
+                     load warm-up of larger models (httpx default is 5s — too short;
+                     qwen3.5:4b first load can take 90-180s on cold GPU)
 
     Guarantee:
         Returns RAGEvalResult with all 10 scores in [0.0, 1.0] and
@@ -181,7 +185,7 @@ def evaluate(
     assert answer.strip(),   "answer must be non-empty"
     assert context.strip(),  "context must be non-empty"
 
-    client = OpenAI(base_url=base_url, api_key=OLLAMA_API_KEY)
+    client = OpenAI(base_url=base_url, api_key=OLLAMA_API_KEY, timeout=timeout)
     prompt = build_prompt(question, answer, context, ground_truth)
 
     response = client.chat.completions.create(

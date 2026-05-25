@@ -18,6 +18,7 @@ flowchart TD
     FIXER["fixer / coder\nqwen3.5-9b\n------------------\nSpec translation only\nBreaks -> packets\nDispatches to aider"]
     LIBRARIAN["librarian\ngemini-2.5-flash-lite\nWeb + docs search"]
     OBSERVER["observer\nqwen-vl-30b\nDocs + screenshots + clips"]
+    RESEARCHER["researcher\ndeepseek-v4-flash\nMulti-hop evidence\ngathering (raw)"]
 
     %% ── Subagents ─────────────────────────────────────────────────
     PI["pi\nqwen3.5-9b\n------------------\nSMOKE TESTS\nInner harness loop\nRuns scripts - returns output"]
@@ -25,7 +26,7 @@ flowchart TD
     HANDYMAN["handyman\ngranite-4.1-8b\nFile ops - mechanical"]
     PATCHER["patcher\ngemma-4-26b\nExact hotfix\nknown-file only"]
     DEBUGGER["debugger\nqwen3.6-35b\nStack traces - QA"]
-    SUMMARIZER["summarizer\nmimo-v2-flash\nContext compression"]
+    SUMMARIZER["summarizer\nmimo-v2-flash\nSPO triplet extraction\n(map-reduce sink)"]
 
     %% ── Entry → shell ─────────────────────────────────────────────
     HUMAN -->|"task prompt"| OC
@@ -40,6 +41,11 @@ flowchart TD
     ORCH -->|"multi-file /\nambiguous"| FIXER
     ORCH -->|"web research"| LIBRARIAN
     ORCH -->|"visual / screenshot"| OBSERVER
+    ORCH -->|"evidence gathering"| RESEARCHER
+
+    %% ── researcher → summarizer (map-reduce pair) ─────────────────
+    RESEARCHER -->|"raw evidence\n→ compress"| SUMMARIZER
+    SUMMARIZER -->|"SPO triplets"| ORCH
 
     %% ── orchestrator → subagents (direct shortcuts) ───────────────
     ORCH -->|"AIDER DIRECT:\nor file+change concrete"| AIDER
@@ -79,7 +85,7 @@ flowchart TD
     class HUMAN,RAG entry
     class HB watchdog
     class OC shell
-    class ORCH,ORACLE,FIXER,LIBRARIAN,OBSERVER primary
+    class ORCH,ORACLE,FIXER,LIBRARIAN,OBSERVER,RESEARCHER primary
     class PI,HANDYMAN,PATCHER,DEBUGGER,SUMMARIZER subagent
     class AIDER leaf
     class DB db
