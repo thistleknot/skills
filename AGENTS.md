@@ -440,6 +440,7 @@ Proactively invoke the matching skill when the task type is clear. Don't wait to
 | Structuring context, files, prompts for LLM effectiveness | `code` (context-engineering section) |
 | README / changelog / release-note / fixes-applied updates | `documentation` |
 | Behavioral hyperparameter tuning for agentic systems | `agentic-hyperparm` |
+| Non-stationary signal normalization → MACD momentum → RL band maintenance | `signal-modulation` |
 | Imbalanced classifier class weighting | `class-balancing` |
 | Splitting a problem/data along median boundaries; baked-in contrastive signal | `median-bifurcation` |
 | PDF to enriched-Markdown extraction workflow | `pdf-extraction` |
