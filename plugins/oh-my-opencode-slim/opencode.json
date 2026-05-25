@@ -53,6 +53,15 @@
             "output": 393216
           },
           "variants": {
+            "lean": {
+              "reasoning": {
+                "effort": "minimal"
+              },
+              "modelKwargs": {
+                "frequency_penalty": 0.7,
+                "presence_penalty": 0.2
+              }
+            },
             "orchestrator": {
               "reasoning": {
                 "effort": "high",
@@ -71,7 +80,7 @@
             }
           }
         },
-        "qwen/qwen-3.6-35b-a3b": {
+        "qwen/qwen3.6-35b-a3b": {
           "name": "Qwen 3.6 35B",
           "limit": {
             "context": 262144,
@@ -109,6 +118,26 @@
               "modelKwargs": {
                 "frequency_penalty": 0.7,
                 "presence_penalty": 0.2
+              }
+            },
+            "heavy": {
+              "reasoning": {
+                "effort": "high",
+                "enabled": true
+              },
+              "modelKwargs": {
+                "frequency_penalty": 0.4,
+                "presence_penalty": 0.2
+              }
+            },
+            "io": {
+              "reasoning": {
+                "effort": "none",
+                "exclude": true
+              },
+              "modelKwargs": {
+                "frequency_penalty": 0.8,
+                "presence_penalty": 0.3
               }
             }
           }

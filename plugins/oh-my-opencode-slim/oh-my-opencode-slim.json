@@ -29,7 +29,7 @@
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
       // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.22 | wgtd:0.171
       // Map-reduce pair with @summarizer: researcher gathers raw evidence, summarizer compresses to SPO triplets
-      "explorer":     { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "displayName": "researcher", "skills": [], "mcps": [] },
+      "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": [] },
       // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
       "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
@@ -48,7 +48,7 @@
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
       // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.22 | wgtd:0.171
       // Map-reduce pair with @summarizer: researcher gathers raw evidence, summarizer compresses to SPO triplets
-      "explorer":     { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "displayName": "researcher", "skills": [], "mcps": [] },
+      "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": [] },
       // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
       "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
@@ -58,7 +58,7 @@
       "aider":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "io", "skills": [], "mcps": [] }
     }
   },
-  "disabled_agents": ["explorer", "explore", "scout"],
+  "disabled_agents": ["explore", "scout"],
   "sessionManager": {
     "maxSessionsPerAgent": 2,
     "readContextMinLines": 10,
@@ -108,7 +108,7 @@
       "prompt": "You are Summarizer. Data Parser: Zero-reasoning extraction of semantic triplets. Output JSON only: {triplets: [{subject, predicate, object, origin}]} where origin is 'observed' or 'inferred'. No prose.",
       "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets from researcher output\n- Agentic design pattern: researcher→summarizer map-reduce; researcher gathers raw evidence, summarizer compresses it to structured triplets before returning to orchestrator\n- Delegate when: researcher has returned raw evidence that needs structured compression, or any raw text needs triplet extraction\n- Don't delegate when: general summarization needed (summarizer is triplet extraction only, not prose compression)"
     },
-    "explorer": {
+    "researcher": {
       // DeepSeek V4 Flash: strong reasoning at low cost; preferred for multi-hop evidence gathering
       "model": "openrouter/deepseek/deepseek-v4-flash",
       "variant": "lean",
