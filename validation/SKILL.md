@@ -92,6 +92,36 @@ Transformations must be reversible. Validate both forward and backward data pers
 
 ## Development Workflow
 Document (features) → Unit Test (core functionality) → Integrate → Commit
+
+## Testing Hierarchy
+
+Apply this progression when validating any new dimension, feature, or pipeline process:
+
+| Stage | What it tests | Pass condition |
+|---|---|---|
+| **Smoke** | Does the process run at all for this dimension/feature? | No crash, output produced |
+| **Unit (n=1)** | One record through the full process | Correct output for that record |
+| **Contract (sample)** | A representative sample across edge cases | Schema and contract assertions hold |
+| **Cross-feature integration** | This feature interacting with other dimensions | No conflicts, shared state correct |
+| **Subset integration** | A bounded subset of the full data (minimizes commitment time) | Stable end-to-end within the subset |
+| **Full** | All data | Production-equivalent correctness |
+
+Do not skip stages. Each stage reveals a different failure class. A smoke pass does not imply unit correctness; a unit pass does not imply cross-feature stability.
+
+For schema translation workflows: "smoke" means the CLI/UI wrapper accepts the dimension as input; "unit" means one record translates and loads in the target system correctly; "contract" means the mapping table holds across a sample of records.
+
+### Endless-data warning
+
+If a process (training, embedding, BM25 indexing, etc.) would take **more than 2 hours** to run on the full dataset, stop and surface this before starting:
+
+> "Full run is estimated at N hours. Goal is convergence / parity — not exhaustive processing. Recommended alternatives:"
+> - **Reduced epochs** — stop when validation loss plateaus (early stopping), not at a fixed epoch count
+> - **Reduced record count** — a representative subset (e.g. stratified sample) converges to the global mean faster than the full corpus; use as a proxy for correctness
+> - **Both** — short run, fewer records, validate parity against a held-out reference metric
+
+**When parity is the goal (not exhaustive coverage):** the model or index needs to converge on a global mean with minimum error loss — it does not need to see every record. A well-sampled subset is sufficient and avoids over-indexing on outliers in a long tail.
+
+Flag this at planning time, not after a multi-hour run has already started.
 <!-- consolidation:see-also:start -->
 ## See Also
 [[codebase-knowledge-graph]]  [[validation-artifacts]]  [[git-workflow]]

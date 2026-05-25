@@ -257,6 +257,85 @@ Current working default:
 This keeps the stack inspectable and prevents "backend support" from meaning
 "a helper module exists somewhere with unit tests."
 
+## Meta-Harness Profile Pattern (OpenCode CLI)
+
+**Purpose:** Enforce that all work routes through the inner harness by making the outer entry point
+incapable of doing anything except calling `opencode run`. The top-level agent is structurally
+prevented from bypassing the harness — its only tool is the CLI invocation.
+
+### Design
+
+Create a global agent file at `~/.config/opencode/agents/meta-harness.md`:
+
+```markdown
+---
+description: Meta-harness entry point — routes all work through inner OpenCode harness
+mode: primary
+model: openrouter/qwen/qwen3.5-9b
+temperature: 0.1
+permission:
+  bash: allow
+  read: deny
+  edit: deny
+  glob: deny
+  grep: deny
+  webfetch: deny
+  task: deny
+  todowrite: deny
+  websearch: deny
+  lsp: deny
+  skill: deny
+---
+You are the Meta-Harness Orchestrator. Your ONLY action is to delegate work to the
+inner OpenCode harness via bash.
+
+Rules:
+- NEVER use any tool except bash
+- For new work:                  opencode run "<user request>"
+- Resume last session:           opencode run -c "<next message>"
+- Resume specific session:       opencode run -s <session-id> "<next message>"
+- Interactive resume:            opencode run -i -c
+- You do not plan, code, edit, or search directly — the inner harness handles all of that
+- Return the inner harness result verbatim to the user
+```
+
+### Verified CLI flags (`opencode run --help`, 2026-05-25)
+
+| Flag | Short | Purpose |
+|---|---|---|
+| `--continue` | `-c` | Continue the last session |
+| `--session <id>` | `-s` | Resume a specific session by ID |
+| `--interactive` | `-i` | Direct interactive split-footer mode |
+| `--fork` | | Fork before continuing (use with `-c` or `-s`) |
+| `--agent <name>` | | Specify which agent handles the inner session |
+| `--model <id>` | `-m` | Override model for the inner session |
+
+### Launch
+
+```powershell
+# Start the meta-harness profile
+opencode --agent meta-harness
+
+# Or headless: pipe a task directly into the harness
+opencode run --agent meta-harness "implement feature X"
+```
+
+### Why this matters
+
+- `bash: allow` + all others `deny` = the LLM is structurally incapable of bypassing the harness.
+  Even if the model ignores the system prompt, it has no other tool surface to act on.
+- The inner `opencode run` call carries the full agent fleet, skills, and MCP config.
+  The outer profile is just a gated doorbell.
+- `--fork` before continuing protects the session tree from mid-run branching.
+- This pattern is a direct instantiation of the **Harness-as-policy** rung on the
+  Harness Progression Ladder (see §Harness Progression Ladder → 3. Harness-as-policy).
+
+### Invariant
+
+The meta-harness profile is the **only sanctioned entry point** when working in contexts where
+harness enforcement is required. Any direct `opencode` invocation that bypasses this profile
+breaks the policy boundary.
+
 ## Default Agent Settings
 
 Canonical behavioral hyperparameters live in `default_agent_settings.json`

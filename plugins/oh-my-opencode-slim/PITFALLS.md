@@ -169,6 +169,22 @@ errors before OpenCode's compaction threshold is reached.
 
 ---
 
+## ❌ PITFALL 8A: Surface-vector extraction turns into a search loop
+
+**Symptom:** The run is supposed to compare `base` vs `masterwork` by extracting top-level function and constant names, but the agent keeps re-opening the same Lua tree, broadening globs, or re-running discovery after the first inventory is already complete.
+
+**Root cause:** The prompt framed structural extraction like an open-ended hunt instead of a bounded inventory. Once the file set is known, the model needs a fixed output contract (`mod -> file -> functions/constants`) and a hard stop.
+
+**Fix:** For surface-vector tasks:
+- inventory the named roots once
+- sort by mod, then file, then top-level key type
+- emit the extracted names directly
+- never rescan the same tree after a complete file inventory
+
+**Rule:** If the task names the mod roots and asks for top-level key extraction, return the surface map immediately. Do not keep searching for "better" coverage unless a concrete blocker is still preventing extraction.
+
+---
+
 ## ❌ PITFALL 9: Orchestrator `timeout` set too low (60s)
 
 **Symptom:** Session silently dies after a single subagent dispatch. No error shown. Appears as a stall.
@@ -225,6 +241,21 @@ errors before OpenCode's compaction threshold is reached.
 
 **Rule:** Never give agents output paths outside the workspace root. If external writes are genuinely required, use bash as the write mechanism, not edit/write tools.
 
+
+---
+
+## ❌ PITFALL 12: Recursive OpenCode invocation (`opencode` called from inside OpenCode)
+
+**Symptom:** Session appears to hang after "starting opencode" from a worker turn, or repeatedly restarts without progressing the user task.
+
+**Root cause:** A spawned OpenCode worker tries to launch another OpenCode process. This nests orchestrators and creates control-flow contention (parent waiting on child orchestration that is itself waiting/routing).
+
+**Fix:** Enforce one OpenCode boundary:
+
+- only the top-level manager/orchestrator session may launch `opencode run ...`
+- child workers must execute with native tools directly (search/edit/run/verify) and must not spawn a fresh OpenCode runtime
+
+**Rule:** OpenCode may orchestrate workers; workers may not recursively launch OpenCode.
 
 ---
 
@@ -293,3 +324,29 @@ Expected behavior:
 - return the concrete llama.cpp flag error (currently `--draft-min` removed -> use `--spec-draft-n-min` or `--spec-ngram-mod-n-min`)
 
 **Rule:** For explicit Windows script troubleshooting in a known workspace, shell selection is not a planning task. Execute once with the native launcher and move directly to the concrete failure.
+
+---
+
+## ❌ PITFALL 15: Routing Decision template printed as prose instead of issuing `task()` call
+
+**Symptom:** Orchestrator outputs a block like:
+
+```
+### Routing Decision
+- Agent(s): @coder
+- Why: implementation task
+- Strategy: direct
+
+### Delegation
+Delegating to @coder...
+```
+
+…followed by no actual `task()` call, or a `task()` call buried after 400 tokens of narration that exhausts the output budget.
+
+**Root cause:** The `## Output Style` section previously contained a `### Routing Decision` / `### Delegation` template that the model interpreted as a required prose output format. Gemma prints the template as formatted text and exits — the tool call never happens.
+
+**Fix:** Removed the template from `orchestrator.md`. The correct contract is:
+
+> Your routing output IS the `task()` call. Do not print a routing decision summary. Issue the call directly.
+
+**Rule:** Any prose template inside an orchestrator prompt that describes "what you are about to do" will be reproduced as literal output instead of triggering action. Remove all pre-delegation narration scaffolds.

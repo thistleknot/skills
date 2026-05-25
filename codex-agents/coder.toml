@@ -1,6 +1,6 @@
 name = "coder"
 description = "Implementation. Fills pre-defined stubs from explicit spec. No architectural decisions."
-model = "gpt-5.4-mini"
+model = "a30-3b"
 model_reasoning_effort = "low"
 sandbox_mode = "workspace-write"
 developer_instructions = """

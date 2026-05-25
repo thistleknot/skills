@@ -1,6 +1,6 @@
 name = "coder"
 description = "Spec-packager and edit dispatcher. Wraps work into bounded packets for @aider. No direct file edits."
-model = "gpt-5.4-mini"
+model = "qwen3.5-9b"
 model_reasoning_effort = "low"
 sandbox_mode = "workspace-write"
 developer_instructions = """

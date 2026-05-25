@@ -5,16 +5,37 @@ Parses filesystem tree, groups files by type (source, test, config, doc),
 and outputs markdown artifact with embedded JSON metadata.
 """
 
-import os
+import argparse
+import re
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
-import json
 
 from utils import (
     detect_project, classify_file, format_markdown_artifact,
     normalize_path, truncate_file_content, count_lines
 )
+
+FUNCTION_RE = re.compile(r"^(?:local\s+)?function\s+([A-Za-z_][\w\.:]*)\s*\(")
+LOCAL_ASSIGN_RE = re.compile(r"^local\s+([A-Za-z_][\w]*)\s*=")
+GLOBAL_ASSIGN_RE = re.compile(r"^([A-Za-z_][\w]*)\s*=")
+IGNORED_TOKENS = {
+    "if",
+    "for",
+    "while",
+    "repeat",
+    "until",
+    "return",
+    "end",
+    "do",
+    "then",
+    "else",
+    "elseif",
+    "function",
+    "local",
+    "require",
+    "print",
+}
 
 @dataclass
 class FileInfo:
@@ -25,6 +46,15 @@ class FileInfo:
     line_count: int
     content: str
     truncated: bool
+
+
+@dataclass
+class SurfaceFileInfo:
+    path: str
+    functions: List[str]
+    constants: List[str]
+    line_count: int
+
 
 def should_ignore(filepath: Path, ignore_patterns: List[str]) -> bool:
     """Check if file matches any ignore pattern."""
@@ -44,6 +74,202 @@ def fnmatch_simple(path: str, pattern: str) -> bool:
     """Simple glob pattern matching."""
     import fnmatch
     return fnmatch.fnmatch(path, pattern)
+
+
+def extract_lua_symbols(content: str) -> Tuple[List[str], List[str]]:
+    """Extract top-level function and constant names from Lua content."""
+    functions: List[str] = []
+    constants: List[str] = []
+    seen_functions = set()
+    seen_constants = set()
+
+    for raw_line in content.splitlines():
+        if not raw_line or raw_line[0].isspace():
+            continue
+
+        code = raw_line.split("--", 1)[0].rstrip()
+        if not code:
+            continue
+
+        function_match = FUNCTION_RE.match(code)
+        if function_match:
+            name = function_match.group(1)
+            if name not in seen_functions:
+                functions.append(name)
+                seen_functions.add(name)
+            continue
+
+        local_match = LOCAL_ASSIGN_RE.match(code)
+        if local_match:
+            name = local_match.group(1)
+            if name not in seen_constants:
+                constants.append(name)
+                seen_constants.add(name)
+            continue
+
+        global_match = GLOBAL_ASSIGN_RE.match(code)
+        if global_match:
+            name = global_match.group(1)
+            if name not in IGNORED_TOKENS and name not in seen_constants:
+                constants.append(name)
+                seen_constants.add(name)
+
+    return (sorted(functions), sorted(constants))
+
+
+def extract_surface_inventory(
+    project_path: str,
+    ignore_patterns: List[str],
+) -> List[SurfaceFileInfo]:
+    """Extract Lua surface vectors from a project tree."""
+    project_path = Path(project_path)
+    surface_files: List[SurfaceFileInfo] = []
+
+    for filepath in sorted(project_path.rglob("*.lua")):
+        if not filepath.is_file():
+            continue
+
+        if should_ignore(filepath, ignore_patterns):
+            continue
+
+        try:
+            content = filepath.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+
+        functions, constants = extract_lua_symbols(content)
+        surface_files.append(
+            SurfaceFileInfo(
+                path=normalize_path(filepath, project_path),
+                functions=functions,
+                constants=constants,
+                line_count=count_lines(content),
+            )
+        )
+
+    return surface_files
+
+
+def infer_inventory_label(project_path: str, fallback: str) -> str:
+    """Infer a stable label for a comparison root."""
+    if not project_path:
+        return fallback
+
+    path = Path(project_path)
+    parts = [part.lower() for part in path.parts]
+    if "base" in parts:
+        return "base"
+    if "masterwork" in parts:
+        return "masterwork"
+    path_text = str(project_path).replace("/", "\\").lower()
+    if "df_44_12_win" in path_text or "vanilla" in path_text:
+        return "base"
+    if "masterwork" in path_text:
+        return "masterwork"
+    return fallback
+
+
+def summarize_surface_inventory(surface_files: List[SurfaceFileInfo], root_path: str) -> Dict[str, object]:
+    """Build summary stats for a Lua surface inventory."""
+    function_count = sum(len(file_info.functions) for file_info in surface_files)
+    constant_count = sum(len(file_info.constants) for file_info in surface_files)
+    terminal_leaf_paths = set()
+    for file_info in surface_files:
+        terminal_leaf_paths.add(file_info.path)
+
+    return {
+        "root_path": str(Path(root_path).resolve()),
+        "file_count": len(surface_files),
+        "function_count": function_count,
+        "constant_count": constant_count,
+        "terminal_leaf_paths": sorted(terminal_leaf_paths),
+    }
+
+
+def format_surface_inventory_section(title: str, surface_files: List[SurfaceFileInfo]) -> str:
+    """Format a Lua surface inventory section for markdown output."""
+    lines: List[str] = []
+    for file_info in sorted(surface_files, key=lambda item: item.path.lower()):
+        lines.append(f"### {file_info.path}")
+        lines.append(f"- functions: {', '.join(file_info.functions) if file_info.functions else 'NONE'}")
+        lines.append(f"- constants: {', '.join(file_info.constants) if file_info.constants else 'NONE'}")
+        lines.append(f"- lines: {file_info.line_count}")
+        lines.append("")
+
+    if not lines:
+        lines.append("No Lua files found.")
+
+    return "\n".join(lines)
+
+
+def build_dimension_inventory_report(
+    primary_path: str,
+    comparison_path: Optional[str],
+    ignore_patterns: List[str],
+    force: bool,
+) -> str:
+    """Build a comparison report for Lua surface vectors."""
+    primary_label = infer_inventory_label(primary_path, "primary")
+    comparison_label = infer_inventory_label(comparison_path, "comparison") if comparison_path else None
+
+    primary_files = extract_surface_inventory(primary_path, ignore_patterns)
+    comparison_files = extract_surface_inventory(comparison_path, ignore_patterns) if comparison_path else []
+
+    primary_summary = summarize_surface_inventory(primary_files, primary_path)
+    comparison_summary = summarize_surface_inventory(comparison_files, comparison_path) if comparison_path else None
+
+    sections: Dict[str, str] = {}
+    mode_lines = [
+        "- **Mode**: dimension_inventory",
+        "- **Sort order**: mod -> file -> top-level key type",
+        f"- **Primary Root**: {primary_summary['root_path']}",
+    ]
+    if comparison_summary:
+        mode_lines.append(f"- **Comparison Root**: {comparison_summary['root_path']}")
+    sections["Mode"] = "\n".join(mode_lines) + "\n"
+
+    def summary_block(label: str, summary: Dict[str, object]) -> str:
+        terminal_leaf_paths = ", ".join(summary["terminal_leaf_paths"]) if summary["terminal_leaf_paths"] else "NONE"
+        return (
+            f"- **Root**: {summary['root_path']}\n"
+            f"- **Files**: {summary['file_count']}\n"
+            f"- **Functions**: {summary['function_count']}\n"
+            f"- **Constants**: {summary['constant_count']}\n"
+            f"- **Terminal Leaf Paths**: {terminal_leaf_paths}\n"
+        )
+
+    sections[f"{primary_label.title()} Summary"] = summary_block(primary_label, primary_summary)
+    sections[f"{primary_label.title()} Inventory"] = format_surface_inventory_section(primary_label, primary_files)
+
+    if comparison_summary and comparison_label:
+        sections[f"{comparison_label.title()} Summary"] = summary_block(comparison_label, comparison_summary)
+        sections[f"{comparison_label.title()} Inventory"] = format_surface_inventory_section(comparison_label, comparison_files)
+
+    metadata = {
+        "artifact_type": "code_extraction",
+        "mode": "dimension_inventory",
+        "language": "lua",
+        "primary_root": primary_summary["root_path"],
+        "comparison_root": comparison_summary["root_path"] if comparison_summary else None,
+        "file_count": primary_summary["file_count"] + (comparison_summary["file_count"] if comparison_summary else 0),
+        "function_count": primary_summary["function_count"] + (comparison_summary["function_count"] if comparison_summary else 0),
+        "constant_count": primary_summary["constant_count"] + (comparison_summary["constant_count"] if comparison_summary else 0),
+    }
+
+    provenance = {
+        "primary_path": str(Path(primary_path).resolve()),
+        "comparison_path": str(Path(comparison_path).resolve()) if comparison_path else None,
+        "ignore_patterns": ignore_patterns,
+        "report_mode": "dimension_inventory",
+    }
+
+    return format_markdown_artifact(
+        "code_extraction",
+        "Dimension Inventory",
+        sections,
+        metadata,
+        provenance,
+    )
 
 def extract_files(
     project_path: str,
@@ -133,7 +359,9 @@ def extract(
     ignore_patterns: Optional[List[str]] = None,
     max_file_bytes: int = 50000,
     include_tests: bool = True,
-    force: bool = False
+    force: bool = False,
+    report_mode: str = "standard",
+    comparison_path: Optional[str] = None
 ) -> str:
     """
     Extract codebase into markdown artifact.
@@ -144,6 +372,8 @@ def extract(
         max_file_bytes: Max file size before truncation
         include_tests: Include test files in output
         force: Skip project detection
+        report_mode: "standard" or "dimension_inventory"
+        comparison_path: Optional comparison root for dimension inventory mode
     
     Returns:
         Markdown artifact string
@@ -154,6 +384,14 @@ def extract(
             ".git", ".venv", "*.egg-info", ".pytest_cache"
         ]
     
+    if report_mode == "dimension_inventory" or comparison_path:
+        return build_dimension_inventory_report(
+            project_path,
+            comparison_path,
+            ignore_patterns,
+            force,
+        )
+
     # Detect project
     language = detect_project(project_path, force=force)
     if not language:
@@ -218,6 +456,7 @@ def extract(
     # Build metadata
     metadata = {
         "artifact_type": "code_extraction",
+        "mode": report_mode,
         "language": language,
         "file_count": total_files,
         "source_count": len(grouped_files["source"]),
@@ -242,11 +481,23 @@ def extract(
 
 
 if __name__ == "__main__":
-    # Example usage
-    import sys
-    if len(sys.argv) < 2:
-        print("Usage: python code_extraction.py <project_path>")
-        sys.exit(1)
-    
-    artifact = extract(sys.argv[1])
+    parser = argparse.ArgumentParser(description="Extract a codebase into markdown.")
+    parser.add_argument("project_path", help="Path to the project root")
+    parser.add_argument("--compare-with", dest="comparison_path", help="Optional comparison root for dimension inventory mode")
+    parser.add_argument(
+        "--mode",
+        dest="report_mode",
+        choices=["standard", "dimension_inventory"],
+        default="standard",
+        help="Report mode to generate",
+    )
+    parser.add_argument("--force", action="store_true", help="Skip project detection")
+    args = parser.parse_args()
+
+    artifact = extract(
+        args.project_path,
+        force=args.force,
+        report_mode=args.report_mode,
+        comparison_path=args.comparison_path,
+    )
     print(artifact)

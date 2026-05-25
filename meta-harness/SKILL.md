@@ -23,6 +23,11 @@ Invoke when:
 - Work is drifting into downstream patching and needs an upstream-first routing
   reset
 
+Do not invoke when:
+
+- The task is a single bounded leaf fix that one worker can complete directly
+- You are already inside a spawned OpenCode worker session for that same scope
+
 ## Core Contract
 
 ### 1) Scope and objective contract
@@ -60,6 +65,22 @@ Fix at the highest valid upstream layer, then regenerate downstream artifacts.
 - validation commands
 - escalation conditions
 
+### 5) Anti-recursion contract (OpenCode)
+
+- `meta-harness` may choose OpenCode as a substrate only at the parent/orchestrator
+  boundary.
+- Once inside an OpenCode-managed spawned session, do not call `opencode` again from
+  that child session.
+- Nested `opencode` invocations inside an active OpenCode worker are treated as a
+  stall-risk control-flow violation.
+
+Required fallback when nested launch is detected:
+
+1. Stop the nested attempt.
+2. Continue execution with native tools in the current session (search/edit/run).
+3. If a new OpenCode run is truly required, start it only from the top-level parent
+   session, not from a child worker.
+
 ## OpenCode Session Pattern
 
 Use this operational pattern in OpenCode:
@@ -67,6 +88,14 @@ Use this operational pattern in OpenCode:
 - `opencode run -m <provider/model> "<task prompt>"` for one-shot scoped sessions
 - `opencode run -c` (or `--session <id>`) to resume
 - `opencode run --session <id> --fork` to branch worker sessions per task
+
+Where/when routing rule:
+
+- Use `meta-harness` in the top-level manager session to decide and launch OpenCode
+  scoped work.
+- Use `agentic-harness` in child sessions for implementation/verification mechanics.
+- Do not route child workers back through `opencode run ...`; that recursion is
+  forbidden because it causes avoidable stalls.
 
 ## Bootstrap Prompt Template
 

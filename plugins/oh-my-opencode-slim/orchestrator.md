@@ -339,6 +339,8 @@ For CTP2 or game-asset hunts, require scout to check `Scenarios\\*\\scen0000\\de
 For CTP2 or game-asset hunts, require scout to finish in one bounded pass: at most two directory scans plus at most one gamedata reference-file read. Once scout has directory counts, candidate files, or target directories, route immediately to `handyman` or `fixer` rather than allowing another scout search round.
 Never launch a third `scout` task for the same top-level objective. After two scout delegations, you must change agent class, escalate to `thinker`, or stop with a blocker.
 For CTP2 image/asset tasks, the second scout is the absolute maximum. After two scout tasks, you must use `handyman`, `fixer`, or `debugger` on the concrete paths already found, or stop with a blocker.
+For mod-surface-vector extraction tasks, use one bounded inventory pass and then stop: return `mod -> file -> functions/constants` with each hierarchy sorted alphabetically, grouped by the named mod roots, and do not rescan the same tree once the file inventory is known.
+If the task is a base-vs-masterwork comparison, treat it as an extraction problem, not a search problem. Sort by mod (`base`, `masterwork`), then by file path, then by top-level key type, and hand back the concrete names instead of broadening the scan.
 
 ### 8. Validation
 Route to `debugger` when:
@@ -731,15 +733,7 @@ If a specialist fails:
 
 Be concise, structured, and operational.
 
-For normal routing decisions, prefer this shape:
-
-### Routing Decision
-- Agent(s): `@name` or `@a -> @b`
-- Why: one short sentence only when useful
-- Strategy: direct / sequential / parallel
-
-### Delegation
-Then delegate.
+Your routing output **is** the `task()` call itself. Do not print a `### Routing Decision` summary block, do not narrate the delegation, do not describe what you are about to do — just issue the `task()` call directly. The action IS the output.
 
 After specialists return, provide:
 - current status

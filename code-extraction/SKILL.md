@@ -8,7 +8,7 @@ validation_method: session
 ---
 # code-extraction Skill
 
-Extract source files + configs into a normalized, copy-paste-ready artifact for LLM consumption. Follows docling extraction philosophy: recursive file collection → semantic grouping → markdown + JSON metadata output.
+Extract source files + configs into a normalized, copy-paste-ready artifact for LLM consumption. Follows docling extraction philosophy: recursive file collection → semantic grouping → markdown + JSON metadata output. Supports a Lua-focused `dimension_inventory` mode for base-vs-masterwork comparison reports.
 
 ## Trigger Conditions
 
@@ -17,6 +17,7 @@ Invoke when:
 - Building a comprehensive code artifact for review or analysis
 - Generating documentation from live source code
 - Creating a copy-paste-friendly project snapshot for offline LLM use
+- Comparing two Lua-heavy roots with a base summary and mode section
 
 ## Contract
 
@@ -57,6 +58,14 @@ code_extraction.extract(
     ignore_patterns=["docs/generated/**", ".venv/**"],
     max_file_bytes=100000
 )
+
+# Dimension inventory mode
+code_extraction.extract(
+    project_path="/path/to/masterwork",
+    comparison_path="/path/to/base",
+    report_mode="dimension_inventory",
+    force=True
+)
 ```
 
 ## Usage in Agentic Workflows
@@ -86,6 +95,7 @@ test_plan = test_planner.analyze(artifact)
 
 - **Language Detection**: Infers from file extensions (py→Python, js→JavaScript, etc.)
 - **Project Detection**: Checks for language markers first; falls back to source file count (8+)
+- **Lua Support**: Treats `.lua` as source and can emit a `dimension_inventory` comparison mode
 - **File Grouping**: Organizes by semantic type (source, test, config, doc)
 - **Truncation**: Large files are truncated; preserves first N lines with ellipsis indicator
 - **Ignore Patterns**: Glob-based filtering (supports **, *, ?, -)
@@ -125,6 +135,7 @@ test_plan = test_planner.analyze(artifact)
 {
   "artifact_type": "code_extraction",
   "language": "python",
+  "mode": "standard",
   "file_count": N,
   "total_lines": N,
   "test_count": N,
@@ -133,6 +144,14 @@ test_plan = test_planner.analyze(artifact)
 }
 \`\`\`
 ```
+
+## Dimension Inventory Mode
+
+When `--mode dimension_inventory` is used, the report switches to:
+- `Mode` section with the comparison contract
+- `Base Summary` and `Masterwork Summary`
+- `Base Inventory` and `Masterwork Inventory`
+- metadata field `mode: dimension_inventory`
 
 ## Related Skills
 

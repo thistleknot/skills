@@ -63,6 +63,12 @@ LANGUAGE_CONFIG = {
         file_extensions=[".java"],
         marker_files=["pom.xml", "build.gradle"]
     ),
+    "lua": LanguageInfo(
+        name="lua",
+        package_manager="lua",
+        file_extensions=[".lua"],
+        marker_files=[".luarc.json"]
+    ),
 }
 
 def detect_project(path: str, force: bool = False) -> Optional[str]:

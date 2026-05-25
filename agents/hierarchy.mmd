@@ -3,7 +3,7 @@ title: OpenCode Agent Hierarchy
 ---
 flowchart TD
     %% ── Entry Points ──────────────────────────────────────────────
-    HUMAN(["Human / Copilot CLI"])
+    HUMAN(["Master Control Plane\nHuman / Copilot CLI"])
     RAG(["run_aider.ps1 -FromGraph"])
     HB(["heartbeat.ps1\n(watchdog: seed/profile restart)"])
     DB[(".task_graph.db")]
