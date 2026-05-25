@@ -53,6 +53,7 @@ skills/
 │   │   └── openspec-archive-change  # archive a completed OpenSpec change
 │   ├── fabro-create-workflow        # author Fabro `.fabro` + `.toml` workflows from natural-language requirements
 │   ├── substrate-selection          # runtime substrate policy: OpenCode / claw-code / pi / aider / provider boundary
+│   ├── ollama-structured            # schema-constrained JSON from Ollama (native SDK + OpenAI compat); Qwen3 thinking suppression
 │   ├── pi                           # lightweight delegated external harness; sits under opencode/agentic-harness and can host aider-like workers
 │   ├── evaluator-optimizer          # LLM-generates→LLM-critiques→LLM-regenerates loop; MBR selection; stopping criteria
 │   │   └── prompt-optimization      # automatic prompt self-improvement; DSPy (MIPROv2), TextGrad (text-space gradients), OPRO, APE; labeled-trainset → MIPROv2 vs no-trainset → TextGrad decision tree
