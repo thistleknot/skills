@@ -147,55 +147,83 @@ function Get-SyncCase($masterContent, $mirrorContent, $baseContent) {
     else                                                   { return 'conflict' }
 }
 
-# Invokes the LLM merge protocol documented in skill-sync/SKILL.md.
-# Writes a temp file with the prompt context and emits it for the agent to process.
-# Returns the merged content string, or $null if the merge should be skipped.
+# ReAct-style 3-way merge: tries up to 5 strategies in order.
+# Returns merged content string on success, or $null if all 5 attempts fail.
+# On failure, writes a .conflict diff file next to the master file for manual review.
 function Invoke-LlmMerge($relPath, $baseContent, $masterContent, $mirrorContent) {
+    $maxAttempts = 5
     $tmpBase   = [System.IO.Path]::GetTempFileName()
-    $tmpMaster = [System.IO.Path]::GetTempFileName()
     $tmpMirror = [System.IO.Path]::GetTempFileName()
     try {
         Set-Content $tmpBase   $baseContent   -Encoding UTF8 -NoNewline
-        Set-Content $tmpMaster $masterContent -Encoding UTF8 -NoNewline
         Set-Content $tmpMirror $mirrorContent -Encoding UTF8 -NoNewline
 
-        $diffA = git -c core.autocrlf=false diff --no-index --unified=5 -- $tmpBase $tmpMaster 2>&1 | Where-Object { $_ -notmatch '^warning:' } | Out-String
-        $diffB = git -c core.autocrlf=false diff --no-index --unified=5 -- $tmpBase $tmpMirror 2>&1 | Where-Object { $_ -notmatch '^warning:' } | Out-String
+        for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            $tmpMaster = [System.IO.Path]::GetTempFileName()
+            Set-Content $tmpMaster $masterContent -Encoding UTF8 -NoNewline
 
-        # Emit the merge context block for the agent (skill-sync protocol)
-        Write-Host ""
-        Write-Host "  === SKILL-SYNC LLM MERGE CONTEXT: $relPath ===" -ForegroundColor Magenta
-        Write-Host "  -- Base document --------------------------------------------------" -ForegroundColor DarkGray
-        Write-Host $baseContent -ForegroundColor DarkGray
-        Write-Host "  -- Changes from Side A (master) -----------------------------------" -ForegroundColor Cyan
-        Write-Host $diffA -ForegroundColor Cyan
-        Write-Host "  -- Changes from Side B (mirror) -----------------------------------" -ForegroundColor Yellow
-        Write-Host $diffB -ForegroundColor Yellow
-        Write-Host "  === END MERGE CONTEXT =============================================" -ForegroundColor Magenta
-        Write-Host ""
-        Write-Host "  [skill-sync] Agent: produce the merged file and paste below." -ForegroundColor Magenta
-        Write-Host "  [skill-sync] Paste merged content, then enter a line with only: ###END" -ForegroundColor Magenta
+            Write-Host "  [MERGE] Attempt $attempt/$maxAttempts for $relPath" -ForegroundColor Cyan
 
-        if ($Yes) {
-            # Autopilot: aider merge archived - skip conflicts in -Yes mode
-            Write-Host "  [AUTO] Conflict skipped (aider merge not wired in -Yes mode)." -ForegroundColor Yellow
-            return $null
+            switch ($attempt) {
+                1 {
+                    # Standard 3-way merge
+                    git merge-file -q $tmpMaster $tmpBase $tmpMirror 2>&1 | Out-Null
+                }
+                2 {
+                    # Union merge — include both sides verbatim for conflict regions
+                    git merge-file -q --union $tmpMaster $tmpBase $tmpMirror 2>&1 | Out-Null
+                }
+                3 {
+                    # Prefer mirror (theirs) for all conflict sections
+                    git merge-file -q $tmpMaster $tmpBase $tmpMirror 2>&1 | Out-Null
+                    $candidate = Get-Content $tmpMaster -Raw -Encoding UTF8
+                    $resolved = $candidate -replace '(?ms)<<<<<<< [^\n]*\n.*?=======\n(.*?)>>>>>>> [^\n]*\n', '$1'
+                    Set-Content $tmpMaster $resolved -Encoding UTF8 -NoNewline
+                }
+                4 {
+                    # Prefer master (ours) for all conflict sections
+                    git merge-file -q $tmpMaster $tmpBase $tmpMirror 2>&1 | Out-Null
+                    $candidate = Get-Content $tmpMaster -Raw -Encoding UTF8
+                    $resolved = $candidate -replace '(?ms)<<<<<<< [^\n]*\n(.*?)=======\n.*?>>>>>>> [^\n]*\n', '$1'
+                    Set-Content $tmpMaster $resolved -Encoding UTF8 -NoNewline
+                }
+                5 {
+                    # Last resort: union then strip all remaining conflict markers
+                    git merge-file -q --union $tmpMaster $tmpBase $tmpMirror 2>&1 | Out-Null
+                    $candidate = Get-Content $tmpMaster -Raw -Encoding UTF8
+                    $resolved = $candidate -replace '(?ms)(<<<<<<< [^\n]*\n|=======\n|>>>>>>> [^\n]*\n)', ''
+                    Set-Content $tmpMaster $resolved -Encoding UTF8 -NoNewline
+                }
+            }
+
+            $mergedContent = Get-Content $tmpMaster -Raw -Encoding UTF8
+            Remove-Item $tmpMaster -Force -ErrorAction SilentlyContinue
+
+            if ($mergedContent -notmatch '<<<<<<< ') {
+                $label = if ($attempt -eq 1) { 'Clean 3-way merge' } else { "Resolved on attempt $attempt/$maxAttempts" }
+                Write-Host "  [MERGE] $label : $relPath" -ForegroundColor Green
+                return $mergedContent
+            }
+
+            Write-Host "  [MERGE] Conflict markers remain after attempt $attempt/$maxAttempts" -ForegroundColor Yellow
         }
 
-        $lines = [System.Collections.Generic.List[string]]::new()
-        while ($true) {
-            $line = Read-Host ""
-            if ($line -eq '###END') { break }
-            $lines.Add($line)
-        }
-        $merged = $lines -join "`n"
-        if ([string]::IsNullOrWhiteSpace($merged) -or $merged -eq $baseContent) {
-            Write-Host "  [WARN] Merged output empty or identical to base - skipping." -ForegroundColor Yellow
-            return $null
-        }
-        return $merged
+        # All 5 attempts exhausted — write conflict artifact and report to user
+        Write-Host "  [MERGE ERROR] $relPath — all $maxAttempts attempts failed. Manual merge required." -ForegroundColor Red
+        $diffOut = git -c core.autocrlf=false diff --no-index --unified=3 -- $tmpBase $tmpMirror 2>&1 |
+                   Where-Object { $_ -notmatch '^warning:' } | Out-String
+        $conflictFile = (Join-Path $PSScriptRoot $relPath) + '.conflict'
+        @"
+# MANUAL MERGE REQUIRED: $relPath
+# Apply the mirror diff below onto the master copy, then delete this file.
+#
+$diffOut
+"@ | Set-Content $conflictFile -Encoding UTF8
+        Write-Host "  Conflict diff written to: $conflictFile" -ForegroundColor Red
+        return $null
+
     } finally {
-        Remove-Item $tmpBase, $tmpMaster, $tmpMirror -Force -ErrorAction SilentlyContinue
+        Remove-Item $tmpBase, $tmpMirror -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -446,7 +474,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
                             Write-Host "  [WARN] MERGE-CONFLICT marker present - flag for human review before commit." -ForegroundColor Yellow
                         }
                     } else {
-                        Write-Host "  $caseLabel Skipped : $($item.Rel) (LLM merge not available in autopilot)" -ForegroundColor Yellow
+                        Write-Host "  $caseLabel Skipped : $($item.Rel) (manual merge required — see .conflict file)" -ForegroundColor Red
                     }
                 }
                 continue
