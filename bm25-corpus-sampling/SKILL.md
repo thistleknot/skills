@@ -501,19 +501,109 @@ BM25 cost is bounded to the retrieved set. Appropriate when cosine recall is hig
 
 ---
 
-### Option B — Proxy Model + k-means projection
+### Option B — Proxy Model + k-means + BM25 Correlation Graph
 
 ```
 sample (2000 docs)
-  → fit proxy BM25/TF-IDF model (vocabulary + IDF from sample)
+  → fit proxy TF-IDF model (vocabulary + IDF from sample)
       → at retrieval time:
-          → project retrieved documents into proxy feature space
-              → k-means clustering on projected retrieved set
-                  → pairwise BM25 scores within each cluster (bounded by cluster size)
-                      → threshold edges → Louvain / WCC community detection
+          → project retrieved candidates into proxy TF-IDF space
+              → k-means clustering on projected retrieved set (bounds O(n²) to O(cluster²))
+                  → per cluster: build n×n BM25 score matrix S
+                      where S[i,j] = BM25(doc_i as query, doc_j as doc)
+                  → Pearson-correlate rows of S → correlation matrix C
+                      C[i,j] = pearsonr(S[i,:], S[j,:])
+                  → keep edges where C[i,j] > corr_thresh (significant correlations only)
+                      → Louvain / WCC / DWPC community detection
 ```
 
-k-means bounds pairwise BM25 to O(cluster_size²) per cluster. Proxy IDF noise propagates from sample quality — apply `1/(1+|z_c|)` reliability weighting to edges from high-|z| cells. Louvain for overlapping topic communities; WCC for hard disjoint groups (more sensitive to edge threshold choice).
+**Key insight: BM25 score matrix → correlation matrix:**
+Two documents are co-retrieval-correlated when they retrieve similar neighbours. If doc_i and doc_j both strongly retrieve the same set of documents (similar BM25 score profile), they share topic — even if doc_i and doc_j don't directly match each other. The correlation matrix captures this *indirect* topical similarity.
+
+```python
+import numpy as np
+from rank_bm25 import BM25Okapi
+from scipy.stats import pearsonr
+import networkx as nx
+
+def build_bm25_correlation_graph(
+    candidate_ids: list[int],
+    docs: list[dict],
+    corr_thresh: float = 0.10,
+) -> nx.Graph:
+    """
+    Build graph where edge weight = Pearson correlation between BM25 score profiles.
+
+    S[i,j] = BM25 score when doc_i is used as query against doc_j.
+    Two docs are adjacent if their retrieval profiles are correlated: they retrieve
+    similar neighbors (shared topic signal) even if they don't directly match.
+    This is NOT pairwise BM25 — it is co-retrieval correlation.
+
+    Significant correlation threshold:
+      corr_thresh=0.10 is conservative (catches broad co-retrieval).
+      corr_thresh=0.30 gives tight clusters (only strong co-retrieval).
+      Rule of thumb: elbow on the distribution of all pairwise correlations.
+    """
+    cand_texts = [docs[i]["tokens"] for i in candidate_ids]
+    bm25 = BM25Okapi(cand_texts)
+    n = len(candidate_ids)
+
+    S = np.zeros((n, n), dtype=float)
+    for i in range(n):
+        S[i] = bm25.get_scores(cand_texts[i])
+
+    G = nx.Graph()
+    G.add_nodes_from(candidate_ids)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if np.std(S[i]) < 1e-9 or np.std(S[j]) < 1e-9:
+                continue
+            r, _ = pearsonr(S[i], S[j])
+            if r > corr_thresh:
+                G.add_edge(candidate_ids[i], candidate_ids[j], weight=float(r))
+    return G
+```
+
+**DWPC edge weighting (penalises hub documents):**
+Generic documents (high degree in the correlation graph) should contribute less credit per edge than specialist documents. Degree-Weighted Path Count normalises by the geometric mean of node degrees:
+
+```python
+# For each node u, DWPC score = Σ_{(u,v) ∈ edges} weight(u,v) / sqrt(deg(u) * deg(v))
+# Hub nodes (large deg) get penalised; specialists (small deg) get amplified credit.
+degrees = dict(G.degree())
+dwpc = {}
+for u, v, data in G.edges(data=True):
+    w = data["weight"] / (math.sqrt(degrees[u] * degrees[v]) + 1e-9)
+    dwpc[u] = dwpc.get(u, 0.0) + w
+    dwpc[v] = dwpc.get(v, 0.0) + w
+```
+
+k-means bounds pairwise BM25 to O(cluster_size²) per cluster. Proxy IDF noise propagates from sample quality — apply `1/(1+|z_c|)` reliability weighting to edges from high-|z| cells.
+
+---
+
+### Option C — Closed-Vocabulary Hash Graph (zero BM25 cost)
+
+When BM25 scoring is too expensive for large candidate pools, replace the BM25 correlation graph with a **dual-hash Jaccard graph** using a closed vocabulary:
+
+```
+full corpus
+  → enumerate all tokens → sorted token IDs (zero-collision, no hash function)
+  → enumerate all char n-grams (n=3) → sorted n-gram IDs (same format)
+      → at retrieval time per candidate pair (i, j):
+          token_jaccard = |tok_ids(i) ∩ tok_ids(j)| / |tok_ids(i) ∪ tok_ids(j)|
+          char_jaccard  = |char_ids(i) ∩ char_ids(j)| / |char_ids(i) ∪ char_ids(j)|
+          edge_weight   = (token_jaccard + char_jaccard) / 2
+          → keep edges above jac_thresh → same Louvain/WCC/DWPC community detection
+```
+
+**Why closed-vocabulary hashing is invertible:**
+- Token IDs = index into sorted vocabulary. `vocab[id]` recovers the token. Zero collisions by construction.
+- Count vector (`uint16` per vocab position) recovers the exact multiset (bag-of-words, no order).
+- Char n-gram IDs similarly invertible for the n-gram set (not original text order).
+- The dual representation (token + char) combines lexical overlap with morphological similarity — handles stemming variants without a stemmer.
+
+**O(V/64) vs O(n·|tokens|):** NumPy bitwise AND/OR on boolean arrays is 64× faster than BM25 token scoring for the same candidate pool.
 
 ---
 
@@ -521,17 +611,71 @@ k-means bounds pairwise BM25 to O(cluster_size²) per cluster. Proxy IDF noise p
 
 | Decision | Guidance |
 |---|---|
-| Edge weight threshold | Elbow on BM25 score distribution within the retrieved/cluster set |
-| Topic labels for cell grid | Option A: cosine cluster labels. Option B: k-means labels on sample. |
+| Edge weight (BM25 graph) | Pearson correlation between BM25 score profiles; significant if r > corr_thresh |
+| Edge weight (hash graph) | Mean(token_jaccard, char_jaccard); add edge if > jac_thresh |
+| corr_thresh | 0.10 conservative, 0.30 tight; elbow on pairwise correlation distribution |
+| jac_thresh | 0.05 typical; increase if graph is too dense, decrease if too sparse |
+| k-means clusters | 5 per 50-candidate pool; scales O(clusters) |
 | IDF reliability correction | Weight edges by `1/(1+\|z_c\|)` for cells with high variance from normal |
-| Community detection | Louvain (overlapping, modularity) vs WCC (disjoint, threshold-driven) |
+| Community detection | Louvain (overlapping, modularity) / WCC (disjoint) / DWPC (hub-penalised) |
+
+---
+
+## PI-Stratified Sampling (Robust Alternative to CDF-Diff)
+
+The CDF-diff pipeline above works well when the corpus is large and well-spread. For smaller or skewed corpora, a simpler two-axis stratification using predictive intervals is more stable:
+
+**Step 1 — Prune outlier-length documents (95% PI)**
+```python
+from scipy.stats import median_abs_deviation
+lens = [d["token_len"] for d in docs]
+med = np.median(lens)
+mad = median_abs_deviation(lens, scale=1.4826)  # σ-equivalent under normality
+lo, hi = med - 1.96 * mad, med + 1.96 * mad     # 95% prediction interval
+# Prune: keep only docs within PI (removes ~5% extreme-length outliers)
+surviving = [d for d in docs if lo <= d["token_len"] <= hi]
+```
+
+This is a **predictive interval** (per-document), not a confidence interval (population estimate). It asks: "Is this specific document's length within the expected range?" — appropriate when outlier removal is the goal, not mean estimation.
+
+**Step 2 — Joint stratification on (length_bin × category)**
+```python
+import numpy as np
+# Quantile bins: 10 bins by token length percentile
+quantiles = np.percentile([d["token_len"] for d in surviving], np.linspace(0, 100, 11))
+def len_bin(l): return min(9, np.searchsorted(quantiles[1:-1], l))
+
+# Category inverse-frequency weight
+from collections import Counter
+cat_counts = Counter(d["category"] for d in surviving)
+total = len(surviving)
+cat_weight = {c: total / (len(cat_counts) * n) for c, n in cat_counts.items()}
+
+# Per-doc weight = harmonic mean of bin weight and category weight
+bin_counts = Counter(len_bin(d["token_len"]) for d in surviving)
+bin_weight = {b: total / (10 * n) for b, n in bin_counts.items()}
+
+def doc_weight(d):
+    bw = bin_weight[len_bin(d["token_len"])]
+    cw = cat_weight[d["category"]]
+    return 2 * bw * cw / (bw + cw + 1e-9)  # harmonic mean
+```
+
+**Step 3 — Proportional quota with floor guarantee**
+```python
+rng = np.random.default_rng(seed)
+weights = np.array([doc_weight(d) for d in surviving])
+weights /= weights.sum()
+# Sample indices without replacement, weighted
+sample_idx = rng.choice(len(surviving), size=n_sample, replace=False, p=weights)
+```
+
+**When to use PI-stratified vs CDF-diff:**
+- **CDF-diff**: better when category counts span many orders of magnitude (news vs humor 10:1 ratio); CDF compression prevents extreme categories from dominating
+- **PI-stratified**: better when the corpus is more uniform or when you want a simpler, more interpretable weight formula; harmonic mean prevents any single axis from dominating
+- Both guarantee floor-1 per non-empty cell when combined with quota rounding
 
 <!-- consolidation:see-also:start -->
 ## See Also
-[[stratified-quota-sampling]]  [[representation-pipeline]]  [[hyper-parm_tuning]]
-<!-- consolidation:see-also:end -->
-
-<!-- consolidation:see-also:start -->
-## See Also
-[[stratified-quota-sampling]]  [[representation-pipeline]]  [[hyper-parm_tuning]]
+[[stratified-quota-sampling]]  [[representation-pipeline]]  [[hyper-parm_tuning]]  [[bm25-autoencoder]]
 <!-- consolidation:see-also:end -->

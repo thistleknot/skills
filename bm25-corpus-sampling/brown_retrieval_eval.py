@@ -1,48 +1,42 @@
-"""brown_retrieval_eval.py — RAGAS-style retrieval comparison on Brown corpus.
+"""brown_retrieval_eval.py — No-LLM BM25-community retrieval comparison on Brown corpus.
 
-Compares four retrieval systems:
-  dense_only    — nomic-embed-text cosine similarity (Ollama)
-  bm25_full     — BM25 over full corpus (rank_bm25, BM25Okapi)
-  hybrid_rrf    — Reciprocal Rank Fusion: dense + bm25_full
-  proxy_louvain — dense top-50 → k-means on proxy TF-IDF (2000-para sample)
-                  → pairwise BM25 within clusters → Louvain rerank
+Compares six retrieval systems:
+  dense_only      — nomic-embed-text cosine similarity (Ollama, embeddings only)
+  bm25_full       — BM25 over full corpus (rank_bm25, BM25Okapi)
+  hybrid_rrf      — Reciprocal Rank Fusion: dense + bm25_full
+  proxy_louvain   — k-means on TF-IDF wordpiece → BM25 score matrix
+                    → Pearson correlation matrix → Louvain community rerank
+  proxy_wcc       — same BM25 correlation graph → WCC (weakly connected component)
+                    cohesion rerank
+  proxy_dwpc      — same graph → DWPC-weighted community score rerank
+                    (Degree-Weighted Path Count: edge_weight / sqrt(deg_u * deg_v))
 
-Judge metrics (qwen3.5:4b via Ollama, single structured call per system):
-  relevance              — answer addresses the question
-  entailment             — answer logically entailed by retrieved context
-  faithfulness           — answer claims grounded in context
-  correctness            — factual content matches context
-  context_entity_precision — context entities relevant to the question
-  context_entity_recall  — key answer entities surface in context
-  factualness            — all stated facts supported by context
-  fluency                — grammatical correctness and readability
-  coherence              — internal logical structure of the answer
-  informativeness        — specific, useful information density
+Sampling (2 000-para proxy corpus — no LLM needed):
+  1. Per paragraph compute token length.
+  2. Prune to 95% prediction interval: median ± 1.96 × 1.4826 × MAD.
+  3. Bin surviving paragraphs into 10 quantile token-length bins.
+  4. Gather per-category counts.
+  5. Weight = harmonic mean(token_bin_weight, category_weight).
+  6. Sample 2 000 proportionally (quota rounding + floor-1 guarantee).
 
-  Plus two label-based metrics (no LLM needed):
-  context_precision  — fraction of top-K from same Brown category
-  context_recall     — |same-cat in top-K| / min(|same-cat total|, K)
+Evaluation (label-based + intrinsic — NO LLM required):
+  context_precision   — fraction of top-K retrieved docs from same Brown category
+  context_recall      — |same-cat in top-K| / min(|same-cat total|, K)
+  avg_bm25_score      — mean BM25 score of retrieved docs (intrinsic relevance)
+  community_density   — mean intra-community BM25 edge weight (proxy systems only; 0 for others)
 
-Pipeline per query:
-  1. qwen3.5:4b generates an open-ended factual question from the source paragraph
-  2. each system retrieves top-K docs
-  3. qwen3.5:4b generates an answer from retrieved context
-  4. single structured call scores all 10 LLM metrics via Pydantic JSON schema
-
-Thinking suppression: think=False (top-level Ollama field) + /no_think system prefix.
-
-Ground truth: same Brown category = relevant for context_precision / context_recall.
-Query set  : 30 paragraphs (CDF-diff stratified).
-Embeddings : checkpointed to SQLite to avoid recomputation.
+Ground truth: same Brown category = relevant.
+Query set  : 30 paragraphs (PI-stratified sample, seed=99).
+Embeddings : nomic-embed-text via Ollama, checkpointed to SQLite.
 
 Require:
-  pydantic, rank_bm25, networkx>=2.7, nltk(brown corpus), scikit-learn, scipy, numpy, requests
-  Ollama running on localhost:11434 with nomic-embed-text and qwen3.5:4b pulled.
+  rank_bm25, networkx>=2.7, nltk(brown), scikit-learn, scipy, numpy, requests
+  Ollama running on localhost:11434 with nomic-embed-text pulled.
+  (qwen3.5:4b NOT required — no LLM judge or question/answer generation.)
 """
 
 import math
 import pickle
-import re
 import sqlite3
 import time
 import numpy as np
@@ -50,25 +44,29 @@ import networkx as nx
 import requests
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
-
-from pydantic import BaseModel, Field
 
 import nltk
 from nltk.corpus import brown
-from scipy.stats import median_abs_deviation, norm
+from scipy.stats import median_abs_deviation, norm, pearsonr
 from sklearn.preprocessing import PowerTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from rank_bm25 import BM25Okapi
 
-CKPT = Path(__file__).parent / "retrieval_eval.db"
-K = 10           # retrieval depth for all metrics
-DENSE_POOL = 50  # dense candidates fed to proxy reranker
-OLLAMA = "http://localhost:11434"
-LLM_MODEL  = "qwen3.5:4b"
+CKPT       = Path(__file__).parent / "retrieval_eval.db"
+K          = 10           # retrieval depth for all metrics
+DENSE_POOL = 50           # dense candidates fed to proxy reranker
+N_CLUSTERS = 5            # k-means clusters for proxy BM25 graph
+CORR_THRESH  = 0.1         # minimum Pearson correlation to create a graph edge
+JAC_THRESH   = 0.05        # minimum Jaccard similarity to create a hash-graph edge
+CHAR_N       = 3           # character n-gram length for char hash
+AE_DIM       = 64          # bottleneck dimension for multi-view projector
+AE_THRESH    = 0.55        # cosine similarity threshold for AE graph edges
+OLLAMA     = "http://localhost:11434"
 EMB_MODEL  = "nomic-embed-text"
-N_QUERIES  = 30   # query budget (LLM calls ≈ N * (1 + 4*(1+1)) = N*9)
+N_QUERIES  = 30           # number of eval queries
+N_PROXY    = 2000         # proxy corpus size for sampling + TF-IDF vocab
+
 
 
 
@@ -91,47 +89,11 @@ def _set(db, key, value):
     db.commit()
 
 
-# ── Ollama helpers ────────────────────────────────────────────────────────────
-
-def _strip_think(text: str) -> str:
-    """Remove <think>...</think> blocks that Qwen3 emits in thinking mode."""
-    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
-
-
-def llm(
-    prompt: str,
-    max_tokens: int = 300,
-    fmt: Optional[dict] = None,
-    system: str = "/no_think You are a precise evaluation assistant.",
-) -> str:
-    """
-    Call qwen3.5:4b via Ollama /api/generate with thinking suppressed.
-
-    Thinking is disabled two ways:
-      1. think=False at the top-level JSON field (Ollama-specific for Qwen3)
-      2. /no_think prefix in the system prompt (model-level instruction)
-
-    Require: Ollama running on localhost:11434 with qwen3.5:4b pulled.
-    Guarantee: returns response text; raises on connection failure.
-    """
-    body: dict = {
-        "model": LLM_MODEL,
-        "system": system,
-        "prompt": prompt,
-        "stream": False,
-        "think": False,
-        "options": {"temperature": 0, "num_predict": max_tokens, "seed": 42},
-    }
-    if fmt is not None:
-        body["format"] = fmt
-    resp = requests.post(f"{OLLAMA}/api/generate", json=body, timeout=120)
-    resp.raise_for_status()
-    return resp.json()["response"].strip()
-
+# ── Ollama embedding helper ───────────────────────────────────────────────────
 
 def embed_batch(texts: list[str], db, cache_key: str) -> np.ndarray:
     """
-    Embed a list of texts with nomic-embed-text via Ollama, L2-normalised.
+    Embed texts with nomic-embed-text via Ollama, L2-normalised.
     Results are checkpointed so re-runs skip the API calls.
 
     Require: texts non-empty, Ollama running with nomic-embed-text pulled.
@@ -153,7 +115,7 @@ def embed_batch(texts: list[str], db, cache_key: str) -> np.ndarray:
         )
         resp.raise_for_status()
         vecs.extend(resp.json()["embeddings"])
-        if i % 512 == 0 and i > 0:
+        if (i // batch_size) % 8 == 0 and i > 0:
             print(f"    {i}/{len(texts)}")
 
     arr = np.array(vecs, dtype=np.float32)
@@ -169,7 +131,7 @@ def embed_batch(texts: list[str], db, cache_key: str) -> np.ndarray:
 def build_corpus() -> list[dict]:
     """
     Return all Brown paragraphs with ≥10 alpha tokens as dicts:
-    {id, text, tokens, category}
+    {id, text, tokens, token_len, category}
     """
     docs = []
     for cat in sorted(brown.categories()):
@@ -181,44 +143,76 @@ def build_corpus() -> list[dict]:
                         "id": len(docs),
                         "text": " ".join(tokens),
                         "tokens": tokens,
+                        "token_len": len(tokens),
                         "category": cat,
                     })
     return docs
 
 
-# ── CDF-diff stratified sampling ─────────────────────────────────────────────
+# ── PI-stratified sampling ────────────────────────────────────────────────────
 
-def cdf_diff_sample(docs: list[dict], n_sample: int = 2000, seed: int = 42) -> list[int]:
+def pi_stratified_sample(docs: list[dict], n_sample: int = 2000, seed: int = 42,
+                         n_bins: int = 10) -> list[int]:
     """
-    Sample n_sample document indices using log-normal → MAD-scale →
-    Yeo-Johnson → Gaussian CDF-difference weights.
+    Sample n_sample doc indices using a two-axis stratification:
+      Axis 1 — token-length bins (10 quantile bins within 95% PI)
+      Axis 2 — category counts
+
+    Steps:
+      1. Compute 95% prediction interval on token lengths:
+           lower = median - 1.96 * 1.4826 * MAD
+           upper = median + 1.96 * 1.4826 * MAD
+      2. Prune paragraphs outside [lower, upper].
+      3. Bin survivors into n_bins quantile token-length bins.
+      4. Compute category frequency weights (uniform → rare categories get more share).
+      5. Per-doc weight = harmonic mean(bin_weight, cat_weight).
+      6. Quota-sample proportionally with floor-1 guarantee.
+
+    Require: docs non-empty, n_sample ≤ len(docs).
+    Guarantee: returns list of unique doc indices of length n_sample (or fewer if corpus is small).
     """
-    by_cat = defaultdict(list)
-    for i, d in enumerate(docs):
-        by_cat[d["category"]].append(i)
+    lengths = np.array([d["token_len"] for d in docs], dtype=float)
+    med = float(np.median(lengths))
+    mad = float(median_abs_deviation(lengths, scale=1.4826))
+    pi_lo = med - 1.96 * mad
+    pi_hi = med + 1.96 * mad
 
-    cats = sorted(by_cat.keys())
-    counts = np.array([len(by_cat[c]) for c in cats], dtype=float)
+    # prune to PI survivors
+    survivors = [i for i, d in enumerate(docs) if pi_lo <= d["token_len"] <= pi_hi]
+    surv_lens = np.array([docs[i]["token_len"] for i in survivors], dtype=float)
 
-    x = np.log1p(counts)
-    med = np.median(x)
-    mad = median_abs_deviation(x, scale=1.4826)
-    x = (x - med) / (mad + 1e-9)
+    # token-length quantile bins
+    bin_edges = np.percentile(surv_lens, np.linspace(0, 100, n_bins + 1))
+    bin_edges[-1] += 1e-6  # ensure last edge is inclusive
+    bin_ids = np.digitize(surv_lens, bin_edges[1:-1])  # 0 … n_bins-1
 
-    pt = PowerTransformer(method="yeo-johnson", standardize=False)
-    x = pt.fit_transform(x.reshape(-1, 1)).ravel()
+    bin_counts = np.bincount(bin_ids, minlength=n_bins).astype(float)
+    bin_weights = np.where(bin_counts > 0, 1.0 / bin_counts, 0.0)
+    bin_weights /= bin_weights[bin_counts > 0].sum() if bin_weights.sum() > 0 else 1.0
 
-    order = np.argsort(x)
-    cdf_vals = norm.cdf(x[order])
-    w_sorted = np.diff(cdf_vals, prepend=0.0)
-    w_sorted /= w_sorted.sum()
-    weights = np.empty_like(w_sorted)
-    weights[order] = w_sorted
+    # category inverse-frequency weights
+    cat_counts: dict[str, int] = defaultdict(int)
+    for i in survivors:
+        cat_counts[docs[i]["category"]] += 1
+    n_surv = len(survivors)
+    cat_w = {c: (n_surv / (len(cat_counts) * cnt)) for c, cnt in cat_counts.items()}
+    c_vals = np.array([cat_w[docs[i]["category"]] for i in survivors])
+    c_vals /= c_vals.sum()
+
+    # bin weights per survivor
+    b_vals = bin_weights[bin_ids]
+    b_vals = b_vals / b_vals.sum() if b_vals.sum() > 0 else np.ones(len(survivors)) / len(survivors)
+
+    # harmonic mean of the two weight vectors
+    eps = 1e-12
+    w = 2.0 * (b_vals * c_vals) / (b_vals + c_vals + eps)
+    w /= w.sum()
 
     rng = np.random.default_rng(seed)
-    quotas = np.round(weights * n_sample).astype(int)
-    quotas = np.maximum(quotas, 1)
-    excess = int(quotas.sum()) - n_sample
+    n_eff = min(n_sample, len(survivors))
+    quotas_f = w * n_eff
+    quotas = np.maximum(np.round(quotas_f).astype(int), 1)
+    excess = int(quotas.sum()) - n_eff
     for idx in np.argsort(quotas)[::-1]:
         if excess <= 0:
             break
@@ -226,16 +220,11 @@ def cdf_diff_sample(docs: list[dict], n_sample: int = 2000, seed: int = 42) -> l
         quotas[idx] -= trim
         excess -= trim
 
-    idxs = []
-    for i, cat in enumerate(cats):
-        pool = by_cat[cat]
-        q = int(quotas[i])
-        chosen = rng.choice(len(pool), size=min(q, len(pool)), replace=False)
-        idxs.extend(pool[j] for j in chosen)
-    return idxs
+    chosen = rng.choice(len(survivors), size=n_eff, replace=False, p=w)
+    return [survivors[j] for j in chosen[:n_eff]]
 
 
-# ── RAGAS metrics ─────────────────────────────────────────────────────────────
+# ── label-based and intrinsic evaluation metrics ─────────────────────────────
 
 def context_precision(retrieved_cats: list[str], query_cat: str) -> float:
     """Fraction of top-K retrieved docs from the same category (signal-to-noise)."""
@@ -252,101 +241,365 @@ def context_recall(retrieved_cats: list[str], query_cat: str, total_relevant: in
     return hits / denom if denom > 0 else 0.0
 
 
-class JudgeScores(BaseModel):
-    """Structured LLM judge output — all 10 metrics in a single response."""
-
-    relevance: float = Field(..., ge=0.0, le=1.0,
-        description="Answer directly addresses the question asked.")
-    entailment: float = Field(..., ge=0.0, le=1.0,
-        description="Answer is logically entailed by the retrieved context.")
-    faithfulness: float = Field(..., ge=0.0, le=1.0,
-        description="Every answer claim has explicit support in the context.")
-    correctness: float = Field(..., ge=0.0, le=1.0,
-        description="Factual content of the answer matches the context.")
-    context_entity_precision: float = Field(..., ge=0.0, le=1.0,
-        description="Named entities in the context are relevant to the question.")
-    context_entity_recall: float = Field(..., ge=0.0, le=1.0,
-        description="Key entities needed to answer the question appear in the context.")
-    factualness: float = Field(..., ge=0.0, le=1.0,
-        description="All stated facts are verifiable from the context.")
-    fluency: float = Field(..., ge=0.0, le=1.0,
-        description="Answer is grammatically correct and readable.")
-    coherence: float = Field(..., ge=0.0, le=1.0,
-        description="Answer is internally logical and well-structured.")
-    informativeness: float = Field(..., ge=0.0, le=1.0,
-        description="Answer is specific and provides useful information density.")
-
-
-def score_all_metrics(
-    question: str,
-    answer: str,
-    context_texts: list[str],
-) -> JudgeScores:
+def avg_bm25_score(bm25_index: BM25Okapi, query_tokens: list[str],
+                   retrieved_ids: list[int]) -> float:
     """
-    Single structured LLM call returning all 10 judge metrics.
-
-    Uses Ollama format= (JSON schema) so the model returns valid JSON
-    matching JudgeScores.  qwen3.5:4b + think=False + /no_think prefix.
-
-    Require: question, answer, and up to 5 context snippets (≤400 chars each).
-    Guarantee: returns a JudgeScores instance; falls back to 0.5 on parse failure.
+    Mean BM25 score of retrieved docs (intrinsic relevance signal).
+    Higher = retrieved docs contain more query-relevant terms.
     """
-    ctx = "\n\n".join(f"[{i+1}] {t[:400]}" for i, t in enumerate(context_texts[:5]))
-    prompt = (
-        f"Question: {question}\n\n"
-        f"Retrieved Context:\n{ctx}\n\n"
-        f"Answer: {answer[:400]}\n\n"
-        "Score the Answer on these 10 dimensions, each a float from 0.0 to 1.0:\n"
-        "  relevance              – answer addresses the question\n"
-        "  entailment             – answer logically follows from context\n"
-        "  faithfulness           – all answer claims grounded in context\n"
-        "  correctness            – factual content matches context\n"
-        "  context_entity_precision – context entities relevant to question\n"
-        "  context_entity_recall  – key answer entities present in context\n"
-        "  factualness            – all stated facts supported by context\n"
-        "  fluency                – grammatical correctness and readability\n"
-        "  coherence              – logical structure of the answer\n"
-        "  informativeness        – specific, useful information density\n"
-        "Return ONLY the JSON object, no commentary."
-    )
-    schema = JudgeScores.model_json_schema()
-    raw = llm(prompt, max_tokens=256, fmt=schema)
-    try:
-        return JudgeScores.model_validate_json(raw)
-    except Exception:
-        # fallback: extract floats from any valid JSON fragment
-        try:
-            import json
-            data = json.loads(raw)
-            clamped = {k: min(1.0, max(0.0, float(v))) for k, v in data.items()
-                       if k in JudgeScores.model_fields}
-            defaults = {f: 0.5 for f in JudgeScores.model_fields if f not in clamped}
-            return JudgeScores(**{**defaults, **clamped})
-        except Exception:
-            return JudgeScores(**{f: 0.5 for f in JudgeScores.model_fields})
+    all_scores = bm25_index.get_scores(query_tokens)
+    return float(np.mean([all_scores[i] for i in retrieved_ids])) if retrieved_ids else 0.0
 
 
-def generate_question(para_text: str) -> str:
-    """Use qwen3.5:4b to generate an open-ended factual question about the paragraph."""
-    prompt = (
-        f"Read this passage:\n{para_text[:500]}\n\n"
-        "Write ONE open-ended factual question (who/what/when/where/why/how) "
-        "whose specific answer is directly stated in the passage.\n"
-        "Do NOT write a yes/no question.\n"
-        "Output only the question, nothing else."
-    )
-    return llm(prompt, max_tokens=60)
+# ── closed-vocabulary hash representation ─────────────────────────────────────
+
+class ClosedVocab:
+    """
+    Lossless dual-level document fingerprint over a closed (enumerable) vocabulary.
+
+    Token hash  : sorted array of token IDs present in the document.
+                  Invertible: tok_ids → vocab[id] recovers exact token set.
+                  Multiset (with counts) is recoverable via count vector.
+
+    Char hash   : sorted array of char n-gram IDs (n=CHAR_N) over the document text.
+                  Not order-preserving but fingerprints morphology exactly.
+                  Same format as token hash — same Jaccard distance operation applies.
+
+    Zero-collision guarantee: vocab is fully enumerated at construction time;
+    every document token and n-gram maps to a unique integer with no hash function.
+
+    The dual representation captures:
+      - token hash  → lexical/semantic identity (what words appear)
+      - char hash   → morphological identity (what subword patterns appear)
+    Both are comparable without modality switching.
+    """
+
+    def __init__(self, docs: list[dict], char_n: int = CHAR_N):
+        """
+        Build vocabulary and char n-gram table from the full corpus.
+        Require: docs[i]["tokens"] is a list of lowercase alpha strings.
+        Guarantee: self.V token IDs and self.C char n-gram IDs, both starting at 0.
+        """
+        all_tokens = sorted(set(tok for d in docs for tok in d["tokens"]))
+        self.vocab   : list[str]      = all_tokens
+        self.tok2id  : dict[str, int] = {t: i for i, t in enumerate(all_tokens)}
+        self.V       : int             = len(all_tokens)
+
+        all_ngrams = sorted(set(
+            d["text"][i: i + char_n]
+            for d in docs
+            for i in range(max(0, len(d["text"]) - char_n + 1))
+            if d["text"][i: i + char_n].replace(" ", "").isalpha()
+        ))
+        self.char_ngrams : list[str]       = all_ngrams
+        self.ng2id       : dict[str, int]  = {ng: i for i, ng in enumerate(all_ngrams)}
+        self.C           : int              = len(all_ngrams)
+        self.char_n      : int              = char_n
+
+    def token_bitvec(self, tokens: list[str]) -> np.ndarray:
+        """
+        Boolean vector of length V.  bitvec[i] = True iff vocab[i] appears in tokens.
+        Invertible: vocab[i] for i where bitvec[i] gives back exact token set.
+        """
+        vec = np.zeros(self.V, dtype=bool)
+        for t in tokens:
+            if t in self.tok2id:
+                vec[self.tok2id[t]] = True
+        return vec
+
+    def token_countvec(self, tokens: list[str]) -> np.ndarray:
+        """
+        uint16 count vector — recovers multiset exactly (bag-of-words, no order).
+        """
+        vec = np.zeros(self.V, dtype=np.uint16)
+        for t in tokens:
+            if t in self.tok2id:
+                vec[self.tok2id[t]] += 1
+        return vec
+
+    def char_bitvec(self, text: str) -> np.ndarray:
+        """
+        Boolean vector of length C over char n-grams.
+        Same format as token_bitvec — enables same Jaccard operation.
+        """
+        vec = np.zeros(self.C, dtype=bool)
+        for i in range(max(0, len(text) - self.char_n + 1)):
+            ng = text[i: i + self.char_n]
+            if ng in self.ng2id:
+                vec[self.ng2id[ng]] = True
+        return vec
+
+    def token_ids(self, tokens: list[str]) -> list[int]:
+        """Sorted token ID array — the canonical 'hash string' for this token set."""
+        return sorted(self.tok2id[t] for t in tokens if t in self.tok2id)
+
+    def char_ids(self, text: str) -> list[int]:
+        """Sorted char n-gram ID array — same canonical format as token_ids."""
+        ids = sorted(set(
+            self.ng2id[text[i: i + self.char_n]]
+            for i in range(max(0, len(text) - self.char_n + 1))
+            if text[i: i + self.char_n] in self.ng2id
+        ))
+        return ids
+
+    def unpack_token_ids(self, ids: list[int]) -> list[str]:
+        """Invert token_ids() → recover original token set."""
+        return [self.vocab[i] for i in ids]
+
+    def unpack_char_ids(self, ids: list[int]) -> list[str]:
+        """Invert char_ids() → recover char n-gram set (not original text order)."""
+        return [self.char_ngrams[i] for i in ids]
 
 
-def generate_answer(question: str, context_docs: list[dict]) -> str:
-    """Use qwen3.5:4b to answer the question using only the retrieved context."""
-    ctx = "\n\n".join(f"[{i+1}] {d['text'][:300]}" for i, d in enumerate(context_docs[:5]))
-    prompt = (
-        "Answer the question using ONLY the provided context. Be concise.\n\n"
-        f"Context:\n{ctx}\n\n"
-        f"Question: {question}\n\nAnswer:"
-    )
-    return llm(prompt, max_tokens=150)
+class MultiViewProjector:
+    """
+    Linear multi-view autoencoder (TruncatedSVD on concatenated views).
+
+    The three views concatenated per document:
+      1. TF-IDF term weights  (proxy_tfidf vocab, ~8 000 features, already L2-normalised)
+      2. Token count vector   (ClosedVocab, V features — recovers multiset exactly)
+      3. Char n-gram bitvec   (ClosedVocab, C features — morphological signal)
+
+    The SVD bottleneck (z_dim latent dims) is the optimal *linear* compression of all
+    three views into a shared space (Eckart-Young theorem: minimum Frobenius reconstruction
+    error).  This is the linear limit of a nonlinear multi-view autoencoder; extending to
+    a deep encoder/decoder requires PyTorch but the structure is identical.
+
+    Theory (from user):
+      - Each view is an independent approximation of the same underlying document.
+      - Collinearity between views measures redundancy: if z_tfidf ≈ z_hash, one view adds
+        little.  Dense embeddings (nomic-embed-text) are worth adding only when their z is
+        orthogonal to the sparse views.
+      - The bottleneck z is the unified retrieval representation; community detection on
+        z-cosine-similarity graphs replaces the per-view BM25-correlation/Jaccard graphs.
+
+    Require: proxy_tfidf fitted; cv built over full corpus; docs contain 'tokens'+'text'.
+    Guarantee: transform() returns L2-normalised float32 array shape (n, z_dim).
+    Maintain: fit on proxy corpus, transform can be called on any subset doc_indices.
+    """
+
+    def __init__(self, z_dim: int = AE_DIM):
+        from sklearn.decomposition import TruncatedSVD
+        self.z_dim = z_dim
+        self._svd = TruncatedSVD(n_components=z_dim, random_state=42)
+        self._fitted = False
+
+    def _build_matrix(
+        self,
+        doc_indices: list[int],
+        docs: list[dict],
+        proxy_tfidf: TfidfVectorizer,
+        cv: "ClosedVocab",
+    ):
+        """Sparse (n, V_tfidf + V_tok + C_char) matrix, L2-normalised per row."""
+        import scipy.sparse as sp
+        from sklearn.preprocessing import normalize as sk_norm
+
+        texts = [docs[i]["text"] for i in doc_indices]
+        tokens_list = [docs[i]["tokens"] for i in doc_indices]
+        n = len(doc_indices)
+
+        tfidf_mat = proxy_tfidf.transform(texts)
+
+        # token count view — sparse uint16 → float
+        tok_rows, tok_cols, tok_vals = [], [], []
+        for row, toks in enumerate(tokens_list):
+            for t in toks:
+                if t in cv.tok2id:
+                    tok_rows.append(row)
+                    tok_cols.append(cv.tok2id[t])
+                    tok_vals.append(1.0)
+        tok_mat = sp.csr_matrix((tok_vals, (tok_rows, tok_cols)), shape=(n, cv.V))
+
+        # char n-gram bitvec view
+        char_rows, char_cols = [], []
+        for row, text in enumerate(texts):
+            for i in range(max(0, len(text) - cv.char_n + 1)):
+                ng = text[i: i + cv.char_n]
+                if ng in cv.ng2id:
+                    char_rows.append(row)
+                    char_cols.append(cv.ng2id[ng])
+        char_mat = sp.csr_matrix(
+            (np.ones(len(char_rows), dtype=np.float32), (char_rows, char_cols)),
+            shape=(n, cv.C),
+        )
+
+        combined = sp.hstack([tfidf_mat, tok_mat, char_mat], format="csr")
+        return sk_norm(combined, norm="l2")
+
+    def fit(self, doc_indices: list[int], docs: list[dict],
+            proxy_tfidf: TfidfVectorizer, cv: "ClosedVocab") -> "MultiViewProjector":
+        """Fit SVD on the proxy corpus (2 000 docs — fast)."""
+        X = self._build_matrix(doc_indices, docs, proxy_tfidf, cv)
+        self._svd.fit(X)
+        self._fitted = True
+        return self
+
+    def transform(self, doc_indices: list[int], docs: list[dict],
+                  proxy_tfidf: TfidfVectorizer, cv: "ClosedVocab") -> np.ndarray:
+        """Project doc_indices into z_dim bottleneck space, L2-normalised."""
+        X = self._build_matrix(doc_indices, docs, proxy_tfidf, cv)
+        Z = self._svd.transform(X).astype(np.float32)
+        norms = np.linalg.norm(Z, axis=1, keepdims=True)
+        return Z / np.where(norms > 1e-9, norms, 1.0)
+
+    def explained_variance(self) -> float:
+        """Fraction of total variance captured by the z_dim bottleneck."""
+        return float(self._svd.explained_variance_ratio_.sum())
+
+
+def jaccard_bitvec(a: np.ndarray, b: np.ndarray) -> float:
+    """
+    Jaccard similarity between two boolean vectors.
+    J = |A ∩ B| / |A ∪ B| = bitwise_AND.sum() / bitwise_OR.sum()
+    O(V/64) with numpy bit-packing vs O(n·|tokens|) for BM25.
+    Zero-collision because A and B are drawn from the same closed vocabulary.
+    """
+    inter = float(np.logical_and(a, b).sum())
+    union = float(np.logical_or(a, b).sum())
+    return inter / union if union > 0 else 0.0
+
+
+def build_jaccard_graph(
+    candidate_ids: list[int],
+    docs: list[dict],
+    cv: ClosedVocab,
+    jac_thresh: float = JAC_THRESH,
+    use_char: bool = True,
+) -> nx.Graph:
+    """
+    Build undirected weighted graph using dual-hash Jaccard similarity.
+
+    Edge weight = mean(token_jaccard, char_jaccard) if use_char else token_jaccard.
+    This replaces the BM25 correlation graph with O(n² · (V+C)/64) bitwise ops
+    instead of O(n² · |tokens|) float arithmetic — significantly faster for
+    large candidate pools.
+
+    Invertibility:
+      token bitvec → vocab[i] for active bits → original token set (no order)
+      char bitvec  → char_ngrams[i] for active bits → n-gram set (not full text)
+
+    Require: candidate_ids ≥ 2; docs[i]["tokens"] and docs[i]["text"] present.
+    Guarantee: nx.Graph with node set = set(candidate_ids); nodes-only if no edges above threshold.
+    """
+    n = len(candidate_ids)
+    G = nx.Graph()
+    G.add_nodes_from(candidate_ids)
+    if n < 2:
+        return G
+
+    tok_vecs = [cv.token_bitvec(docs[i]["tokens"]) for i in candidate_ids]
+    chr_vecs = [cv.char_bitvec(docs[i]["text"]) for i in candidate_ids] if use_char else None
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            tj = jaccard_bitvec(tok_vecs[i], tok_vecs[j])
+            if use_char and chr_vecs is not None:
+                cj = jaccard_bitvec(chr_vecs[i], chr_vecs[j])
+                w = (tj + cj) / 2.0
+            else:
+                w = tj
+            if w > jac_thresh:
+                G.add_edge(candidate_ids[i], candidate_ids[j], weight=w)
+
+    return G
+
+
+def build_bm25_graph(
+    candidate_ids: list[int],
+    docs: list[dict],
+    corr_thresh: float = CORR_THRESH,
+) -> nx.Graph:
+    """
+    Build an undirected weighted graph over candidate_ids where edge weight =
+    Pearson correlation between their respective BM25 score vectors.
+
+    Steps:
+      1. Each candidate c_i acts as a query; compute BM25 scores against all other candidates.
+         This yields an (n × n) BM25 score matrix S where S[i,j] = bm25(c_i as query, c_j as doc).
+      2. Pearson-correlate rows of S: corr[i,j] = pearsonr(S[i,:], S[j,:]).
+         Two docs are correlated if they retrieve similar neighbours when used as queries.
+      3. Add edge (c_i, c_j) if corr[i,j] > corr_thresh; weight = corr[i,j].
+
+    Require: candidate_ids has ≥ 2 elements; docs[i]["tokens"] must be present.
+    Guarantee: returns nx.Graph with node set = set(candidate_ids).
+               If no edges form (all correlations below threshold), returns graph with nodes only.
+    """
+    n = len(candidate_ids)
+    if n < 2:
+        G = nx.Graph()
+        G.add_nodes_from(candidate_ids)
+        return G
+
+    cand_texts = [docs[i]["tokens"] for i in candidate_ids]
+    bm25 = BM25Okapi(cand_texts)
+
+    # BM25 score matrix: row i = scores when doc i is the query
+    S = np.zeros((n, n), dtype=float)
+    for i in range(n):
+        S[i] = bm25.get_scores(cand_texts[i])
+
+    G = nx.Graph()
+    G.add_nodes_from(candidate_ids)
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            if np.std(S[i]) < 1e-9 or np.std(S[j]) < 1e-9:
+                continue
+            r, _ = pearsonr(S[i], S[j])
+            if r > corr_thresh:
+                G.add_edge(candidate_ids[i], candidate_ids[j], weight=float(r))
+
+    return G
+
+
+def community_density(G: nx.Graph, community: set) -> float:
+    """
+    Mean intra-community edge weight for a given community set.
+    Returns 0.0 for singleton communities.
+    """
+    edges = [(u, v, d["weight"]) for u, v, d in G.edges(data=True)
+             if u in community and v in community]
+    return float(np.mean([w for _, _, w in edges])) if edges else 0.0
+
+
+def build_ae_graph(
+    candidate_ids: list[int],
+    docs: list[dict],
+    ae: MultiViewProjector,
+    proxy_tfidf: TfidfVectorizer,
+    cv: ClosedVocab,
+    ae_thresh: float = AE_THRESH,
+) -> nx.Graph:
+    """
+    Build similarity graph on multi-view AE (TruncatedSVD) bottleneck z-space.
+
+    Projects each candidate into the shared z_dim latent space via ae.transform(),
+    then adds an edge between any two candidates whose cosine similarity > ae_thresh.
+    Because z vectors are L2-normalised, cosine similarity = dot product.
+
+    This is the community-detection equivalent of using the bottleneck z as the
+    retrieval representation — replacing the per-view BM25-correlation / Jaccard graphs
+    with a single graph over the multi-view compressed representation.
+
+    Require: ae.fit() already called; candidate_ids ≥ 2.
+    Guarantee: nx.Graph with node set = set(candidate_ids); nodes-only if no cosine
+               similarities exceed ae_thresh.
+    """
+    G = nx.Graph()
+    G.add_nodes_from(candidate_ids)
+    if len(candidate_ids) < 2:
+        return G
+
+    Z = ae.transform(candidate_ids, docs, proxy_tfidf, cv)  # (n, z_dim) L2-normed
+    sim = Z @ Z.T  # cosine similarity matrix (n × n)
+    n = len(candidate_ids)
+    for i in range(n):
+        for j in range(i + 1, n):
+            s = float(sim[i, j])
+            if s > ae_thresh:
+                G.add_edge(candidate_ids[i], candidate_ids[j], weight=s)
+    return G
 
 
 # ── Reciprocal Rank Fusion ────────────────────────────────────────────────────
@@ -359,71 +612,126 @@ def rrf_fuse(rank_lists: list[list[int]], rrf_k: int = 60) -> list[int]:
     return sorted(scores.keys(), key=lambda d: -scores[d])
 
 
-# ── proxy BM25 + Louvain reranker ─────────────────────────────────────────────
 
-def proxy_louvain_rerank(
+# ── community-detection rerankers ─────────────────────────────────────────────
+
+def _cluster_then_graph(
     dense_top50: list[int],
     docs: list[dict],
     proxy_tfidf: TfidfVectorizer,
-    n_clusters: int = 5,
-) -> list[int]:
+    graph_builder=None,
+) -> tuple[nx.Graph, list[list[int]]]:
     """
-    Project dense candidates into proxy TF-IDF space, k-means cluster,
-    pairwise BM25 within each cluster, Louvain community detection,
-    rerank by intra-community cohesion score.
+    Common first stage for all proxy rerankers:
+      1. Project dense_top50 into TF-IDF wordpiece space.
+      2. k-means cluster.
+      3. Build similarity graph per cluster using graph_builder.
+         graph_builder(member_ids, docs) → nx.Graph
 
-    Require:
-      dense_top50 — corpus doc indices (at most 50)
-      proxy_tfidf — fitted on 2000-para CDF-diff sample
-
-    Guarantee:
-      Returns top-K doc indices; falls back to dense order if no graph edges form.
+    Returns (G, cluster_member_lists).
     """
+    if graph_builder is None:
+        graph_builder = build_bm25_graph
+
     if len(dense_top50) <= 1:
-        return dense_top50[:K]
+        G = nx.Graph()
+        G.add_nodes_from(dense_top50)
+        return G, [dense_top50]
 
-    cand_texts = [docs[i]["text"] for i in dense_top50]
-    vecs = proxy_tfidf.transform(cand_texts)
-
-    n_c = min(n_clusters, len(dense_top50))
+    vecs = proxy_tfidf.transform([docs[i]["text"] for i in dense_top50])
+    n_c = min(N_CLUSTERS, len(dense_top50))
     labels = KMeans(n_clusters=n_c, n_init=3, random_state=42).fit_predict(vecs)
 
     G = nx.Graph()
     G.add_nodes_from(dense_top50)
-
+    clusters = []
     for c_id in range(n_c):
         members = [dense_top50[j] for j, lbl in enumerate(labels) if lbl == c_id]
+        clusters.append(members)
         if len(members) < 2:
             continue
-        bm25 = BM25Okapi([docs[i]["tokens"] for i in members])
-        for qi, qid in enumerate(members):
-            scores = bm25.get_scores(docs[qid]["tokens"])
-            for di, did in enumerate(members):
-                if di == qi:
-                    continue
-                w = float(scores[di])
-                if w > 0.5:
-                    if G.has_edge(qid, did):
-                        G[qid][did]["weight"] = max(G[qid][did]["weight"], w)
-                    else:
-                        G.add_edge(qid, did, weight=w)
+        subG = graph_builder(members, docs)
+        for u, v, d in subG.edges(data=True):
+            if G.has_edge(u, v):
+                G[u][v]["weight"] = max(G[u][v]["weight"], d["weight"])
+            else:
+                G.add_edge(u, v, weight=d["weight"])
 
+    return G, clusters
+
+
+def _community_rerank_louvain(G: nx.Graph, dense_top50: list[int]) -> tuple[list[int], float]:
     if G.number_of_edges() == 0:
-        return dense_top50[:K]
-
+        return dense_top50[:K], 0.0
     communities = nx.community.louvain_communities(G, weight="weight", seed=42)
-    node_to_comm = {node: cid for cid, comm in enumerate(communities) for node in comm}
-
+    node_to_comm = {n: cid for cid, comm in enumerate(communities) for n in comm}
+    comm_sets = [set(c) for c in communities]
     cohesion: dict[int, float] = defaultdict(float)
     for u, v, data in G.edges(data=True):
         if node_to_comm.get(u) == node_to_comm.get(v):
             cohesion[u] += data["weight"]
             cohesion[v] += data["weight"]
+    mean_dens = float(np.mean([community_density(G, cs) for cs in comm_sets if len(cs) > 1]) or 0.0)
+    ranked = sorted(dense_top50, key=lambda d: (-cohesion.get(d, 0.0), dense_top50.index(d)))
+    return ranked[:K], mean_dens
 
-    return sorted(
-        dense_top50,
-        key=lambda d: (-cohesion.get(d, 0.0), dense_top50.index(d)),
-    )[:K]
+
+def _community_rerank_wcc(G: nx.Graph, dense_top50: list[int]) -> tuple[list[int], float]:
+    if G.number_of_edges() == 0:
+        return dense_top50[:K], 0.0
+    components = list(nx.connected_components(G))
+    node_to_comp = {n: cid for cid, comp in enumerate(components) for n in comp}
+    cohesion: dict[int, float] = defaultdict(float)
+    for u, v, data in G.edges(data=True):
+        if node_to_comp.get(u) == node_to_comp.get(v):
+            cohesion[u] += data["weight"]
+            cohesion[v] += data["weight"]
+    mean_dens = float(np.mean([community_density(G, c) for c in components if len(c) > 1]) or 0.0)
+    ranked = sorted(dense_top50, key=lambda d: (-cohesion.get(d, 0.0), dense_top50.index(d)))
+    return ranked[:K], mean_dens
+
+
+def _community_rerank_dwpc(G: nx.Graph, dense_top50: list[int]) -> tuple[list[int], float]:
+    if G.number_of_edges() == 0:
+        return dense_top50[:K], 0.0
+    degrees = dict(G.degree())
+    dwpc: dict[int, float] = defaultdict(float)
+    for u, v, data in G.edges(data=True):
+        w = data["weight"]
+        denom = math.sqrt(degrees[u] * degrees[v]) + 1e-9
+        contribution = w / denom
+        dwpc[u] += contribution
+        dwpc[v] += contribution
+    mean_dwpc = float(np.mean(list(dwpc.values()))) if dwpc else 0.0
+    ranked = sorted(dense_top50, key=lambda d: (-dwpc.get(d, 0.0), dense_top50.index(d)))
+    return ranked[:K], mean_dwpc
+
+
+def proxy_louvain_rerank(
+    dense_top50: list[int], docs: list[dict], proxy_tfidf: TfidfVectorizer,
+    graph_builder=None,
+) -> tuple[list[int], float]:
+    """k-means → graph (BM25 or Jaccard) → Louvain community → rerank."""
+    G, _ = _cluster_then_graph(dense_top50, docs, proxy_tfidf, graph_builder)
+    return _community_rerank_louvain(G, dense_top50)
+
+
+def proxy_wcc_rerank(
+    dense_top50: list[int], docs: list[dict], proxy_tfidf: TfidfVectorizer,
+    graph_builder=None,
+) -> tuple[list[int], float]:
+    """k-means → graph → WCC (connected components) → cohesion rerank."""
+    G, _ = _cluster_then_graph(dense_top50, docs, proxy_tfidf, graph_builder)
+    return _community_rerank_wcc(G, dense_top50)
+
+
+def proxy_dwpc_rerank(
+    dense_top50: list[int], docs: list[dict], proxy_tfidf: TfidfVectorizer,
+    graph_builder=None,
+) -> tuple[list[int], float]:
+    """k-means → graph → DWPC-weighted → rerank."""
+    G, _ = _cluster_then_graph(dense_top50, docs, proxy_tfidf, graph_builder)
+    return _community_rerank_dwpc(G, dense_top50)
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -434,7 +742,17 @@ def main():
 
     print("Building corpus...")
     docs = build_corpus()
-    print(f"  {len(docs):,} paragraphs across {len(set(d['category'] for d in docs))} categories")
+    n_cats = len(set(d["category"] for d in docs))
+    print(f"  {len(docs):,} paragraphs across {n_cats} categories")
+
+    # ── token length stats + PI pruning (informational) ──────────────────────
+    lengths = np.array([d["token_len"] for d in docs])
+    med = float(np.median(lengths))
+    mad = float(median_abs_deviation(lengths, scale=1.4826))
+    pi_lo, pi_hi = med - 1.96 * mad, med + 1.96 * mad
+    n_pruned = sum(1 for l in lengths if not (pi_lo <= l <= pi_hi))
+    print(f"  Token lengths — median={med:.0f}, MAD={mad:.1f}, "
+          f"95% PI=[{pi_lo:.0f}, {pi_hi:.0f}], pruned={n_pruned} ({100*n_pruned/len(docs):.1f}%)")
 
     # ── dense embeddings (nomic-embed-text, checkpointed) ────────────────────
     emb_key = f"emb_nomic_{len(docs)}"
@@ -445,41 +763,56 @@ def main():
     print("Building full-corpus BM25 index...")
     bm25_full = BM25Okapi([d["tokens"] for d in docs])
 
-    # ── proxy TF-IDF on 2000-para CDF-diff sample ────────────────────────────
-    print("Sampling 2000-para proxy corpus (CDF-diff)...")
-    sample_idx = cdf_diff_sample(docs, n_sample=2000, seed=42)
-    proxy_tfidf = TfidfVectorizer(max_features=8_000, sublinear_tf=True)
+    # ── proxy TF-IDF on PI-stratified 2k sample ──────────────────────────────
+    print(f"Sampling {N_PROXY}-para proxy corpus (PI-stratified)...")
+    sample_idx = pi_stratified_sample(docs, n_sample=N_PROXY, seed=42)
+    proxy_tfidf = TfidfVectorizer(max_features=8_000, sublinear_tf=True, analyzer="word")
     proxy_tfidf.fit([docs[i]["text"] for i in sample_idx])
     print(f"  Proxy vocab: {len(proxy_tfidf.vocabulary_):,} terms")
 
-    # ── query set ─────────────────────────────────────────────────────────────
-    print(f"Sampling {N_QUERIES}-query evaluation set (CDF-diff, seed=99)...")
-    query_idx = cdf_diff_sample(docs, n_sample=N_QUERIES, seed=99)
+    # ── query set (PI-stratified, different seed) ─────────────────────────────
+    print(f"Sampling {N_QUERIES}-query evaluation set (PI-stratified, seed=99)...")
+    query_idx = pi_stratified_sample(docs, n_sample=N_QUERIES, seed=99)
     cat_counts: dict[str, int] = defaultdict(int)
     for d in docs:
         cat_counts[d["category"]] += 1
 
     # ── evaluation loop ───────────────────────────────────────────────────────
-    systems = ["dense_only", "bm25_full", "hybrid_rrf", "proxy_louvain"]
-    llm_metrics = list(JudgeScores.model_fields.keys())  # 10 fields
-    all_metrics = llm_metrics + ["context_precision", "context_recall"]
+    METRICS = ["context_precision", "context_recall", "avg_bm25", "community_density"]
+    systems = [
+        "dense_only", "bm25_full", "hybrid_rrf",
+        "bm25_louvain", "bm25_wcc", "bm25_dwpc",
+        "jac_louvain",  "jac_wcc",  "jac_dwpc",
+        "ae_louvain",   "ae_wcc",   "ae_dwpc",
+    ]
     results: dict[str, list[dict]] = {s: [] for s in systems}
 
-    total_calls = N_QUERIES * (1 + len(systems) * 2)  # q_gen + (ans_gen + score_all) per system
-    print(f"\nEvaluating {N_QUERIES} queries × {len(systems)} systems")
-    print(f"Estimated LLM calls: ~{total_calls}  ({LLM_MODEL})\n")
+    # closed-vocabulary hash representation (built once over full corpus)
+    print("Building closed vocabulary for hash-based retrieval...")
+    cv = ClosedVocab(docs)
+    print(f"  Token vocab: {cv.V:,}  |  Char {CHAR_N}-gram vocab: {cv.C:,}")
 
+    # Jaccard graph builder bound to the ClosedVocab instance
+    jac_builder = lambda ids, docs_: build_jaccard_graph(ids, docs_, cv)
+
+    # Multi-view autoencoder: TF-IDF + token_countvec + char_bitvec → z_dim bottleneck
+    print(f"Fitting multi-view projector (TruncatedSVD z_dim={AE_DIM}) on proxy corpus...")
+    ae = MultiViewProjector(z_dim=AE_DIM)
+    ae.fit(sample_idx, docs, proxy_tfidf, cv)
+    print(f"  Explained variance: {ae.explained_variance():.3f}")
+    ae_builder = lambda ids, docs_: build_ae_graph(ids, docs_, ae, proxy_tfidf, cv)
+
+    print(f"\nEvaluating {N_QUERIES} queries × {len(systems)} systems (no LLM required)\n")
     t0 = time.time()
+
     for qi, qidx in enumerate(query_idx):
         qdoc = docs[qidx]
         qcat = qdoc["category"]
         qtoks = qdoc["tokens"]
         qemb = embeddings[qidx]
+        total_rel = cat_counts[qcat] - 1
 
-        print(f"[{qi+1:02d}/{N_QUERIES}] cat={qcat}  generating question...")
-        question = generate_question(qdoc["text"])
-
-        # retrieve top-50 dense (exclude self)
+        # dense top-50 (exclude self)
         cos = embeddings @ qemb
         cos[qidx] = -1.0
         dense50 = list(np.argsort(cos)[::-1][:DENSE_POOL])
@@ -493,50 +826,98 @@ def main():
         # hybrid RRF
         rrf_10 = rrf_fuse([dense50, bm25_10])[:K]
 
-        # proxy Louvain
-        proxy_10 = proxy_louvain_rerank(dense50, docs, proxy_tfidf)
+        # BM25-correlation community rerankers
+        bm25_lou_10, bm25_lou_dens = proxy_louvain_rerank(dense50, docs, proxy_tfidf)
+        bm25_wcc_10, bm25_wcc_dens = proxy_wcc_rerank(dense50, docs, proxy_tfidf)
+        bm25_dw_10,  bm25_dw_dens  = proxy_dwpc_rerank(dense50, docs, proxy_tfidf)
 
-        for sys_name, top10 in zip(systems, [dense10, bm25_10, rrf_10, proxy_10]):
-            retrieved_docs  = [docs[i] for i in top10]
-            retrieved_cats  = [d["category"] for d in retrieved_docs]
-            context_texts   = [d["text"] for d in retrieved_docs]
-            total_rel       = cat_counts[qcat] - 1
+        # Jaccard (dual hash) community rerankers
+        jac_lou_10, jac_lou_dens = proxy_louvain_rerank(dense50, docs, proxy_tfidf, jac_builder)
+        jac_wcc_10, jac_wcc_dens = proxy_wcc_rerank(dense50, docs, proxy_tfidf, jac_builder)
+        jac_dw_10,  jac_dw_dens  = proxy_dwpc_rerank(dense50, docs, proxy_tfidf, jac_builder)
 
-            answer = generate_answer(question, retrieved_docs)
-            scores = score_all_metrics(question, answer, context_texts)
+        # Multi-view AE bottleneck community rerankers
+        ae_lou_10,  ae_lou_dens  = proxy_louvain_rerank(dense50, docs, proxy_tfidf, ae_builder)
+        ae_wcc_10,  ae_wcc_dens  = proxy_wcc_rerank(dense50, docs, proxy_tfidf, ae_builder)
+        ae_dw_10,   ae_dw_dens   = proxy_dwpc_rerank(dense50, docs, proxy_tfidf, ae_builder)
 
-            rec = scores.model_dump()
-            rec["context_precision"] = context_precision(retrieved_cats, qcat)
-            rec["context_recall"]    = context_recall(retrieved_cats, qcat, total_rel)
+        sys_results = [
+            (dense10,      0.0),
+            (bm25_10,      0.0),
+            (rrf_10,       0.0),
+            (bm25_lou_10,  bm25_lou_dens),
+            (bm25_wcc_10,  bm25_wcc_dens),
+            (bm25_dw_10,   bm25_dw_dens),
+            (jac_lou_10,   jac_lou_dens),
+            (jac_wcc_10,   jac_wcc_dens),
+            (jac_dw_10,    jac_dw_dens),
+            (ae_lou_10,    ae_lou_dens),
+            (ae_wcc_10,    ae_wcc_dens),
+            (ae_dw_10,     ae_dw_dens),
+        ]
+
+        for sys_name, (top10, comm_dens) in zip(systems, sys_results):
+            ret_cats = [docs[i]["category"] for i in top10]
+            rec = {
+                "context_precision": context_precision(ret_cats, qcat),
+                "context_recall":    context_recall(ret_cats, qcat, total_rel),
+                "avg_bm25":          avg_bm25_score(bm25_full, qtoks, top10),
+                "community_density": comm_dens,
+            }
             results[sys_name].append(rec)
 
         elapsed = time.time() - t0
-        print(f"  done  ({elapsed:.0f}s elapsed)")
+        print(f"  [{qi+1:02d}/{N_QUERIES}] cat={qcat:<16}  elapsed={elapsed:.0f}s")
 
     # ── results table ─────────────────────────────────────────────────────────
-    col = 9
-    hdr = f"{'System':<16}" + "".join(f"{m[:col-1]:>{col}}" for m in all_metrics) + f"{'composite':>{col}}"
+    col = 12
+    hdr = f"{'System':<20}" + "".join(f"{m[:col-1]:>{col}}" for m in METRICS) + f"{'composite':>{col}}"
     print("\n" + "=" * len(hdr))
     print(hdr)
     print("-" * len(hdr))
 
-    # composite: equal weight across all 12 metrics
     composite_scores = {}
-    for sys_name in systems:
+    all_bm25 = [float(np.mean([r["avg_bm25"] for r in results[s]])) for s in systems]
+    bm25_range = max(all_bm25) - min(all_bm25) + 1e-9
+
+    # separator rows: baselines → BM25-correlation → Hash-Jaccard → Multi-view AE
+    separators = {3: "── BM25-correlation ──", 6: "── Hash-Jaccard (dual) ──", 9: "── Multi-view AE ──"}
+
+    for si, sys_name in enumerate(systems):
+        if si in separators:
+            print(f"  {separators[si]}")
         recs = results[sys_name]
-        v = {m: float(np.mean([r[m] for r in recs])) for m in all_metrics}
-        comp = float(np.mean(list(v.values())))
+        v = {m: float(np.mean([r[m] for r in recs])) for m in METRICS}
+        v_norm_bm25 = (v["avg_bm25"] - min(all_bm25)) / bm25_range
+        comp = float(np.mean([v["context_precision"], v["context_recall"], v_norm_bm25]))
         composite_scores[sys_name] = comp
-        row = f"{sys_name:<16}" + "".join(f"{v[m]:>{col}.3f}" for m in all_metrics) + f"{comp:>{col}.3f}"
+        row = (f"{sys_name:<20}"
+               + "".join(f"{v[m]:>{col}.4f}" for m in METRICS)
+               + f"{comp:>{col}.4f}")
         print(row)
 
     print("=" * len(hdr))
     best = max(composite_scores, key=composite_scores.__getitem__)
     print(f"\nBest composite: {best}  ({composite_scores[best]:.4f})")
+
+    # delta table: Jaccard vs BM25 vs AE per community method
+    print("\n── Δ composite per community method ──")
+    print(f"  {'method':<8}  {'jac−bm25':>10}  {'ae−bm25':>10}  {'ae−jac':>10}")
+    for method in ("louvain", "wcc", "dwpc"):
+        bm25_s = f"bm25_{method}"
+        jac_s  = f"jac_{method}"
+        ae_s   = f"ae_{method}"
+        d_jb = composite_scores[jac_s] - composite_scores[bm25_s]
+        d_ab = composite_scores[ae_s]  - composite_scores[bm25_s]
+        d_aj = composite_scores[ae_s]  - composite_scores[jac_s]
+        print(f"  {method:<8}  {d_jb:>+10.4f}  {d_ab:>+10.4f}  {d_aj:>+10.4f}")
+
     print()
-    print(f"LLM judge : {LLM_MODEL}")
-    print(f"Embeddings: {EMB_MODEL}")
-    print(f"Queries   : {N_QUERIES}  |  K={K}  |  proxy_pool={DENSE_POOL}")
+    print(f"Embeddings: {EMB_MODEL}  |  K={K}  |  pool={DENSE_POOL}  |  clusters={N_CLUSTERS}")
+    print(f"corr_thresh={CORR_THRESH}  jac_thresh={JAC_THRESH}  ae_thresh={AE_THRESH}  "
+          f"ae_dim={AE_DIM}  char_n={CHAR_N}  proxy_n={N_PROXY}  queries={N_QUERIES}")
+    print(f"Token vocab={cv.V:,}  Char-ngram vocab={cv.C:,}  "
+          f"AE explained_var={ae.explained_variance():.3f}")
 
 
 if __name__ == "__main__":
