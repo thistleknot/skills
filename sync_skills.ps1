@@ -209,16 +209,12 @@ function Invoke-LlmMerge($relPath, $baseContent, $masterContent, $mirrorContent)
         }
 
         # All 5 attempts exhausted — write conflict artifact and report to user
-        Write-Host "  [MERGE ERROR] $relPath — all $maxAttempts attempts failed. Manual merge required." -ForegroundColor Red
+        Write-Host "  [MERGE ERROR] $relPath -- all $maxAttempts attempts failed. Manual merge required." -ForegroundColor Red
         $diffOut = git -c core.autocrlf=false diff --no-index --unified=3 -- $tmpBase $tmpMirror 2>&1 |
                    Where-Object { $_ -notmatch '^warning:' } | Out-String
         $conflictFile = (Join-Path $PSScriptRoot $relPath) + '.conflict'
-        @"
-# MANUAL MERGE REQUIRED: $relPath
-# Apply the mirror diff below onto the master copy, then delete this file.
-#
-$diffOut
-"@ | Set-Content $conflictFile -Encoding UTF8
+        $conflictContent = "# MANUAL MERGE REQUIRED: $relPath`n# Apply the mirror diff below onto the master copy, then delete this file.`n#`n$diffOut"
+        Set-Content $conflictFile $conflictContent -Encoding UTF8
         Write-Host "  Conflict diff written to: $conflictFile" -ForegroundColor Red
         return $null
 
@@ -474,7 +470,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
                             Write-Host "  [WARN] MERGE-CONFLICT marker present - flag for human review before commit." -ForegroundColor Yellow
                         }
                     } else {
-                        Write-Host "  $caseLabel Skipped : $($item.Rel) (manual merge required — see .conflict file)" -ForegroundColor Red
+                        Write-Host "  $caseLabel Skipped : $($item.Rel) (manual merge required -- see .conflict file)" -ForegroundColor Red
                     }
                 }
                 continue
@@ -616,16 +612,16 @@ Write-Host "        Gemma   : agents\orchestrator.gemma.md -> orchestrator.gemma
 Write-Header "Remote: $RemoteUser@${RemoteHost}:$RemotePath"
 
 Write-Host @"
-  Option A — WinSCP CLI (if winscp.com is on PATH):
+  Option A -- WinSCP CLI (if winscp.com is on PATH):
     winscp.com /command ``
       "open sftp://$RemoteUser@$RemoteHost" ``
       "synchronize remote -filemask=""|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*""  ""$Master"" $RemotePath" ``
       "exit"
 
-  Option B — rsync (via WSL or Git Bash):
+  Option B -- rsync (via WSL or Git Bash):
     rsync -avz --delete --exclude='.*' "$($Master.Replace('\','/'))" $RemoteUser@${RemoteHost}:$RemotePath
 
-  Option C — Manual WinSCP:
+  Option C -- Manual WinSCP:
     Host    : $RemoteHost
     User    : $RemoteUser
     Remote  : $RemotePath
