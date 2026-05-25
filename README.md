@@ -97,7 +97,9 @@ skills/
 │   ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
 │   ├── model-size-reduction         # checkpoint slimming for HF models: dtype cast, layer drop, LoRA extraction, DARE/TIES/DELLA; architecture-agnostic state_dict path
 │   ├── generalization-theory        # signal-vs-noise training-dynamics lens via eNTK; diagnose memorization, grokking, and noisy-preference fine-tunes
-│   └── representation-pipeline      # representation design: raw signal → embedding space
+│   ├── representation-pipeline      # representation design: raw signal → embedding space
+│   ├── bm25-corpus-sampling         # representative corpus sampling for BM25; log-normal→MAD→Yeo-Johnson→CDF-diff quota; cascaded and proxy-Louvain rerankers
+│   └── rag-eval                     # single-pass 10-metric RAG judge: qwen3.5:4b + Pydantic RAGEvalResult + macro_mean; one prompt per answer
 │
 ├── artifacts/                       # masterpiece outputs and information design
 │   ├── documentation                # choose canonical doc vs changelog vs timestamped fixes-applied artifact
