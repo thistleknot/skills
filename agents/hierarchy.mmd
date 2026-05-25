@@ -14,11 +14,10 @@ flowchart TD
     %% ── Primary agents ────────────────────────────────────────────
     ORCH["orchestrator\ngemma-4-26b / orchestrator\n-----------------\nRoutes - never codes\nEmits heartbeat/status"]
 
-    ORACLE["oracle / planner\nqwen3.6-35b\nSpec planning"]
-    DESIGNER["designer\nqwen3.6-35b\nSigs + stubs"]
+    ORACLE["oracle / planner\nqwen3.6-35b\n-----------------\nSpec + sigs + stubs\n(absorbed designer)"]
     FIXER["fixer / coder\nqwen3.5-9b\n------------------\nSpec translation only\nBreaks -> packets\nDispatches to aider"]
     LIBRARIAN["librarian\ngemini-2.5-flash-lite\nWeb + docs search"]
-    OBSERVER["observer / visionary\nqwen-vl-30b\nScreenshots"]
+    OBSERVER["observer\nqwen-vl-30b\nDocs + screenshots + clips"]
 
     %% ── Subagents ─────────────────────────────────────────────────
     PI["pi\nqwen3.5-9b\n------------------\nSMOKE TESTS\nInner harness loop\nRuns scripts - returns output"]
@@ -37,8 +36,7 @@ flowchart TD
     OC --> ORCH
 
     %% ── orchestrator → primaries ──────────────────────────────────
-    ORCH -->|"plan / spec"| ORACLE
-    ORCH -->|"design needed"| DESIGNER
+    ORCH -->|"plan / spec / sigs"| ORACLE
     ORCH -->|"multi-file /\nambiguous"| FIXER
     ORCH -->|"web research"| LIBRARIAN
     ORCH -->|"visual / screenshot"| OBSERVER
@@ -50,6 +48,10 @@ flowchart TD
     ORCH -->|"pure file ops"| HANDYMAN
     ORCH -->|"trace / test fail"| DEBUGGER
     ORCH -->|"compress context"| SUMMARIZER
+
+    %% ── reflection loop (generate → critique → fix) ──────────────
+    AIDER -->|"run fails /\ntests fail"| DEBUGGER
+    DEBUGGER -->|"bug report"| ORCH
 
     %% ── fixer → aider (packet chain) ─────────────────────────────
     FIXER -->|"bounded edit packet\n(1 file · 1 concern)"| AIDER
@@ -77,7 +79,7 @@ flowchart TD
     class HUMAN,RAG entry
     class HB watchdog
     class OC shell
-    class ORCH,ORACLE,DESIGNER,FIXER,LIBRARIAN,OBSERVER primary
+    class ORCH,ORACLE,FIXER,LIBRARIAN,OBSERVER primary
     class PI,HANDYMAN,PATCHER,DEBUGGER,SUMMARIZER subagent
     class AIDER leaf
     class DB db
