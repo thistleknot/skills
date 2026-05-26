@@ -2,74 +2,96 @@
 title: OpenCode Agent Hierarchy
 ---
 flowchart TD
-    %% ── Entry Points ──────────────────────────────────────────────
-    HUMAN(["Master Control Plane\nHuman / Copilot CLI"])
-    RAG(["run_aider.ps1 -FromGraph"])
-    HB(["heartbeat.ps1\n(watchdog: seed/profile restart)"])
+    %% ── Entry cluster ────────────────────────────────────────────
+    subgraph ENTRIES ["Entry Points"]
+        direction LR
+        HUMAN(["Human / Copilot CLI"])
+        RAG(["run_aider.ps1\n-FromGraph"])
+        HB(["heartbeat.ps1\n(watchdog)"])
+    end
     DB[(".task_graph.db")]
 
-    %% ── opencode shell ────────────────────────────────────────────
-    OC["opencode run\n(oh-my-opencode-slim)"]
+    %% ── opencode shell ───────────────────────────────────────────
+    OC["opencode\n(oh-my-opencode-slim)"]
 
-    %% ── Primary agents ────────────────────────────────────────────
-    ORCH["orchestrator\ngemma-4-26b / orchestrator\n-----------------\nRoutes - never codes\nEmits heartbeat/status"]
+    %% ── orchestrator ─────────────────────────────────────────────
+    ORCH["orchestrator\ngemma-4-26b / orchestrator\nRoutes — never codes"]
 
-    ORACLE["oracle / planner\nqwen3.6-35b\n-----------------\nSpec + sigs + stubs\n(absorbed designer)"]
-    FIXER["fixer / coder\nqwen3.5-9b\n------------------\nSpec translation only\nBreaks -> packets\nDispatches to aider"]
-    RESEARCHER["researcher\ndeepseek-v4-flash\nSnippet-informed multi-hop\nweb+file+docs MCPs\n(absorbed librarian)"]
+    %% ── Planning lane (left) ─────────────────────────────────────
+    subgraph PLAN ["Planning Lane"]
+        direction TB
+        ORACLE["oracle / planner\nqwen3.6-35b\nSpec + sigs + stubs"]
+        THINKER["thinker\nqwen3.6-35b\nFirst-principles fallback\n(stuck 2+ attempts)"]
+    end
 
-    %% ── Subagents ─────────────────────────────────────────────────
-    PI["pi\nqwen3.5-9b\n------------------\nSMOKE TESTS\nInner harness loop\nRuns scripts - returns output"]
-    AIDER["aider\nqwen3.5-9b\n------------------\nLEAF EDITOR\n2-pass: Reason -> Edit\n1 packet - 1 file\nsubtask = DENY"]
-    HANDYMAN["handyman\ngranite-4.1-8b\nFile ops - mechanical"]
-    PATCHER["patcher\ngemma-4-26b\nExact hotfix\nknown-file only"]
-    DEBUGGER["debugger\nqwen3.6-35b\nStack traces - QA"]
-    SUMMARIZER["summarizer\nmimo-v2-flash\nSPO triplet extraction\n(map-reduce sink)"]
+    %% ── Evidence lane (right) ────────────────────────────────────
+    subgraph EVIDENCE ["Evidence Lane"]
+        direction TB
+        RESEARCHER["researcher\ndeepseek-v4-flash\n3-hop web+docs+files\n(absorbed librarian)"]
+        SUMMARIZER["summarizer\nmimo-v2-flash\nSPO triplet extraction"]
+        OBSERVER["observer\nqwen3-vl-30b\nVisual inspection / audit"]
+    end
 
-    %% ── Entry → shell ─────────────────────────────────────────────
+    %% ── Execution cluster (bottom) ───────────────────────────────
+    subgraph EXEC ["Execution Layer"]
+        direction LR
+        FIXER["fixer / coder\nqwen3.5-9b\nMulti-file packets → aider"]
+        AIDER["aider\nqwen3.5-9b\nLeaf editor\n(1 packet · 1 file)"]
+        PI["pi\nqwen3.5-9b\nInner harness loop"]
+        SCOUT["scout\nqwen3.5-9b\nCodebase search\nContract output only"]
+        HANDYMAN["handyman\ngranite-4.1-8b\nMechanical file ops"]
+        PATCHER["patcher\ngemma-4-26b\nExact hotfix / known-file"]
+        DEBUGGER["debugger\nqwen3.6-35b\nStack traces / QA"]
+    end
+
+    %% ── Entry → shell ────────────────────────────────────────────
     HUMAN -->|"task prompt"| OC
     RAG -->|"AIDER DIRECT: [task_id=X]"| OC
-    HB -->|"stall -> kill+relaunch"| OC
+    HB -->|"stall → kill+relaunch"| OC
 
-    %% ── shell → orchestrator ──────────────────────────────────────
+    %% ── shell → orchestrator ─────────────────────────────────────
     OC --> ORCH
 
-    %% ── orchestrator → primaries ──────────────────────────────────
+    %% ── orchestrator → planning lane ─────────────────────────────
     ORCH -->|"plan / spec / sigs"| ORACLE
-    ORCH -->|"multi-file /\nambiguous"| FIXER
-    ORCH -->|"evidence / web / docs"| RESEARCHER
+    ORCH -->|"stuck 2+ attempts"| THINKER
+    ORACLE -->|"spec ready"| ORCH
+    THINKER -->|"root constraint"| ORCH
 
-    %% ── researcher → summarizer (map-reduce pair) ─────────────────
-    RESEARCHER -->|"raw evidence\n→ compress"| SUMMARIZER
+    %% ── orchestrator → evidence lane ────────────────────────────
+    ORCH -->|"evidence / web / docs"| RESEARCHER
+    ORCH -->|"visual inspect"| OBSERVER
+    RESEARCHER -->|"raw evidence"| SUMMARIZER
     SUMMARIZER -->|"SPO triplets"| ORCH
 
-    %% ── orchestrator → subagents (direct shortcuts) ───────────────
-    ORCH -->|"AIDER DIRECT:\nor file+change concrete"| AIDER
+    %% ── orchestrator → execution layer ──────────────────────────
+    ORCH -->|"multi-file / ambiguous"| FIXER
+    ORCH -->|"AIDER DIRECT"| AIDER
     ORCH -->|"smoke test"| PI
-    ORCH -->|"known-file hotfix"| PATCHER
+    ORCH -->|"locate files/symbols"| SCOUT
     ORCH -->|"pure file ops"| HANDYMAN
+    ORCH -->|"known-file hotfix"| PATCHER
     ORCH -->|"trace / test fail"| DEBUGGER
-    ORCH -->|"compress context"| SUMMARIZER
 
-    %% ── reflection loop (generate → critique → fix) ──────────────
-    AIDER -->|"run fails /\ntests fail"| DEBUGGER
+    %% ── reflection loop ─────────────────────────────────────────
+    AIDER -->|"run fails / tests fail"| DEBUGGER
     DEBUGGER -->|"bug report"| ORCH
 
-    %% ── fixer → aider (packet chain) ─────────────────────────────
+    %% ── fixer → aider ───────────────────────────────────────────
     FIXER -->|"bounded edit packet\n(1 file · 1 concern)"| AIDER
 
-    %% ── pi internal routing ───────────────────────────────────────
+    %% ── pi internal routing ─────────────────────────────────────
     PI -->|"edit packet"| AIDER
     PI -->|"file ops"| HANDYMAN
     PI -->|"failure / trace"| DEBUGGER
 
-    %% ── task graph wiring ─────────────────────────────────────────
-    ORCH <-->|"heartbeat\nstatus"| DB
+    %% ── task graph wiring ────────────────────────────────────────
+    ORCH <-->|"heartbeat / status"| DB
     FIXER <-->|"status / result"| DB
-    AIDER <-->|"in_progress\ndone / blocked"| DB
+    AIDER <-->|"in_progress / done"| DB
     RAG -->|"pull pending\nmark in_progress"| DB
 
-    %% ── styles ────────────────────────────────────────────────────
+    %% ── styles ───────────────────────────────────────────────────
     classDef entry    fill:#1a1a2e,stroke:#4fc3f7,color:#e0e0e0,rx:8
     classDef shell    fill:#0d2137,stroke:#4fc3f7,color:#e0e0e0,rx:4
     classDef primary  fill:#1b2a1b,stroke:#81c784,color:#e0e0e0,rx:4
@@ -81,7 +103,8 @@ flowchart TD
     class HUMAN,RAG entry
     class HB watchdog
     class OC shell
-    class ORCH,ORACLE,FIXER,OBSERVER,RESEARCHER primary
-    class PI,HANDYMAN,PATCHER,DEBUGGER,SUMMARIZER subagent
+    class ORCH,ORACLE,FIXER,RESEARCHER primary
+    class THINKER,OBSERVER primary
+    class PI,HANDYMAN,PATCHER,DEBUGGER,SUMMARIZER,SCOUT subagent
     class AIDER leaf
     class DB db
