@@ -16,9 +16,7 @@ flowchart TD
 
     ORACLE["oracle / planner\nqwen3.6-35b\n-----------------\nSpec + sigs + stubs\n(absorbed designer)"]
     FIXER["fixer / coder\nqwen3.5-9b\n------------------\nSpec translation only\nBreaks -> packets\nDispatches to aider"]
-    LIBRARIAN["librarian\ngemini-2.5-flash-lite\nWeb + docs search"]
-    OBSERVER["observer\nqwen-vl-30b\nDocs + screenshots + clips"]
-    RESEARCHER["researcher\ndeepseek-v4-flash\nMulti-hop evidence\ngathering (raw)"]
+    RESEARCHER["researcher\ndeepseek-v4-flash\nSnippet-informed multi-hop\nweb+file+docs MCPs\n(absorbed librarian)"]
 
     %% ── Subagents ─────────────────────────────────────────────────
     PI["pi\nqwen3.5-9b\n------------------\nSMOKE TESTS\nInner harness loop\nRuns scripts - returns output"]
@@ -39,9 +37,7 @@ flowchart TD
     %% ── orchestrator → primaries ──────────────────────────────────
     ORCH -->|"plan / spec / sigs"| ORACLE
     ORCH -->|"multi-file /\nambiguous"| FIXER
-    ORCH -->|"web research"| LIBRARIAN
-    ORCH -->|"visual / screenshot"| OBSERVER
-    ORCH -->|"evidence gathering"| RESEARCHER
+    ORCH -->|"evidence / web / docs"| RESEARCHER
 
     %% ── researcher → summarizer (map-reduce pair) ─────────────────
     RESEARCHER -->|"raw evidence\n→ compress"| SUMMARIZER
@@ -85,7 +81,7 @@ flowchart TD
     class HUMAN,RAG entry
     class HB watchdog
     class OC shell
-    class ORCH,ORACLE,FIXER,LIBRARIAN,OBSERVER,RESEARCHER primary
+    class ORCH,ORACLE,FIXER,OBSERVER,RESEARCHER primary
     class PI,HANDYMAN,PATCHER,DEBUGGER,SUMMARIZER subagent
     class AIDER leaf
     class DB db

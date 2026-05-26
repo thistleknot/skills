@@ -10,7 +10,7 @@
   // orchestrator   | 0.25  | 0.543 | 0.942 | 0.767 | 0.751 | 0.188 | 0.200 | 0.250 | 0.300 | 0.250
   // oracle/planner  | 0.35  | 0.886 | 0.942 | 0.000 | 0.609 | 0.213 | 0.150 | 0.350 | 0.450 | 0.340  (merged designer 0.10 → oracle)
   // fixer          | 0.22  | 0.429 | 0.942 | 0.967 | 0.779 | 0.171 | 0.150 | 0.210 | 0.300 | 0.216
-  // librarian      | 0.06  | 0.286 | 1.000 | 0.767 | 0.684 | 0.041 | 0.030 | 0.060 | 0.100 | 0.062
+  // researcher     | 0.06  | 0.543 | 1.000 | 0.767 | 0.770 | 0.046 | 0.030 | 0.060 | 0.100 | 0.062  (absorbed librarian; websearch+context7+grep_app)
   // observer       | 0.03  | 0.114 | 0.942 | 0.433 | 0.497 | 0.015 | 0.010 | 0.030 | 0.060 | 0.032
   // handyman       | 0.14  | 0.000 | 0.942 | 1.000 | 0.647 | 0.091 | 0.080 | 0.140 | 0.200 | 0.140
   // debugger       | 0.08  | 0.000 | 0.000 | 0.700 | 0.233 | 0.019 | 0.040 | 0.080 | 0.140 | 0.084  <- ctx cliff (198K)
@@ -29,16 +29,8 @@
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
       // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.22 | wgtd:0.171
       // Map-reduce pair with @summarizer: researcher gathers raw evidence, summarizer compresses to SPO triplets
-      "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": [] },
-      // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
-      "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
-      // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
-      // vl-32b is cheaper than vl-8b on OR; no cost rationale to split; single agent covers docs + clips + tagging
-      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "observer", "skills": [], "mcps": [] },
-      // Leaf editor: bounded single-file codegen, no subtask routing
-      "aider":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "io", "skills": [], "mcps": [] }
-    },
-    "openrouter-gemma-orchestrator": {
+      // Absorbs librarian: snippet-informed multi-hop web+file search (websearch, context7, grep_app)
+      "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
       "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "orchestrator", "skills": ["*"], "mcps": ["*", "!context7"] },
       // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.35 | wgtd:0.213 (absorbs designer)
@@ -48,9 +40,8 @@
       "fixer":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "heavy", "displayName": "coder", "skills": [], "mcps": [] },
       // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.22 | wgtd:0.171
       // Map-reduce pair with @summarizer: researcher gathers raw evidence, summarizer compresses to SPO triplets
-      "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": [] },
-      // AA:~22 | ctx:1049K | in:$0.10 out:$0.40 | blend(8:1):$0.13 | ELO:green | usage:0.06 | wgtd:0.041
-      "librarian":    { "model": "openrouter/google/gemini-2.5-flash-lite", "variant": "extraction", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
+      // Absorbs librarian: snippet-informed multi-hop web+file search (websearch, context7, grep_app)
+      "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
       // vl-32b is cheaper than vl-8b on OR; no cost rationale to split; single agent covers docs + clips + tagging
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "observer", "skills": [], "mcps": [] },
@@ -109,11 +100,12 @@
       "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets from researcher output\n- Agentic design pattern: researcher→summarizer map-reduce; researcher gathers raw evidence, summarizer compresses it to structured triplets before returning to orchestrator\n- Delegate when: researcher has returned raw evidence that needs structured compression, or any raw text needs triplet extraction\n- Don't delegate when: general summarization needed (summarizer is triplet extraction only, not prose compression)"
     },
     "researcher": {
-      // DeepSeek V4 Flash: strong reasoning at low cost; preferred for multi-hop evidence gathering
+      // DeepSeek V4 Flash: strong reasoning at low cost; snippet-informed multi-hop web+file search
+      // Absorbs librarian: now holds websearch, context7, grep_app MCPs
       "model": "openrouter/deepseek/deepseek-v4-flash",
       "variant": "lean",
-      "prompt": "You are Researcher. Evidence Gathering: multi-hop search, document retrieval, and web research. Collect raw evidence only — do not compress or synthesize.\n\nRules:\n- Accept a research objective from orchestrator.\n- Search broadly across available sources (files, web, docs) using multi-hop traversal.\n- Return raw evidence: source text, file references, URL citations. Do not paraphrase or summarize.\n- Emit a structured evidence block: {sources: [{content, origin, citation}]}.\n- Do not interpret or conclude. That is @summarizer's job.\n- After gathering, hand off the raw evidence block to @summarizer for SPO triplet compression.",
-      "orchestratorPrompt": "@researcher\n- Role: Evidence Gathering — multi-hop search and raw source collection\n- Agentic design pattern: researcher→summarizer map-reduce; researcher collects raw evidence, then always hands off to @summarizer for structured compression\n- Delegate when: need to gather evidence from files, web, or docs before synthesis\n- Do not delegate when: information is already in context — go directly to @summarizer or @oracle"
+      "prompt": "You are Researcher. Evidence Gathering: snippet-informed multi-hop search across web, docs, and files. Collect raw evidence only — do not compress or synthesize.\n\nRules:\n- Accept a research objective from orchestrator.\n- Execute multi-hop search: issue query 1, extract top-k snippets, use those snippets as query expansion seeds for query 2, then issue a synthesis query 3 that combines evidence from hops 1 and 2.\n- Use available MCPs (websearch for live web, context7 for library docs, grep_app for codebase).\n- Return raw evidence: source text, file references, URL citations. Do not paraphrase or summarize.\n- Emit a structured evidence block: {sources: [{content, origin, citation}]}.\n- Do not interpret or conclude. That is @summarizer's job.\n- After gathering, hand off the raw evidence block to @summarizer for SPO triplet compression.",
+      "orchestratorPrompt": "@researcher\n- Role: Evidence Gathering — snippet-informed multi-hop search (web + docs + files); absorbed former @librarian role\n- Agentic design pattern: researcher→summarizer map-reduce; researcher collects raw evidence across 3 hops, then always hands off to @summarizer for structured compression\n- MCPs available: websearch (live web), context7 (library docs), grep_app (codebase)\n- Delegate when: need to gather evidence from files, web, or docs before synthesis\n- Do not delegate when: information is already in context — go directly to @summarizer or @oracle\n- Do not use @librarian — it no longer exists; all web/doc search routes here"
     },
     "thinker": {
       // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.09 | wgtd:0.080
