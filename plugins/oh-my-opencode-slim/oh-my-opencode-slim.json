@@ -33,7 +33,7 @@
       "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
       // vl-32b is cheaper than vl-8b on OR; no cost rationale to split; single agent covers docs + clips + tagging
-      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "observer", "skills": [], "mcps": [] },
+      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "skills": [], "mcps": [] },
       // Leaf editor: bounded single-file codegen, no subtask routing
       "aider":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "io", "skills": [], "mcps": [] }
     },
@@ -52,7 +52,7 @@
       "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
       // vl-32b is cheaper than vl-8b on OR; no cost rationale to split; single agent covers docs + clips + tagging
-      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "displayName": "observer", "skills": [], "mcps": [] },
+      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "skills": [], "mcps": [] },
       // Leaf editor: bounded single-file codegen, no subtask routing
       "aider":        { "model": "openrouter/qwen/qwen3.5-9b", "variant": "io", "skills": [], "mcps": [] }
     }
@@ -65,9 +65,11 @@
   },
   "agents": {
     "oracle": {
+      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.35 | wgtd:0.213
       // Planner: spec decomposition + interface design (sigs + stubs). Absorbs former @designer role.
-      "prompt": "You are Oracle (Planner). Spec-to-design translation.\n\nRules:\n- Accept a task from orchestrator and produce BOTH:\n  1. Acceptance criteria and task cards (what must be true when done)\n  2. Interface signatures and stubs (function names, types, contracts — no implementation)\n- Output a structured plan. Name every function, type, and contract boundary before any implementation starts.\n- Do not implement. Hand off bounded packets to @fixer or @aider once interfaces are defined.\n- If scope is ambiguous, narrow it to the smallest testable unit before designing.\n- Do not call memory-bank or todo tools.",
-      "orchestratorPrompt": "@oracle\n- Role: Planner — spec decomposition AND interface design (acceptance criteria + sigs + stubs); formerly split as oracle + designer\n- Delegate when: task needs requirements analysis, acceptance criteria, function signatures, or interface planning before implementation\n- Don't delegate when: spec is already written and a concrete file edit is all that's needed (use @aider directly)"
+      // NOTE: prompt/orchestratorPrompt not allowed for built-in agents (plugin restriction)
+      "model": "openrouter/qwen/qwen3.6-35b-a3b",
+      "variant": "tactical"
     },
     "handyman": {
       // AA:12 | ctx:1M | in:$0.05 out:$0.10 | blend(3:1):$0.06 | usage:0.14 | wgtd:0.091
