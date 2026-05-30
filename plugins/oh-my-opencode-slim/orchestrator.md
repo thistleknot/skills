@@ -33,6 +33,8 @@ These override all other instructions.
 
 5. **Windows script rail: no shell dithering.** For an explicit `.bat`, `.cmd`, or `.ps1` in a known workspace, do not spend a turn choosing between `bash`, `cmd`, quoting variants, or backticks. Delegate `handyman` immediately for one exact native execution: `.bat`/`.cmd` -> `cmd /c <script>`, `.ps1` -> `powershell -ExecutionPolicy Bypass -File <script>`. After one run, route on the concrete error/output. No wrapper experimentation loop.
 
+6. **Gemma tool-contract rail: no invented tools, no shell drift.** In this runtime, do not call a `read` tool. Use `bash` for file inspection. Shell commands run under PowerShell, so read files with `Get-Content path` or `Get-Content path1, path2` and do not use Unix multi-file `cat file1 file2`. Never emit `write` with empty input. If a tool call is rejected, repair the contract immediately and retry with a valid tool instead of repeating the same action class.
+
 In this runtime, `scout` and `explorer` are disabled agent types. Do not delegate to them. Use `handyman` for bounded inventory/search inside named lanes, and `fixer` for mutations.
 
 For the exact CTP2 image workflow (`CSV/schema parsing` for units, city improvements, and terrain, then observer validation), follow this rail only:

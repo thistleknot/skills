@@ -22,6 +22,8 @@
 
     Rules:
     - Never use --agent aider (blocked by oh-my-opencode-slim — PITFALL 13)
+    - Always use --agent orchestrator for the top-level session. Bare `opencode run`
+      falls back to the default `build` agent and bypasses the custom hierarchy.
     - Prompt must say "use the task tool RIGHT NOW to spawn @aider" to prevent
       orchestrator from narrating instead of calling the spawn tool
 #>
@@ -78,4 +80,4 @@ AIDER DIRECT: use the task tool RIGHT NOW to spawn @aider and have it complete t
 Task: $taskLine
 "@
 
-opencode run $prompt
+opencode run --agent orchestrator $prompt

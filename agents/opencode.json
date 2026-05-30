@@ -1,7 +1,36 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "openrouter/google/gemma-4-26b-a4b-it",
+  "model": "openrouter/deepseek/deepseek-v4-flash",
   "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://192.168.3.17:11434/v1",
+        "timeout": 480000
+      },
+      "models": {
+        "hf.co/Jackrong/Negentropy-claude-opus-4.7-9B-GGUF:Negentropy-claude-opus-4.7-9B-Q6_K.gguf": {
+          "name": "Negentropy 9B",
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          },
+          "variants": {
+            "tactical": {
+              "reasoning": { "effort": "medium" }
+            },
+            "orchestrator": {
+              "limit": { "output": 512 },
+              "reasoning": { "effort": "medium", "enabled": true },
+              "modelKwargs": { "frequency_penalty": 0.4, "presence_penalty": 0.2 }
+            },
+            "lean": {
+              "reasoning": { "effort": "minimal" }
+            }
+          }
+        }
+      }
+    },
     "openrouter": {
       "npm": "@ai-sdk/openai-compatible",
       "options": {
@@ -131,11 +160,11 @@
             }
           }
         },
-        "qwen/qwen3.5-9b": {
-          "name": "Qwen 3.5 9B",
+        "stepfun/step-3.5-flash": {
+          "name": "StepFun: Step 3.5 Flash",
           "limit": {
             "context": 262144,
-            "output": 8192
+            "output": 65536
           },
           "variants": {
             "lean": {
@@ -148,11 +177,28 @@
             },
             "conservative": {
               "reasoning": { "effort": "minimal" },
-              "modelKwargs": { "temperature": 0.1, "top_p": 1.0, "frequency_penalty": 0.0, "presence_penalty": 0.0 }
+              "modelKwargs": { "temperature": 0.1, "top_p": 1.0, "frequency_penalty": 0.4, "presence_penalty": 0.2 }
             },
             "creative": {
               "reasoning": { "effort": "low" },
               "modelKwargs": { "temperature": 1.2, "top_p": 0.95, "frequency_penalty": 0.5, "presence_penalty": 0.4 }
+            },
+            "io": {
+              "reasoning": { "effort": "none", "exclude": true },
+              "modelKwargs": { "frequency_penalty": 0.8, "presence_penalty": 0.3 }
+            }
+          }
+        },
+        "deepseek/deepseek-v3.2": {
+          "name": "DeepSeek: DeepSeek V3.2",
+          "limit": {
+            "context": 163840,
+            "output": 65536
+          },
+          "variants": {
+            "heavy": {
+              "reasoning": { "effort": "high", "enabled": true },
+              "modelKwargs": { "frequency_penalty": 0.4, "presence_penalty": 0.2 }
             }
           }
         },

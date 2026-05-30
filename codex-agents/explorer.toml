@@ -1,6 +1,6 @@
 name = "explorer"
 description = "Codebase search. Locates files, traces execution paths, finds relevant symbols."
-model = "gpt-5.4-mini"
+model = "deepseek/deepseek-v4-flash"
 model_reasoning_effort = "low"
 sandbox_mode = "read-only"
 developer_instructions = """

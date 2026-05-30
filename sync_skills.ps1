@@ -120,7 +120,15 @@ function Normalize-LineEndings([string]$text) {
 
 # Returns the base content of a tracked file at last commit, or $null if not tracked.
 function Get-BaseContent($relPath) {
-    $base = git -C $Master show "HEAD:$($relPath.Replace('\','/'))" 2>$null
+    # Check if file exists in HEAD before attempting git show
+    # (files new on disk but not in HEAD would otherwise emit a stderr error record
+    #  that collides with $ErrorActionPreference='Stop')
+    $gitRelPath = $relPath.Replace('\', '/')
+    $check = git -C $Master ls-tree HEAD -- $gitRelPath 2>$null
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($check -join '').Trim())) {
+        return $null
+    }
+    $base = git -C $Master show "HEAD:$gitRelPath" 2>$null
     if ($LASTEXITCODE -ne 0) { return $null }
     return (Normalize-LineEndings ($base -join "`n"))
 }

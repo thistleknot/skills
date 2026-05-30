@@ -70,11 +70,11 @@
             }
           }
         },
-        "qwen/qwen3.5-9b": {
-          "name": "Qwen 3.5 9B",
+        "stepfun/step-3.5-flash": {
+          "name": "StepFun: Step 3.5 Flash",
           "limit": {
             "context": 262144,
-            "output": 81920
+            "output": 65536
           },
           "variants": {
             "lean": {

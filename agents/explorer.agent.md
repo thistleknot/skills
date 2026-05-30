@@ -1,7 +1,7 @@
 ---
 name: explorer
 description: Codebase search. Locates files, traces execution paths, maps affected code areas before changes are proposed.
-model: GPT-5.4-mini (copilot)
+model: deepseek/deepseek-v4-flash
 tools: ['search/codebase', 'readfile', 'list_dir', 'search/symbols']
 handoffs:
   - label: Implement findings

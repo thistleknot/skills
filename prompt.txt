@@ -1,0 +1,60 @@
+2026-05-29 06:32 - OpenCode orchestrator routing checkpoint
+
+Objective
+- Preserve the current OpenCode orchestration state so a new session can resume without re-triaging the routing/model decisions.
+
+Current state
+- `fixer` was promoted from `deepseek-v3.2` to `deepseek-v4-flash` in the active OMO-Slim routing.
+- Gemma remains the default main orchestrator for now.
+- The idea of replacing Gemma with `deepseek-v4-flash` as the main orchestrator is intentionally deferred, but it is now commented at the active routing surfaces.
+- A dual-lane launcher now exists so Gemma and V4 Flash can be run side by side without changing the default routing.
+
+Decisions made
+- Keep the light-touch routing change only: `fixer -> deepseek-v4-flash`.
+- Do not broadly migrate `aider`, `explorer`, or `pi` off StepFun yet.
+- Do not flip the main orchestrator from Gemma to V4 Flash yet.
+- Implement the comparison path first: two separate orchestrator sessions in separate tabs/windows.
+
+Why
+- External validation supported `deepseek-v4-flash` over `deepseek-v3.2` for the coding lane on both price and overall capability.
+- The evidence did not justify a full StepFun leaf-lane migration yet.
+- Gemma still has known tool-call weaknesses, but the safer immediate move was to document the possible orchestrator swap and build an A/B path instead of flipping the default blindly.
+
+Rejected / rolled back
+- Broad worker-lane promotion (`aider` / `explorer` / `pi` -> V4 Flash) was rolled back.
+- No built-in OpenCode "Shift+Tab between orchestrators" feature was found; the implemented answer is dual sessions via terminal tabs/windows.
+
+Files changed
+- `plugins\oh-my-opencode-slim\oh-my-opencode-slim.json`
+- `%USERPROFILE%\.config\opencode\oh-my-opencode-slim.json`
+- `%USERPROFILE%\.config\opencode\oh-my-opencode-slim\oh-my-opencode-slim.json`
+- `agents\AGENTS.md`
+- `agents\run_orchestrator_lanes.ps1`
+
+How to run the new dual-lane launcher
+- Fresh lanes:
+  `powershell -ExecutionPolicy Bypass -File C:\Users\user\Documents\dev\skills\agents\run_orchestrator_lanes.ps1`
+- Fork the same existing session into both lanes:
+  `powershell -ExecutionPolicy Bypass -File C:\Users\user\Documents\dev\skills\agents\run_orchestrator_lanes.ps1 -SessionId ses_123`
+- Fork the latest session into both lanes:
+  `powershell -ExecutionPolicy Bypass -File C:\Users\user\Documents\dev\skills\agents\run_orchestrator_lanes.ps1 -ContinueLast`
+- Preview only:
+  `powershell -ExecutionPolicy Bypass -File C:\Users\user\Documents\dev\skills\agents\run_orchestrator_lanes.ps1 -ContinueLast -Preview`
+
+Important behavior
+- The launcher opens two top-level `--agent orchestrator` sessions.
+- One lane is pinned to `openrouter/google/gemma-4-26b-a4b-it`.
+- The other lane is pinned to `openrouter/deepseek/deepseek-v4-flash`.
+- If `-SessionId` or `-ContinueLast` is used, both lanes add `--fork` so they branch from the same starting state without colliding.
+- Windows Terminal tabs are used when `wt` is available; otherwise it falls back to two PowerShell windows.
+
+Next best resume point
+- Use `agents\run_orchestrator_lanes.ps1 -ContinueLast -Preview` to confirm the exact launch shape.
+- Then run the real launcher and compare Gemma vs V4 Flash on the same task/session.
+- If V4 Flash proves materially better on tool reliability and orchestration quality, promote that from "commented candidate" to the actual orchestrator default in the OMO config.
+
+Read first next session
+- `prompt.txt`
+- `agents\run_orchestrator_lanes.ps1`
+- `agents\AGENTS.md`
+- session `plan.md`

@@ -79,7 +79,7 @@ errors before OpenCode's compaction threshold is reached.
 |-------|-----------|
 | `google/gemma-4-26b-a4b-it` | 262,144 |
 | `deepseek/deepseek-v4-flash` | 1,048,576 |
-| `qwen/qwen3.5-9b` | 262,144 |
+| `stepfun/step-3.5-flash` | 262,144 |
 | `z-ai/glm-4.7-flash` | 202,752 (NOT 2,000,000) |
 | `google/gemini-2.5-flash-lite` | 1,048,576 |
 | `xiaomi/mimo-v2-flash` | 262,144 |
@@ -227,6 +227,8 @@ errors before OpenCode's compaction threshold is reached.
 
 **Rule:** `frequency_penalty >= 0.4` on ALL orchestrator variants, including conservative. Zero-penalty conservative is the stall rotation that makes things worse, not better.
 
+**Runtime guardrail:** `agents\heartbeat.ps1` now also treats **4x consecutive exact stdout repeats** as a stall and forces a sampler+seed rotation instead of waiting only for the 300s heartbeat timeout.
+
 ---
 
 ## ❌ PITFALL 11: `edit`/`write` tool auto-rejects paths outside workspace
@@ -268,11 +270,11 @@ errors before OpenCode's compaction threshold is reached.
 **Workaround — orchestrator dispatch:**
 ```powershell
 # agents/run_aider.ps1 wraps this pattern:
-opencode run "AIDER DIRECT: delegate this entire task to @aider with no additional routing. Task: <task>"
+opencode run --agent orchestrator "AIDER DIRECT: delegate this entire task to @aider with no additional routing. Task: <task>"
 ```
 The `AIDER DIRECT:` prefix triggers aider's updated `orchestratorPrompt` rule, causing the orchestrator to forward immediately to @aider.
 
-**Rule:** Never use `--agent` with subagent-only names (aider, pi, handyman, patcher, debugger, summarizer, thinker, scout). Use the wrapper scripts `run_aider.ps1` or route via explicit `@agent` prefix in the prompt.
+**Rule:** Never use `--agent` with subagent-only names (aider, pi, handyman, patcher, debugger, summarizer, thinker, scout). For top-level custom-fleet entry, use `--agent orchestrator` (or the wrapper scripts like `run_aider.ps1` that do this for you); otherwise `opencode run` falls back to the default `build` agent.
 
 **Symptom:** `opencode run "Implement X and save to file"` routes orchestrator→@coder→@fixer. Directory creation succeeds (handyman step). Then silence — no file written, session hangs for 4+ minutes.
 
@@ -280,8 +282,8 @@ The `AIDER DIRECT:` prefix triggers aider's updated `orchestratorPrompt` rule, c
 
 **Workaround:** For pure codegen tasks (no routing logic needed), run directly:
 ```powershell
-opencode run "Implement X and save to <workspace>/smoke_tests/x/x.py then run it"
-# No --agent flag — orchestrator routes to fixer/handyman directly (2-hop, not 3)
+opencode run --agent orchestrator "Implement X and save to <workspace>/smoke_tests/x/x.py then run it"
+# Explicit top-level orchestrator entry — routes to fixer/handyman directly (2-hop, not 3)
 ```
 If even that stalls, write the file directly with Copilot CLI and mark the smoke test as verified.
 
@@ -293,10 +295,10 @@ If even that stalls, write the file directly with Copilot CLI and mark the smoke
 
 After applying PITFALL 9 + 10 fixes to `agents/opencode.json`:
 
-- **Test 1** (single hop): `opencode run "List files in agents/"` → orchestrator → handyman → result. Exit 0. ~2 min.
-- **Test 2** (two hops): `opencode run "Read first 5 lines of orchestrator.toml and count TOMLs"` → orchestrator → handyman (both tasks in one subagent call) → result. Exit 0. ~3 min.
-- **GoL smoke test**: `opencode run "Implement Conway GoL 20x20..."` → orchestrator → fixer. Exit 0. File written, python ran, 5 generations output confirmed.
-- **React smoke test**: `opencode run "Implement React 18 counter..."` → orchestrator → fixer. Exit 0. `smoke_tests/react/index.html` written, verified.
+- **Test 1** (single hop): `opencode run --agent orchestrator "List files in agents/"` → orchestrator → handyman → result. Exit 0. ~2 min.
+- **Test 2** (two hops): `opencode run --agent orchestrator "Read first 5 lines of orchestrator.toml and count TOMLs"` → orchestrator → handyman (both tasks in one subagent call) → result. Exit 0. ~3 min.
+- **GoL smoke test**: `opencode run --agent orchestrator "Implement Conway GoL 20x20..."` → orchestrator → fixer. Exit 0. File written, python ran, 5 generations output confirmed.
+- **React smoke test**: `opencode run --agent orchestrator "Implement React 18 counter..."` → orchestrator → fixer. Exit 0. `smoke_tests/react/index.html` written, verified.
 - **TD smoke test**: 3-hop chain stalled (PITFALL 12). Written directly. Script ran 3 waves/9 ticks. ✅
 
 All ran from `agents/` dir so `opencode.json` was discovered from CWD. No `--config` flag needed.

@@ -1,6 +1,6 @@
 {
   "name": "model-router",
-  "description": "Routes task work to gpt-5.4-mini",
+  "description": "Routes task work to deepseek/deepseek-v4-flash",
   "version": "1.0.0",
   "agents": "agents/"
 }

@@ -2,12 +2,14 @@
 
 ## Purpose
 
-Use `meta-harness` as the requester-facing manager layer that sits one level above
-`agentic-harness`. It keeps separation of concerns clear:
+Use `meta-harness` as the requester-facing **master control-plane orchestrator**
+that sits one level above `agentic-harness`. It keeps separation of concerns clear:
 
 - `meta-harness` owns objective framing, scope partitioning, session topology, and
   handoff policy.
 - `agentic-harness` owns execution mechanics for one scoped issue at a time.
+- substrate adapters and backend graphs own transport details such as file emission,
+  message serialization, and runtime-specific resume plumbing.
 
 This avoids mixing "what should be solved now" with "how the worker harness solves
 it."
@@ -65,6 +67,21 @@ Fix at the highest valid upstream layer, then regenerate downstream artifacts.
 - validation commands
 - escalation conditions
 
+Before execution starts, the receiving orchestrator or worker must perform a
+**repeat-back handshake**:
+
+1. restate the task packet in its own words
+2. restate any load-bearing definitions, constraints, and done conditions
+3. receive an implicit or explicit match on that restatement before acting
+
+If the receiver cannot restate the packet faithfully, the protocol is underspecified
+and execution should not proceed yet.
+
+`meta-harness` does **not** manage backend graph files, transport envelopes, or
+runtime-specific message plumbing directly. It emits a scoped task packet and
+expects the substrate/harness adapter to translate that packet into the correct
+backend-graph or runtime-specific wire format behind the scenes.
+
 ### 5) Anti-recursion contract (OpenCode)
 
 - `meta-harness` may choose OpenCode as a substrate only at the parent/orchestrator
@@ -88,6 +105,14 @@ Use this operational pattern in OpenCode:
 - `opencode run -m <provider/model> "<task prompt>"` for one-shot scoped sessions
 - `opencode run -c` (or `--session <id>`) to resume
 - `opencode run --session <id> --fork` to branch worker sessions per task
+
+Backend rule:
+
+- If OpenCode's `--agent` path or a converged backend graph requires writing to a
+  file or message surface, that emission belongs to the adapter layer behind
+  `agentic-harness` / `substrate-selection`, not to the orchestrator prompt.
+- The orchestrator should act as if it is sending a scoped task packet into a
+  stable backend contract; it should not script transport details itself.
 
 Where/when routing rule:
 
@@ -131,6 +156,8 @@ Execution contract:
 - Complements `agentic-orchestration` (pattern selection) and
   `multi-agent-coordination` (parallel execution contracts)
 - Works with `adjacent-surface-scan` to enforce one-degree-out sibling checks
+- Relies on `substrate-selection` to hide runtime-specific backend graph and
+  file/message emission details behind a stable execution adapter
 
 ## Failure Modes
 

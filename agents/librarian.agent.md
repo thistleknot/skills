@@ -1,7 +1,7 @@
 ---
 name: librarian
 description: External research. Web search, documentation lookup, and API verification for external references.
-model: GPT-5.4-mini (copilot)
+model: deepseek/deepseek-v4-flash
 tools: ['web/fetch', 'web/search']
 handoffs:
   - label: Back to orchestrator

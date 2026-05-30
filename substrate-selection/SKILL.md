@@ -12,6 +12,8 @@ validation_method: session
 - **Orchestrator substrate** — owns planning, exploration, session flow, and delegated work
 - **Leaf executor** — performs manager-directed code edits or narrow execution tasks
 - **Skill surface** — teaches policy and routing, not runtime invocation
+- **Backend adapter** — translates a scoped task packet into runtime-specific message,
+  file, or graph emission without exposing that transport contract to the orchestrator
 
 ## Current Working Matrix
 - **opencode** — orchestrator substrate; strongest fit for planning/exploration and delegated subtask framing
@@ -73,6 +75,11 @@ concluding that the provider/model gap is the whole problem.**
   - **leaf-agent lane** — default current recommendation: `aider`
 - Each lane should bind through the model registry to a concrete endpoint/model pair, then serialize that binding into state, logs, or CLI output so the active stack is inspectable.
 - Runtime choice remains configurable, but the default split should be explicit rather than implied.
+- Where a runtime such as OpenCode requires `--agent` launches plus backend-graph,
+  file, or message emission, hide that behind a backend adapter. The orchestrator
+  should emit a scoped task packet; the adapter owns the concrete transport.
+- If the orchestrator has to hand-build message files or backend graph artifacts,
+  the substrate boundary has leaked and the integration is incomplete.
 
 ## Model Sizing by Reasoning Load
 

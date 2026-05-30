@@ -23,8 +23,8 @@
                 "enabled": true
               },
               "modelKwargs": {
-                "frequency_penalty": 0.6,
-                "presence_penalty": 0.3
+                "frequency_penalty": 1.4,
+                "presence_penalty": 1.2
               }
             },
             "orchestrator": {
@@ -34,8 +34,8 @@
                 "enabled": true
               },
               "modelKwargs": {
-                "frequency_penalty": 0.4,
-                "presence_penalty": 0.2
+                "frequency_penalty": 1.3,
+                "presence_penalty": 1.1
               }
             },
             "fast": {
@@ -104,11 +104,25 @@
             }
           }
         },
-        "qwen/qwen3.5-9b": {
-          "name": "Qwen 3.5 9B",
+        "qwen/qwen3.6-27b": {
+          "name": "Qwen 3.6 27B",
           "limit": {
             "context": 262144,
-            "output": 8192
+            "output": 65536
+          },
+          "variants": {
+            "tactical": {
+              "reasoning": {
+                "effort": "medium"
+              }
+            }
+          }
+        },
+        "stepfun/step-3.5-flash": {
+          "name": "StepFun: Step 3.5 Flash",
+          "limit": {
+            "context": 262144,
+            "output": 65536
           },
           "variants": {
             "lean": {
@@ -138,6 +152,25 @@
               "modelKwargs": {
                 "frequency_penalty": 0.8,
                 "presence_penalty": 0.3
+              }
+            }
+          }
+        },
+        "deepseek/deepseek-v3.2": {
+          "name": "DeepSeek: DeepSeek V3.2",
+          "limit": {
+            "context": 163840,
+            "output": 65536
+          },
+          "variants": {
+            "heavy": {
+              "reasoning": {
+                "effort": "high",
+                "enabled": true
+              },
+              "modelKwargs": {
+                "frequency_penalty": 0.4,
+                "presence_penalty": 0.2
               }
             }
           }

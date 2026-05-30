@@ -7,6 +7,12 @@
     records liveness by calling record_heartbeat(task_id) via the task-graph MCP on
     every turn. This watchdog polls the DB directly — no stdout parsing required.
 
+    For Gemma orchestrator runs, the watchdog also injects a runtime tool-contract
+    guard and inspects JSON event output for contract failures. Deterministic
+    violations such as unavailable-tool `read`, Unix multi-file `cat` in PowerShell,
+    and empty `write` tool payloads are treated as repairable contract stalls rather
+    than generic "model got stuck" timeouts.
+
     The orchestrator signals completion by calling update_status(root_id, 'done').
     The watchdog exits cleanly when it observes that status.
 
@@ -76,6 +82,16 @@ $MAD_SCALE                   = 1.4826
 $STALL_THRESHOLD_SECONDS     = 300   # no heartbeat update = stall
 $NO_FIRST_HB_THRESHOLD_SEC   = 120   # no first heartbeat at all = stall
 $POLL_INTERVAL_SECONDS       = 15
+$VERBATIM_REPEAT_THRESHOLD   = 4
+$MIN_REPEAT_TEXT_LENGTH      = 40
+$GEMMA_TOOL_CONTRACT = @"
+GEMMA ORCHESTRATOR CONTRACT GUARD
+- This runtime does not expose a `read` tool. Use `bash` for file reads.
+- Shell is PowerShell. Read files with `Get-Content path` or `Get-Content path1, path2`.
+- Do not use Unix multi-file `cat file1 file2` in PowerShell.
+- Never call `write` with empty input.
+- If a tool call is rejected, immediately retry with a valid tool instead of repeating the same action class.
+"@
 
 $SAMPLER_PROFILES = @{
     balanced = @{
@@ -87,8 +103,8 @@ $SAMPLER_PROFILES = @{
     conservative = @{
         temperature       = 0.1
         top_p             = 1.0
-        frequency_penalty = 0.0
-        presence_penalty  = 0.0
+        frequency_penalty = 0.4
+        presence_penalty  = 0.2
     }
     creative = @{
         temperature       = 1.2
@@ -165,6 +181,137 @@ function Get-DurationStats([double[]]$history) {
     return @{ Median = $median; MAD = $mad }
 }
 
+function Normalize-RepetitionCandidate([string]$text) {
+    if ([string]::IsNullOrWhiteSpace($text)) { return $null }
+
+    $normalized = [regex]::Replace($text.Trim(), "\s+", " ")
+    if ($normalized.Length -lt $MIN_REPEAT_TEXT_LENGTH) { return $null }
+    if ($normalized.StartsWith('{"type":"step_') -or $normalized.StartsWith('{"type":"tool_')) { return $null }
+    if ($normalized -match '^[\{\}\[\],":]+$') { return $null }
+    if ($normalized -match '^(permission|pattern|action|status|heartbeat)\b') { return $null }
+    return $normalized
+}
+
+function Get-VerbatimRepeat([string]$logPath) {
+    if (-not (Test-Path $logPath)) { return $null }
+
+    try {
+        $lines = Get-Content $logPath -ErrorAction Stop
+    } catch {
+        return $null
+    }
+
+    $previous = $null
+    $streak = 0
+
+    foreach ($line in $lines) {
+        $candidate = Normalize-RepetitionCandidate $line
+        if (-not $candidate) { continue }
+
+        if ($candidate -eq $previous) {
+            $streak++
+        } else {
+            $previous = $candidate
+            $streak = 1
+        }
+
+        if ($streak -ge $VERBATIM_REPEAT_THRESHOLD) {
+            return [PSCustomObject]@{
+                Text  = $candidate
+                Count = $streak
+            }
+        }
+    }
+
+    return $null
+}
+
+function Get-GemmaContractFailure([string]$logPath) {
+    if (-not (Test-Path $logPath)) { return $null }
+
+    try {
+        $lines = Get-Content $logPath -ErrorAction Stop
+    } catch {
+        return $null
+    }
+
+    foreach ($line in $lines) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        if (-not $line.TrimStart().StartsWith("{")) { continue }
+
+        try {
+            $event = $line | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            continue
+        }
+
+        $part = $event.part
+        if (-not $part) { continue }
+        if ("$($part.type)" -ne "tool") { continue }
+
+        $tool  = "$($part.tool)"
+        $state = $part.state
+        if (-not $state) { continue }
+
+        if ($tool -eq "invalid" -and "$($state.input.tool)" -eq "read") {
+            return [PSCustomObject]@{
+                Kind   = "invalid-read"
+                Detail = "Tried unavailable tool `read`; use bash plus PowerShell-native file reads instead."
+            }
+        }
+
+        if ($tool -eq "bash") {
+            $command = "$($state.input.command)"
+            $output  = "$($state.output)"
+            if ($command -match '(^|\s)cat\s+\S+\s+\S+' -and $output -match 'Get-Content : A positional parameter cannot be found') {
+                return [PSCustomObject]@{
+                    Kind   = "powershell-cat"
+                    Detail = "Used Unix multi-file `cat` in PowerShell; use `Get-Content file1, file2` instead."
+                }
+            }
+        }
+
+        if ($tool -eq "write") {
+            $inputText = "$($state.input)"
+            $rawText   = "$($state.raw)"
+            if ([string]::IsNullOrWhiteSpace($inputText) -and [string]::IsNullOrWhiteSpace($rawText)) {
+                return [PSCustomObject]@{
+                    Kind   = "empty-write"
+                    Detail = "Issued `write` with empty input; emit a real payload or use another tool."
+                }
+            }
+        }
+    }
+
+    return $null
+}
+
+function Build-AttemptPrompt(
+    [string]$taskId,
+    [string]$workspaceRoot,
+    [string]$task,
+    [string]$agent,
+    [object]$lastContractFailure
+) {
+    $taskLine = "[task_id=$taskId,workspace_root=$workspaceRoot] $task"
+
+    if ($agent -ne "orchestrator") {
+        return $taskLine
+    }
+
+    $guardLines = @($GEMMA_TOOL_CONTRACT.Trim())
+    if ($lastContractFailure) {
+        $guardLines += "Previous contract failure: $($lastContractFailure.Detail)"
+        $guardLines += "Repair the contract first, then continue from the current live files."
+    }
+
+    $guardLines += ""
+    $guardLines += "Task:"
+    $guardLines += $taskLine
+
+    return ($guardLines -join "`n")
+}
+
 function Build-TempConfig([string]$profile, [int]$seed, [string]$baseConfigPath) {
     $raw  = Get-Content $baseConfigPath -Raw
     $cfg  = $raw | ConvertFrom-Json
@@ -196,7 +343,7 @@ function Start-Session([string]$configPath, [string]$agent, [string]$prompt, [st
     $agentsDir = Split-Path $configPath -Parent
 
     $proc = Start-Process -FilePath "opencode" `
-        -ArgumentList "run", "--agent", $agent, "--dir", $workDir, $prompt `
+        -ArgumentList "run", "--format", "json", "--agent", $agent, "--dir", $workDir, $prompt `
         -WorkingDirectory $agentsDir `
         -RedirectStandardOutput $logOut `
         -RedirectStandardError  $logErr `
@@ -218,6 +365,7 @@ $profileIdx     = $SAMPLER_ROTATION.IndexOf($InitialProfile)
 $taskHistory    = [System.Collections.Generic.List[double]]::new()
 $retryCount     = 0
 $finalSuccess   = $false
+$lastContractFailure = $null
 
 # Create or reuse root task
 if ($TaskId) {
@@ -248,14 +396,16 @@ while ($retryCount -lt $MaxRetries) {
     # Reset root task status; child task states are preserved for resume
     Reset-RootTask $dbPath $taskId
 
-    # Embed task_id and workspace_root into prompt so orchestrator can call MCP tools
-    $augTask = "[task_id=$taskId,workspace_root=$WorkDir] $Task"
+    # Embed task_id/workspace_root and add Gemma-specific contract guard for orchestrator retries
+    $augTask = Build-AttemptPrompt $taskId $WorkDir $Task $AgentName $lastContractFailure
 
     $session     = Start-Session $tmpCfg $AgentName $augTask $WorkDir
     $start       = Get-Date
     $firstHbSeen = $false
     $done        = $false
     $stall       = $false
+    $repeatHit   = $null
+    $contractHit = $null
 
     Write-Host ">> attempt $($retryCount + 1) | profile=$profile | seed=$seed" -ForegroundColor Cyan
 
@@ -301,6 +451,22 @@ while ($retryCount -lt $MaxRetries) {
                 $stall = $true; break
             }
         }
+
+        # ── Stall: verbatim repetition loop in stdout ────────────────────────
+        $repeatHit = Get-VerbatimRepeat $session.Log
+        if ($repeatHit) {
+            Write-Host "  [STALL] verbatim repetition detected ($($repeatHit.Count)x): $($repeatHit.Text)" -ForegroundColor Yellow
+            $stall = $true; break
+        }
+
+        # ── Gemma contract failure: invalid tool or shell mismatch ───────────
+        if ($AgentName -eq "orchestrator") {
+            $contractHit = Get-GemmaContractFailure $session.Log
+            if ($contractHit) {
+                Write-Host "  [CONTRACT] $($contractHit.Detail)" -ForegroundColor Yellow
+                $stall = $true; break
+            }
+        }
     }
 
     # Session may have exited cleanly — do one final status check
@@ -321,8 +487,14 @@ while ($retryCount -lt $MaxRetries) {
     }
 
     $retryCount++
-    $profileIdx++
-    Write-Host "  rotating -> $($SAMPLER_ROTATION[$profileIdx % 3])..." -ForegroundColor DarkGray
+    if ($contractHit) {
+        $lastContractFailure = $contractHit
+        Write-Host "  retrying same profile with contract guard..." -ForegroundColor DarkGray
+    } else {
+        $lastContractFailure = $null
+        $profileIdx++
+        Write-Host "  rotating -> $($SAMPLER_ROTATION[$profileIdx % 3])..." -ForegroundColor DarkGray
+    }
 }
 
 if (-not $finalSuccess) {
