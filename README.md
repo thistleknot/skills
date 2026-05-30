@@ -1,4 +1,4 @@
-# skills
+﻿# skills
 
 Reusable skill library for agentic coding, memory, retrieval, tuning, and orchestration.
 
@@ -10,117 +10,120 @@ skill. The AST below should match the live folders in this repository.
 
 ## Skill Graph (AST View)
 
-Each node is a skill. Indentation encodes parent → child dependency. Peers share the same indent level.
+Each node is a skill. Indentation encodes parent â†’ child dependency. Peers share the same indent level.
 
 ```
 skills/
-├── execution/                       # plan, implement, verify
-│   ├── react-agent                  # outer execution OS; drives all other skills
-│   ├── reasoning                    # open-ended problem decomposition + multi-perspective analysis
-│   │   └── causal-inference         # LLM→DoWhy→LLM architecture; Pearl's ladder (association/intervention/counterfactual); causal discovery, do-calculus, SCM via DoWhy + causal-learn
-│   ├── codebase-knowledge-graph     # current-repo whole-system map; foundational vs incidental code; ripple analysis before edits
-│   ├── code                         # implementation standards, naming, refactor sequence
-│   │   └── design-patterns          # GoF / contract / relationship-shape companion to code
-│   ├── code-extraction              # extract source files + configs into copy-paste-ready markdown artifact (docling-style)
-│   ├── diagnostic-scanner           # language-aware compiler/linter scanning; errors/warnings grouped by severity
-│   ├── schema-induction             # cross-instance schema discovery via pairwise contrast (Aristotelian diairesis); constants vs variable dims; CRISP-DM data understanding analog
-│   ├── test-planner                 # coverage-aware test plan generation (green/yellow/red status); regression detection
-│   ├── doc-synthesizer              # AST-based documentation with Mermaid dependency/data-flow diagrams
-│   ├── debugging                    # error isolation, salience tiers, diagnostic strategy, self-repair loop
-│   │   └── adjacent-surface-scan    # one-degree-out sibling scan when one missing item likely belongs to a local family
-│   ├── validation                   # test design, verification protocol, behavior contracts
-│   │   └── uncertainty-quantification  # 3-tier UQ protocol (fast/standard/thorough); semantic entropy, SelfCheckGPT, conformal prediction, LM-Polygraph; abstain/escalate table
-│   ├── architecture                 # system design, abstract-class planning, domain → code mapping
-│   ├── tdd-agent                    # Red→Green→Refactor as distinct agentic phases; test-first design contract
-│   │   └── program-synthesis        # LLM-assisted formal verification + proof-assisted coding; AutoVerus 3-phase loop; escalation from tdd-agent for unbounded/security properties
-│   ├── autoresearch                 # autonomous iterative hill-climbing: scorer + proposer + git/sqlite checkpoint loop
-│   ├── cua-desktop-agent            # autonomous desktop automation via VLM perception loop; vision-based retry for legacy/API-less applications
-│   └── react-fastapi-sqlite         # full-stack scaffold: React (TanStack Query) + FastAPI (SQLModel ORM) + SQLite; SPA + REST backend
-│
-├── orchestration/                   # route work, enforce policy, manage cross-session state
-│   ├── meta-harness                 # requester-facing manager layer above agentic-harness; scopes objectives, forks/resumes sessions, delegates one issue at a time
-│   ├── agentic-orchestration        # unified: 5-Q decision tree + live agent roster + Aider architect/editor reference impl + Anthropic pattern taxonomy
-│   ├── agentic-design-patterns      # LangGraph workflow shape, router/gate topology, manager/BA/dev/QA rooms
-│   ├── agentic-harness              # dark-task control plane; backbone = OpenClaw/Claude Code/OpenCode/Copilot CLI; structured-response contracts + HTP
-│   │   ├── checklist                # LLM-as-judge validation pattern; structured findings with novelty proof
-│   │   ├── continuity-log           # compact-safe session memory; distilled decisions, resume points
-│   │   ├── pipeline-input-review    # partition a pipeline problem to its minimal failing unit; materialise inputs before harness dispatch; hyper-focused task statements
-│   │   └── deep-research            # multi-source web evidence pipeline; LangGraph planner→researcher→synthesizer
-│   ├── openspec-workflow            # spec-driven change lifecycle with OpenSpec artifacts and Fabro handoff
-│   │   ├── openspec-propose         # create proposal/design/spec/tasks for a new change
-│   │   ├── openspec-explore         # think/discover mode around an OpenSpec change or idea
-│   │   ├── openspec-apply-change    # implement tasks from an OpenSpec change
-│   │   └── openspec-archive-change  # archive a completed OpenSpec change
-│   ├── fabro-create-workflow        # author Fabro `.fabro` + `.toml` workflows from natural-language requirements
-│   ├── substrate-selection          # runtime substrate policy: OpenCode / claw-code / pi / aider / provider boundary
-│   ├── ollama-structured            # schema-constrained JSON from Ollama (native SDK + OpenAI compat); Qwen3 thinking suppression
-│   ├── pi                           # lightweight delegated external harness; sits under opencode/agentic-harness and can host aider-like workers
-│   ├── evaluator-optimizer          # LLM-generates→LLM-critiques→LLM-regenerates loop; MBR selection; stopping criteria
-│   │   └── prompt-optimization      # automatic prompt self-improvement; DSPy (MIPROv2), TextGrad (text-space gradients), OPRO, APE; labeled-trainset → MIPROv2 vs no-trainset → TextGrad decision tree
-│   ├── multi-agent-coordination     # peer messaging, plan-approval gates, task ownership, dynamic spawning
-│   ├── agent-governance             # safety rails, tool-access policy, audit trail, trust tiers, secrets scan
-│   ├── security-review              # STRIDE-A, OWASP Top 10, data-flow tracing, secret/CVE detection
-│   ├── build-observability          # run-centric observability contract: runs/events/commands, collectors, dashboards, trace enrichment
-│   ├── timeout-guard                # runaway-task policy; interrupt and recovery rules
-│   ├── git-workflow                 # branch strategy (test→dev→main), push gates, LLM verification protocol with headless-browser checks
-│   ├── validation-artifacts         # mandatory proof protocol: training loss curves, holdout metrics, test logs, visual diffs, API benchmarks, script outputs — "seeing is believing"
-│   ├── skill-wiki                   # living skill library lifecycle; intake → staged → active → superseded governance
-│   ├── skill-sync                   # LLM-assisted merge for diverged skill copies across local/remote mirrors; cron-safe
-│   └── consolidation                # triplet-based pairwise correlation + greedy chain decomposition → merge/xref/migrate prescriptions
-│
-├── memory/                          # persist knowledge across sessions and tasks
-│   ├── memory-bank                  # durable project memory (brief, context, patterns, progress)
-│   │   # meta: DESCRIPTION/ARCHITECTURE/HISTORY pattern — applies to any skill folder
-│   ├── todo                         # sqlite-backed task tracking with FastMCP bridge
-│   ├── cognitive-taxonomy           # unified memory classification: implicit/explicit/agentic paradigms; forms/functions/dynamics; System 1 vs 2 routing
-│   ├── memory-architecture          # canonical 5-layer memory stack design: 4 templates (factual KB, personal assistant, autonomous agent, research); inter-layer routing; entity/procedure/query flows
-│   ├── agentic_kg_memory            # MCG Context Graph side: semantic memory policy, retrieval, patterns, tribal knowledge, episodic memory
-│   │   ├── kg_ontology              # MCG DKG entity-identity layer: synset/hypernym BM25 canonicalization
-│   │   └── gist-retriever           # layered sparse+dense retrieval engine (BM25 + Chroma)
-│   ├── crystallization              # distill completed work chains into digest pages + reusable lessons; hand off semantic outputs to agentic_kg_memory and procedural deltas to skill-wiki
-│   ├── semantic-search-enrichment   # retrieval augmentation: query expansion, metadata boosting, semantic reranking
-│   ├── context-compaction           # active context-window management: tiered eviction, pre/post-compaction hooks
-│   ├── mcp-tool-registry            # MCP tool registration, discovery, routing, ACI design
-│   ├── request-intent-resolution    # request-thread routing, retrieval evaluation
-│   └── feature-catalog              # local SQLite feature inventory for implemented capabilities and file mappings
-│
-├── tuning/                          # measure, optimize, record
-│   ├── optuna-nested-cv             # search engine + methodology primer: inner tune / outer unbiased estimate
-│   ├── hyper-parm_tuning            # superseded predecessor; canonical home for Weighted Stage Allocation pattern
-│   ├── agentic-hyperparm            # behavioral knob tuning for agentic systems; instantiates Stage Allocation for L1-L4 layers
-│   ├── parm-tuning-as-lp            # discrete hyperparameter tuning via linear/mixed-integer programming; orthogonal lever factorization, irreducible-ratio perturbation basis, global optimality
-│   ├── class-balancing              # conditional stratification + token-equal weighting for multi-class reasoning transfer; inference pairing; temperature curriculum
-│   ├── stratified-quota-sampling    # coverage-bounded no-replacement sampler; Box-Cox tiers + quota allocation
-│   │   └── synthetic-data           # LLM-generated training data; 8 paradigms (Self-Instruct/Evol-Instruct/GLAN/Magpie/UltraFeedback/FireAct/distilabel); 6 mandatory quality gates; handoff to stratified-quota-sampling + class-balancing
-│   ├── cluster-quantized-knn        # O(1) approximate distance for KNN via cluster-quantization; fast interactive retrieval
-│   ├── mad-dynamic-batching         # MAD-gated token-aware dynamic batching for variable-length training data; quantile partitioning
-│   ├── median-bifurcation           # universal median-cut pattern: choose axis → produce both sides → drop unwanted half; 2^n epistemic cells at zero labeling cost; data-level contrastive learning
-│   ├── mlflow                       # experiment ledger: params, metrics, artifacts, lineage
-│   ├── model-size-reduction         # checkpoint slimming for HF models: dtype cast, layer drop, LoRA extraction, DARE/TIES/DELLA; architecture-agnostic state_dict path
-│   ├── generalization-theory        # signal-vs-noise training-dynamics lens via eNTK; diagnose memorization, grokking, and noisy-preference fine-tunes
-│   ├── representation-pipeline      # representation design: raw signal → embedding space
-│   ├── bm25-corpus-sampling         # representative corpus sampling for BM25; log-normal→MAD→Yeo-Johnson→CDF-diff quota; cascaded and proxy-Louvain rerankers; BM25 correlation graph (significant correlations as edges)
-│   ├── bm25-autoencoder             # multi-view sparse bottleneck: TF-IDF + token count + char bitvec → TruncatedSVD z; collinearity test vs dense; music embedding matrix pattern
-│   ├── signal-modulation            # demodulate non-stationary signal (log→MAD→Yeo-Johnson) → MACD on normalized space → RL band maintenance; regime-invariant threshold calibration
-│   └── rag-eval                     # single-pass 10-metric RAG judge: qwen3.5:4b + Pydantic RAGEvalResult + macro_mean; one prompt per answer
-│
-├── artifacts/                       # masterpiece outputs and information design
-│   ├── documentation                # choose canonical doc vs changelog vs timestamped fixes-applied artifact
-│   ├── response-style               # voice preservation, anti-cliche prose, user-facing coherence
-│   ├── business-writing             # professional document writing: resume, cover letter, portfolio; triplet bullets, spice gradient
-│   ├── gist_correlation_matrix      # sorted correlation matrix as complete relational map; two sorting approaches (orthogonal vs coverage)
-│   ├── nearest-neighbor-chain       # greedy path-cover decomposition of a similarity matrix into variable-length semantic chains; τ selection; chaining = semantic thread
-│   └── spiral-radial-clustering-display  # multi-dimensional spiral visualization; GMM+HDBSCAN+ordering→UMAP 2D with Gestalt encoding
-│
-├── learning/                        # reinforcement learning and policy optimization
-│   ├── deep-q-rl                    # DQN + Russian Doll MCTS for any scored discrete-action framework; code-rl extension; SPO/DPO offline preference optimization
-│   ├── active-inference             # Bayesian POMDP agents via Free Energy Principle; EFE-driven tool selection; pymdp; use when no reward function + partial observability
-│   ├── continual-learning           # non-forgetting agents; EWC, GEM/A-GEM, PackNet, O-LoRA/InfLoRA, DARE, LwF, MemRL; absorbs integrate/MemRL
-│   └── siamese_from_correlation_matrix  # derive metric-learning pairs directly from embedding/correlation structure
-│
-└── pipelines/                       # end-to-end domain workflows (invoke sub-skills as needed)
-    ├── auto-ingest                  # on-demand and background PDF enrichment for arxiv_rag corpus; VLM methods extraction
-    └── pdf-extraction               # docling→base64 strip→VLM→reinsert→methods; table enhancement with tabula+camelot+VLM fusion; classifier training via class-balancing
+â”œâ”€â”€ execution/                       # plan, implement, verify
+â”‚   â”œâ”€â”€ react-agent                  # outer execution OS; drives all other skills
+â”‚   â”œâ”€â”€ reasoning                    # open-ended problem decomposition + multi-perspective analysis
+â”‚   â”‚   â””â”€â”€ causal-inference         # LLMâ†’DoWhyâ†’LLM architecture; Pearl's ladder (association/intervention/counterfactual); causal discovery, do-calculus, SCM via DoWhy + causal-learn
+â”‚   â”œâ”€â”€ codebase-knowledge-graph     # current-repo whole-system map; foundational vs incidental code; ripple analysis before edits
+â”‚   â”œâ”€â”€ code                         # implementation standards, naming, refactor sequence
+â”‚   â”‚   â””â”€â”€ design-patterns          # GoF / contract / relationship-shape companion to code
+â”‚   â”œâ”€â”€ code-extraction              # extract source files + configs into copy-paste-ready markdown artifact (docling-style)
+â”‚   â”œâ”€â”€ diagnostic-scanner           # language-aware compiler/linter scanning; errors/warnings grouped by severity
+â”‚   â”œâ”€â”€ schema-induction             # cross-instance schema discovery via pairwise contrast (Aristotelian diairesis); constants vs variable dims; CRISP-DM data understanding analog
+â”‚   â”œâ”€â”€ test-planner                 # coverage-aware test plan generation (green/yellow/red status); regression detection
+â”‚   â”œâ”€â”€ doc-synthesizer              # AST-based documentation with Mermaid dependency/data-flow diagrams
+â”‚   â”œâ”€â”€ debugging                    # error isolation, salience tiers, diagnostic strategy, self-repair loop
+â”‚   â”‚   â””â”€â”€ adjacent-surface-scan    # one-degree-out sibling scan when one missing item likely belongs to a local family
+â”‚   â”œâ”€â”€ validation                   # test design, verification protocol, behavior contracts
+â”‚   â”‚   â””â”€â”€ uncertainty-quantification  # 3-tier UQ protocol (fast/standard/thorough); semantic entropy, SelfCheckGPT, conformal prediction, LM-Polygraph; abstain/escalate table
+â”‚   â”œâ”€â”€ architecture                 # system design, abstract-class planning, domain â†’ code mapping
+â”‚   â”œâ”€â”€ tdd-agent                    # Redâ†’Greenâ†’Refactor as distinct agentic phases; test-first design contract
+â”‚   â”‚   â”œâ”€â”€ llm-pipeline-layer-tdd   # gate-based TDD for layered LLM/ETL pipelines; test each layer with spoofed inputs; fix contracts not outputs
+â”‚   â”‚   â””â”€â”€ program-synthesis        # LLM-assisted formal verification + proof-assisted coding; AutoVerus 3-phase loop; escalation from tdd-agent for unbounded/security properties
+â”‚   â”œâ”€â”€ autoresearch                 # autonomous iterative hill-climbing: scorer + proposer + git/sqlite checkpoint loop
+â”‚   â”œâ”€â”€ cua-desktop-agent            # autonomous desktop automation via VLM perception loop; vision-based retry for legacy/API-less applications
+â”‚   â””â”€â”€ react-fastapi-sqlite         # full-stack scaffold: React (TanStack Query) + FastAPI (SQLModel ORM) + SQLite; SPA + REST backend
+â”‚
+â”œâ”€â”€ orchestration/                   # route work, enforce policy, manage cross-session state
+â”‚   â”œâ”€â”€ meta-harness                 # requester-facing master control plane above agentic-harness; scopes objectives, forks/resumes sessions, delegates one issue at a time
+â”‚   â”œâ”€â”€ meta-harness                 # requester-facing manager layer above agentic-harness; scopes objectives, forks/resumes sessions, delegates one issue at a time
+â”‚   â”œâ”€â”€ agentic-orchestration        # unified: 5-Q decision tree + live agent roster + Aider architect/editor reference impl + Anthropic pattern taxonomy
+â”‚   â”œâ”€â”€ agentic-design-patterns      # LangGraph workflow shape, router/gate topology, manager/BA/dev/QA rooms
+â”‚   â”œâ”€â”€ agentic-harness              # dark-task control plane; backbone = OpenClaw/Claude Code/OpenCode/Copilot CLI; structured-response contracts + HTP
+â”‚   â”‚   â”œâ”€â”€ checklist                # LLM-as-judge validation pattern; structured findings with novelty proof
+â”‚   â”‚   â”œâ”€â”€ continuity-log           # compact-safe session memory; distilled decisions, resume points
+â”‚   â”‚   â”œâ”€â”€ pipeline-input-review    # partition a pipeline problem to its minimal failing unit; materialise inputs before harness dispatch; hyper-focused task statements
+â”‚   â”‚   â””â”€â”€ deep-research            # multi-source web evidence pipeline; LangGraph plannerâ†’researcherâ†’synthesizer
+â”‚   â”œâ”€â”€ openspec-workflow            # spec-driven change lifecycle with OpenSpec artifacts and Fabro handoff
+â”‚   â”‚   â”œâ”€â”€ openspec-propose         # create proposal/design/spec/tasks for a new change
+â”‚   â”‚   â”œâ”€â”€ openspec-explore         # think/discover mode around an OpenSpec change or idea
+â”‚   â”‚   â”œâ”€â”€ openspec-apply-change    # implement tasks from an OpenSpec change
+â”‚   â”‚   â””â”€â”€ openspec-archive-change  # archive a completed OpenSpec change
+â”‚   â”œâ”€â”€ fabro-create-workflow        # author Fabro `.fabro` + `.toml` workflows from natural-language requirements
+â”‚   â”œâ”€â”€ substrate-selection          # runtime substrate policy: OpenCode / claw-code / pi / aider / provider boundary
+â”‚   â”œâ”€â”€ ollama-structured            # schema-constrained JSON from Ollama (native SDK + OpenAI compat); Qwen3 thinking suppression
+â”‚   â”œâ”€â”€ pi                           # lightweight delegated external harness; sits under opencode/agentic-harness and can host aider-like workers
+â”‚   â”œâ”€â”€ evaluator-optimizer          # LLM-generatesâ†’LLM-critiquesâ†’LLM-regenerates loop; MBR selection; stopping criteria
+â”‚   â”‚   â””â”€â”€ prompt-optimization      # automatic prompt self-improvement; DSPy (MIPROv2), TextGrad (text-space gradients), OPRO, APE; labeled-trainset â†’ MIPROv2 vs no-trainset â†’ TextGrad decision tree
+â”‚   â”œâ”€â”€ multi-agent-coordination     # peer messaging, plan-approval gates, task ownership, dynamic spawning
+â”‚   â”œâ”€â”€ agent-governance             # safety rails, tool-access policy, audit trail, trust tiers, secrets scan
+â”‚   â”œâ”€â”€ security-review              # STRIDE-A, OWASP Top 10, data-flow tracing, secret/CVE detection
+â”‚   â”œâ”€â”€ build-observability          # run-centric observability contract: runs/events/commands, collectors, dashboards, trace enrichment
+â”‚   â”œâ”€â”€ timeout-guard                # runaway-task policy; interrupt and recovery rules
+â”‚   â”œâ”€â”€ git-workflow                 # branch strategy (testâ†’devâ†’main), push gates, LLM verification protocol with headless-browser checks
+â”‚   â”œâ”€â”€ validation-artifacts         # mandatory proof protocol: training loss curves, holdout metrics, test logs, visual diffs, API benchmarks, script outputs â€” "seeing is believing"
+â”‚   â”œâ”€â”€ skill-wiki                   # living skill library lifecycle; intake â†’ staged â†’ active â†’ superseded governance
+â”‚   â”œâ”€â”€ skill-sync                   # LLM-assisted merge for diverged skill copies across local/remote mirrors; cron-safe
+â”‚   â””â”€â”€ consolidation                # triplet-based pairwise correlation + greedy chain decomposition â†’ merge/xref/migrate prescriptions
+â”‚
+â”œâ”€â”€ memory/                          # persist knowledge across sessions and tasks
+â”‚   â”œâ”€â”€ memory-bank                  # durable project memory (brief, context, patterns, progress)
+â”‚   â”‚   # meta: DESCRIPTION/ARCHITECTURE/HISTORY pattern â€” applies to any skill folder
+â”‚   â”œâ”€â”€ todo                         # sqlite-backed task tracking with FastMCP bridge
+â”‚   â”œâ”€â”€ cognitive-taxonomy           # unified memory classification: implicit/explicit/agentic paradigms; forms/functions/dynamics; System 1 vs 2 routing
+â”‚   â”œâ”€â”€ agent-identity               # fixed identity layer above memory/skills; profile isolation for specialized agents
+â”‚   â”œâ”€â”€ memory-architecture          # canonical 5-layer memory stack design: 4 templates (factual KB, personal assistant, autonomous agent, research); inter-layer routing; entity/procedure/query flows
+â”‚   â”œâ”€â”€ agentic_kg_memory            # MCG Context Graph side: semantic memory policy, retrieval, patterns, tribal knowledge, episodic memory
+â”‚   â”‚   â”œâ”€â”€ kg_ontology              # MCG DKG entity-identity layer: synset/hypernym BM25 canonicalization
+â”‚   â”‚   â””â”€â”€ gist-retriever           # layered sparse+dense retrieval engine (BM25 + Chroma)
+â”‚   â”œâ”€â”€ crystallization              # distill completed work chains into digest pages + reusable lessons; hand off semantic outputs to agentic_kg_memory and procedural deltas to skill-wiki
+â”‚   â”œâ”€â”€ semantic-search-enrichment   # retrieval augmentation: query expansion, metadata boosting, semantic reranking
+â”‚   â”œâ”€â”€ context-compaction           # active context-window management: tiered eviction, pre/post-compaction hooks
+â”‚   â”œâ”€â”€ mcp-tool-registry            # MCP tool registration, discovery, routing, ACI design
+â”‚   â”œâ”€â”€ request-intent-resolution    # request-thread routing, retrieval evaluation
+â”‚   â””â”€â”€ feature-catalog              # local SQLite feature inventory for implemented capabilities and file mappings
+â”‚
+â”œâ”€â”€ tuning/                          # measure, optimize, record
+â”‚   â”œâ”€â”€ optuna-nested-cv             # search engine + methodology primer: inner tune / outer unbiased estimate
+â”‚   â”œâ”€â”€ hyper-parm_tuning            # superseded predecessor; canonical home for Weighted Stage Allocation pattern
+â”‚   â”œâ”€â”€ agentic-hyperparm            # behavioral knob tuning for agentic systems; instantiates Stage Allocation for L1-L4 layers
+â”‚   â”œâ”€â”€ parm-tuning-as-lp            # discrete hyperparameter tuning via linear/mixed-integer programming; orthogonal lever factorization, irreducible-ratio perturbation basis, global optimality
+â”‚   â”œâ”€â”€ class-balancing              # conditional stratification + token-equal weighting for multi-class reasoning transfer; inference pairing; temperature curriculum
+â”‚   â”œâ”€â”€ stratified-quota-sampling    # coverage-bounded no-replacement sampler; Box-Cox tiers + quota allocation
+â”‚   â”‚   â””â”€â”€ synthetic-data           # LLM-generated training data; 8 paradigms (Self-Instruct/Evol-Instruct/GLAN/Magpie/UltraFeedback/FireAct/distilabel); 6 mandatory quality gates; handoff to stratified-quota-sampling + class-balancing
+â”‚   â”œâ”€â”€ cluster-quantized-knn        # O(1) approximate distance for KNN via cluster-quantization; fast interactive retrieval
+â”‚   â”œâ”€â”€ mad-dynamic-batching         # MAD-gated token-aware dynamic batching for variable-length training data; quantile partitioning
+â”‚   â”œâ”€â”€ median-bifurcation           # universal median-cut pattern: choose axis â†’ produce both sides â†’ drop unwanted half; 2^n epistemic cells at zero labeling cost; data-level contrastive learning
+â”‚   â”œâ”€â”€ mlflow                       # experiment ledger: params, metrics, artifacts, lineage
+â”‚   â”œâ”€â”€ model-size-reduction         # checkpoint slimming for HF models: dtype cast, layer drop, LoRA extraction, DARE/TIES/DELLA; architecture-agnostic state_dict path
+â”‚   â”œâ”€â”€ generalization-theory        # signal-vs-noise training-dynamics lens via eNTK; diagnose memorization, grokking, and noisy-preference fine-tunes
+â”‚   â”œâ”€â”€ representation-pipeline      # representation design: raw signal â†’ embedding space
+â”‚   â”œâ”€â”€ bm25-corpus-sampling         # representative corpus sampling for BM25; log-normalâ†’MADâ†’Yeo-Johnsonâ†’CDF-diff quota; cascaded and proxy-Louvain rerankers; BM25 correlation graph (significant correlations as edges)
+â”‚   â”œâ”€â”€ bm25-autoencoder             # multi-view sparse bottleneck: TF-IDF + token count + char bitvec â†’ TruncatedSVD z; collinearity test vs dense; music embedding matrix pattern
+â”‚   â”œâ”€â”€ signal-modulation            # demodulate non-stationary signal (logâ†’MADâ†’Yeo-Johnson) â†’ MACD on normalized space â†’ RL band maintenance; regime-invariant threshold calibration
+â”‚   â””â”€â”€ rag-eval                     # single-pass 10-metric RAG judge: qwen3.5:4b + Pydantic RAGEvalResult + macro_mean; one prompt per answer
+â”‚
+â”œâ”€â”€ artifacts/                       # masterpiece outputs and information design
+â”‚   â”œâ”€â”€ documentation                # choose canonical doc vs changelog vs timestamped fixes-applied artifact
+â”‚   â”œâ”€â”€ response-style               # voice preservation, anti-cliche prose, user-facing coherence
+â”‚   â”œâ”€â”€ business-writing             # professional document writing: resume, cover letter, portfolio; triplet bullets, spice gradient
+â”‚   â”œâ”€â”€ gist_correlation_matrix      # sorted correlation matrix as complete relational map; two sorting approaches (orthogonal vs coverage)
+â”‚   â”œâ”€â”€ nearest-neighbor-chain       # greedy path-cover decomposition of a similarity matrix into variable-length semantic chains; Ï„ selection; chaining = semantic thread
+â”‚   â””â”€â”€ spiral-radial-clustering-display  # multi-dimensional spiral visualization; GMM+HDBSCAN+orderingâ†’UMAP 2D with Gestalt encoding
+â”‚
+â”œâ”€â”€ learning/                        # reinforcement learning and policy optimization
+â”‚   â”œâ”€â”€ deep-q-rl                    # DQN + Russian Doll MCTS for any scored discrete-action framework; code-rl extension; SPO/DPO offline preference optimization
+â”‚   â”œâ”€â”€ active-inference             # Bayesian POMDP agents via Free Energy Principle; EFE-driven tool selection; pymdp; use when no reward function + partial observability
+â”‚   â”œâ”€â”€ continual-learning           # non-forgetting agents; EWC, GEM/A-GEM, PackNet, O-LoRA/InfLoRA, DARE, LwF, MemRL; absorbs integrate/MemRL
+â”‚   â””â”€â”€ siamese_from_correlation_matrix  # derive metric-learning pairs directly from embedding/correlation structure
+â”‚
+â””â”€â”€ pipelines/                       # end-to-end domain workflows (invoke sub-skills as needed)
+    â”œâ”€â”€ auto-ingest                  # on-demand and background PDF enrichment for arxiv_rag corpus; VLM methods extraction
+    â””â”€â”€ pdf-extraction               # doclingâ†’base64 stripâ†’VLMâ†’reinsertâ†’methods; table enhancement with tabula+camelot+VLM fusion; classifier training via class-balancing
 ```
 
 ## Key Relationships
@@ -128,13 +131,15 @@ skills/
 1. `react-agent` is the outer execution OS. All other skills are invoked from inside it.
 2. `design-patterns` is the code-facing pattern selector. `code` owns edit mechanics; `design-patterns` chooses the relationship shape and contract.
 3. `agentic-design-patterns` chooses LangGraph workflow shape and role topology. It is where routing, prompt chaining, parallel sectioning, voting, orchestrator-workers, evaluator-optimizer, and bounded autonomous loops belong.
+4. `meta-harness` is the manager layer one step above `agentic-harness`: it owns objective framing, scoped session decomposition, and parent/child coordination so request-level planning stays separate from issue-level harness execution. It is the master control plane, not the transport layer. Inter-orchestrator handoff requires a repeat-back handshake so both sides agree on definitions before execution.
+5. `substrate-selection` decides which runtime sits behind the graph or harness boundary: OpenCode, claw-code, `pi`, aider, or another provider surface. Default integrated stack: `opencode` for the orchestrator lane, optional `pi` for a delegated external-harness lane, and `aider` for the leaf-agent lane. It also owns the rule that model/provider parity does not imply harness/runtime parity â€” first-party surfaces like GitHub Copilot CLI may bundle stronger runtime guarantees that provider-routed OpenRouter stacks must recreate explicitly in skills/config. Backend graph emission, file writes, and message transport belong to the substrate adapter, not to the orchestrator contract.
 4. `meta-harness` is the manager layer one step above `agentic-harness`: it owns objective framing, scoped session decomposition, and parent/child coordination so request-level planning stays separate from issue-level harness execution.
-5. `substrate-selection` decides which runtime sits behind the graph or harness boundary: OpenCode, claw-code, `pi`, aider, or another provider surface. Default integrated stack: `opencode` for the orchestrator lane, optional `pi` for a delegated external-harness lane, and `aider` for the leaf-agent lane. It also owns the rule that model/provider parity does not imply harness/runtime parity — first-party surfaces like GitHub Copilot CLI may bundle stronger runtime guarantees that provider-routed OpenRouter stacks must recreate explicitly in skills/config.
+5. `substrate-selection` decides which runtime sits behind the graph or harness boundary: OpenCode, claw-code, `pi`, aider, or another provider surface. Default integrated stack: `opencode` for the orchestrator lane, optional `pi` for a delegated external-harness lane, and `aider` for the leaf-agent lane. It also owns the rule that model/provider parity does not imply harness/runtime parity â€” first-party surfaces like GitHub Copilot CLI may bundle stronger runtime guarantees that provider-routed OpenRouter stacks must recreate explicitly in skills/config.
 6. `agentic-harness` is the programmatic train station for coding frameworks (Claude Code, OpenCode, GitHub Copilot CLI, OpenClaw). It routes, gates, and reconciles work; each framework is a worker line, and the resolved runtime stack should be visible in state/logs rather than hidden in helper code.
 7. `continuity-log` is a child of `agentic-harness`. It holds the compact-safe distilled state that lets the harness resume without re-deriving decisions.
-8. `deep-research` is a child of `agentic-harness`. It decomposes a question into parallel subquestions, gathers web evidence via a 3-tier fetch pipeline (httpx → retry → Selenium), and synthesizes a claim-backed report seeding the harness TaskSpec.
+8. `deep-research` is a child of `agentic-harness`. It decomposes a question into parallel subquestions, gathers web evidence via a 3-tier fetch pipeline (httpx â†’ retry â†’ Selenium), and synthesizes a claim-backed report seeding the harness TaskSpec.
 9. `optuna-nested-cv` is now self-contained: the Methodology Primer (what to optimize, preconditions, layerwise decomp, structured search, sampler policy) was absorbed from `hyper-parm_tuning` (now superseded). `mlflow` records every run with lineage.
-10. `agentic_kg_memory` is the **CG (Context Graph) side** of the MCG architecture: semantic memory policy, patterns, tribal knowledge, retrieval. `kg_ontology` is the **DKG entity-identity layer**: synset/hypernym BM25 canonicalization that prevents duplicate nodes without graph topology traversal. They are complementary layers, not alternatives — do not merge them again.
+10. `agentic_kg_memory` is the **CG (Context Graph) side** of the MCG architecture: semantic memory policy, patterns, tribal knowledge, retrieval. `kg_ontology` is the **DKG entity-identity layer**: synset/hypernym BM25 canonicalization that prevents duplicate nodes without graph topology traversal. They are complementary layers, not alternatives â€” do not merge them again.
 11. `gist-retriever` is the retrieval sub-skill for that memory layer. It spans the access-path progression from markdown/index-first lookup through local markdown search and into the full hybrid BM25+dense pipeline.
 12. `memory-bank` remains project operating memory, not compiled corpus memory. It stores project continuity while `agentic_kg_memory` stores evolving domain knowledge.
 13. The supplementary comparison boundary is now explicit in the repo: **RAG/retriever** behavior belongs in `gist-retriever`, **LLM Wiki/compiler** behavior belongs in `agentic_kg_memory`, and **GBrain/operator / fat-skills orchestration** belongs on the execution/orchestration side, not in the memory branch.
@@ -146,55 +151,80 @@ skills/
 19. `spiral-radial-clustering-display` is the multi-dimensional hierarchical clustering visualization skill. Maps four layers (macro GMM + micro HDBSCAN + decorrelated ordering + hubness) into 3D feature space, projects via UMAP to 2D, encodes layers via Gestalt (position = spiral topology, color = macro, opacity = micro, size = centrality). Preserves topological structure and produces interactive Plotly HTML with full zoom/pan/hover metadata.
 20. `feature-catalog` is the local implementation ledger: a SQLite feature catalog for tracking what the project already ships and where it lives.
 21. `siamese_from_correlation_matrix` is the metric-learning companion to the embedding-analysis branch: it turns correlation structure into contrastive supervision.
-22. `skill-wiki` is the meta-skill governing the living skill library lifecycle. It owns the intake pipeline, promotion gates, supersession rules, sidecar conventions (EVIDENCE.md, HISTORY.md, scripts/ examples), and the periodic sweep that keeps skills consistent over time. It routes verified work chains into `crystallization` when the output is a digest, and handles staged skill-contract updates when the output is a library change. It is NOT memory storage (→ `agentic_kg_memory`) and NOT project state (→ `memory-bank`).
+22. `skill-wiki` is the meta-skill governing the living skill library lifecycle. It owns the intake pipeline, promotion gates, supersession rules, sidecar conventions (EVIDENCE.md, HISTORY.md, scripts/ examples), and the periodic sweep that keeps skills consistent over time. It routes verified work chains into `crystallization` when the output is a digest, and handles staged skill-contract updates when the output is a library change. It is NOT memory storage (â†’ `agentic_kg_memory`) and NOT project state (â†’ `memory-bank`).
 23. `documentation` decides which durable doc artifact to update: canonical README/spec, cumulative changelog, or a timestamped fixes-applied note.
 24. `response-style` governs user-facing prose: voice preservation, anti-cliche writing, and answer coherence. Harness-state coherence remains with `agentic-harness`.
-25. `class-balancing` is a general-purpose class weight protocol. It computes log inverse frequency per class, applies Box-Cox normalization to tame the distribution tail, clips negatives, and normalizes to ratios for use as `class_weight` in sklearn or `weight` in PyTorch CrossEntropyLoss. Used anywhere labeled data has heavy class imbalance — layout element classification, NER, retrieval judgment labeling.
+25. `class-balancing` is a general-purpose class weight protocol. It computes log inverse frequency per class, applies Box-Cox normalization to tame the distribution tail, clips negatives, and normalizes to ratios for use as `class_weight` in sklearn or `weight` in PyTorch CrossEntropyLoss. Used anywhere labeled data has heavy class imbalance â€” layout element classification, NER, retrieval judgment labeling.
 25. `stratified-quota-sampling` owns fixed-budget coverage schedulers: Box-Cox tiering, quota allocation, and no-replacement sampling from an imbalanced pool. Pair it with `class-balancing` when quota selection alone still leaves residual label skew inside the loss, and with `optuna-nested-cv` when sample fraction, quota ratios, or tier weighting are part of the tuning contract.
-26. `pdf-extraction` is the end-to-end PDF→enriched-Markdown pipeline workflow: docling→base64 strip→VLM image description→reinsert→methods extraction (5 phases via `run_pipeline.bat`). Includes a table enhancement sub-pipeline: docling JSON bboxes→pymupdf crop→tabula+camelot extraction→VLM fusion→patched Markdown. The layout classifier uses `class-balancing` for training. Standalone workflow skill; not a child of `agentic-harness`.
+26. `pdf-extraction` is the end-to-end PDFâ†’enriched-Markdown pipeline workflow: doclingâ†’base64 stripâ†’VLM image descriptionâ†’reinsertâ†’methods extraction (5 phases via `run_pipeline.bat`). Includes a table enhancement sub-pipeline: docling JSON bboxesâ†’pymupdf cropâ†’tabula+camelot extractionâ†’VLM fusionâ†’patched Markdown. The layout classifier uses `class-balancing` for training. Standalone workflow skill; not a child of `agentic-harness`.
 27. `openspec-workflow` is the spec-driven product/change lifecycle skill. Its companion action skills (`openspec-propose`, `openspec-explore`, `openspec-apply-change`, `openspec-archive-change`) are command-shaped entry points into the same OpenSpec operating model.
 28. `fabro-create-workflow` is the Fabro graph/run-config authoring companion. It can support `openspec-workflow` when a repo needs a new Fabro pipeline, but it is also usable as a standalone workflow-design skill.
 29. `agentic-harness` now has an explicit evaluation mix: `checklist` for structured audit artifacts, DSPy-derived metric/reward compile-refine patterns when scoring is explicit, and TextGrad-derived textual-loss loops when the critic must explain how to improve text/code/prompts. Optimizer scores inform repair; artifact-backed verification still decides completion.
 30. `codebase-knowledge-graph` is the current-repository relationship-mapping protocol. It builds the typed module/file/class/function graph and the foundational-vs-incidental distinction that should exist before `code`, `debugging`, or `validation` edits proceed.
-31. `code-extraction` extracts source files + configs from any project into a unified markdown artifact (docling-style: parse → normalize → markdown + JSON metadata). Supports multi-language detection (Python, Go, Rust, Swift, Java, JS/TS via markers or 8+ source files). Output feeds `codebase-knowledge-graph`, `documentation`, and LLM context assembly.
+31. `code-extraction` extracts source files + configs from any project into a unified markdown artifact (docling-style: parse â†’ normalize â†’ markdown + JSON metadata). Supports multi-language detection (Python, Go, Rust, Swift, Java, JS/TS via markers or 8+ source files). Output feeds `codebase-knowledge-graph`, `documentation`, and LLM context assembly.
 32. `diagnostic-scanner` invokes language-appropriate tools (mypy/pylint, go vet, cargo check, swiftc, eslint, etc.) and normalizes errors/warnings by severity and category. Produces fix prompts ready for LLM remediation. Output feeds `validation` and `code` for structured violation handling.
 33. `model-size-reduction` owns post-training checkpoint reduction: dtype casting, layer dropping, LoRA extraction, and DARE/TIES/DELLA sparsification directly against Hugging Face `state_dict`s. `continual-learning` still owns DARE as a lifelong-learning merge pattern; use `model-size-reduction` when the goal is footprint, portability, or architecture-agnostic checkpoint surgery.
 34. `generalization-theory` is the training-dynamics diagnostic lens for signal-vs-noise partitioning, grokking delay, and noisy-preference memorization. It helps choose intervention surfaces across data, architecture, and optimizer design, but it does not own the tuning/search loop (`optuna-nested-cv`) or long-horizon forgetting control (`continual-learning`).
-35. `test-planner` generates coverage-aware test plans with status flags (🟢 GREEN=DONE, 🟡 YELLOW=PARTIAL, 🔴 RED=MISSING). Proposes concrete scenarios by test level (smoke/unit/integration/e2e/regression) and detects regression subjects via git diff. Output feeds `tdd-agent` for test-driven implementation and `validation` for coverage verification.
+35. `test-planner` generates coverage-aware test plans with status flags (ðŸŸ¢ GREEN=DONE, ðŸŸ¡ YELLOW=PARTIAL, ðŸ”´ RED=MISSING). Proposes concrete scenarios by test level (smoke/unit/integration/e2e/regression) and detects regression subjects via git diff. Output feeds `tdd-agent` for test-driven implementation and `validation` for coverage verification.
 36. `doc-synthesizer` parses project structure via AST (Python focus; all languages via markers), builds dependency graphs, and generates Mermaid diagrams for module dependencies and data flow. Output feeds `documentation`, `codebase-knowledge-graph`, and architecture review. URI fetch/crawl extensible for Phase 2.
 37. `build-observability` is the run-centric observability layer for agentic execution. `agentic-harness` owns control flow and retries; `build-observability` projects runtime exhaust into normalized `runs/events/commands` records and operator-facing dashboard views.
-38. `react-fastapi-sqlite` is the full-stack application scaffold skill: React frontend (with TanStack Query for server-state caching), FastAPI backend (with SQLModel ORM layer), and SQLite file-based database. Use when building SPAs with Python REST backends, configuring client-side data fetching and invalidation patterns, or structuring domain-driven CRUD operations. Output: production-ready project layout with separation of concerns (api/ → hooks/ → pages/components/ hierarchy). Integrates with `code` for implementation standards and `validation` for integration testing.
-39. `git-workflow` is the branch strategy and LLM safety protocol for this repository. Enforces test→dev→main push gates, requires LLM verification against last known working commit before each push, and pairs `code` verification (git diff checks) with `headless-browser-verification` screenshots for web frontend changes. Prevents accidental pushes to main by requiring explicit user approval at each stage.
+38. `react-fastapi-sqlite` is the full-stack application scaffold skill: React frontend (with TanStack Query for server-state caching), FastAPI backend (with SQLModel ORM layer), and SQLite file-based database. Use when building SPAs with Python REST backends, configuring client-side data fetching and invalidation patterns, or structuring domain-driven CRUD operations. Output: production-ready project layout with separation of concerns (api/ â†’ hooks/ â†’ pages/components/ hierarchy). Integrates with `code` for implementation standards and `validation` for integration testing.
+39. `git-workflow` is the branch strategy and LLM safety protocol for this repository. Enforces testâ†’devâ†’main push gates, requires LLM verification against last known working commit before each push, and pairs `code` verification (git diff checks) with `headless-browser-verification` screenshots for web frontend changes. Prevents accidental pushes to main by requiring explicit user approval at each stage.
 
 40. `cognitive-taxonomy` is the **reference skill for all memory decisions**. It synthesizes four peer-reviewed papers into a unified classification system: implicit/explicit/agentic paradigms, forms/functions/dynamics taxonomy, biological-artificial crosswalk, and neuro-symbolic System 1 vs System 2 dual-process reasoning. Use it to classify memory patterns, route queries correctly, diagnose underperformance (why is vector-only failing?), and design new memory architectures. It's a pure reference skill (no code changes) that sits above all memory subsystems (`agentic_kg_memory`, `procedural-memory`, `continuity-log`, `context-compaction`).
 
-41. `memory-architecture` is the **canonical design reference for agent memory systems**. Implements the Meta Context Graph layered stack with 4 concrete templates: (1) factual knowledge base (Implicit→Explicit→Working), (2) personal assistant with memory (adds Episodic), (3) autonomous agent (adds Procedural), (4) research/knowledge synthesis pipeline. Each template includes full 5-layer architecture, entity anchor flow, procedure discovery flow, query routing lifecycle, and anti-patterns. Use when designing a new agent with memory, evaluating existing systems for gaps, onboarding developers. Depends on `cognitive-taxonomy` for classification; feeds into `procedural-memory`, `agentic_kg_memory`, `context-compaction` for implementation.
+41. `agent-identity` is the **fixed identity-layer skill** for multi-profile agents. It sits above memory and procedural skills, defining who an agent is before facts and workflows load. Use it when one runtime needs durable specialist profiles (coder / researcher / designer), when persona drift is being caused by memory accretion, or when identity is being incorrectly stuffed into prompt fragments or memory files. It complements `memory-architecture` by adding the missing static frame around the memory stack, and complements `response-style` by separating stable role contract from surface prose style.
+41. `memory-architecture` is the **canonical design reference for agent memory systems**. Implements the Meta Context Graph layered stack with 4 concrete templates: (1) factual knowledge base (Implicitâ†’Explicitâ†’Working), (2) personal assistant with memory (adds Episodic), (3) autonomous agent (adds Procedural), (4) research/knowledge synthesis pipeline. Each template includes full 5-layer architecture, entity anchor flow, procedure discovery flow, query routing lifecycle, and anti-patterns. Use when designing a new agent with memory, evaluating existing systems for gaps, onboarding developers. Depends on `cognitive-taxonomy` for classification; feeds into `procedural-memory`, `agentic_kg_memory`, `context-compaction` for implementation.
 
-42. `validation-artifacts` enforces the principle **"seeing is believing"** by making validation proof mandatory, not optional. Before any skill claims "validation passed", this skill demands reproducible artifacts: training loss curves + eval metrics on holdout sets, predictions + confusion matrices, test execution logs with exit codes, before/after screenshots + visual diffs, API request/response samples + latency profiles, script execution examples with outputs. Used by `validation`, `checklist`, `tdd-agent`, `debugging`, `git-workflow` to prevent "trust me" claims. Integrates with `headless-browser-verification` (UI artifacts) and `security-review` (security validation artifacts).
+42. `memory-architecture` is the **canonical design reference for agent memory systems**. Implements the Meta Context Graph layered stack with 4 concrete templates: (1) factual knowledge base (Implicitâ†’Explicitâ†’Working), (2) personal assistant with memory (adds Episodic), (3) autonomous agent (adds Procedural), (4) research/knowledge synthesis pipeline. Each template includes full 5-layer architecture, entity anchor flow, procedure discovery flow, query routing lifecycle, and anti-patterns. Use when designing a new agent with memory, evaluating existing systems for gaps, onboarding developers. Depends on `cognitive-taxonomy` for classification; feeds into `procedural-memory`, `agentic_kg_memory`, `context-compaction` for implementation.
 
-43. `skill-sync` is the **LLM-assisted merge protocol for diverged skill copies** across master and local/remote mirrors. Distinct from `skill-wiki` (governance: intake/staging/lifecycle) — `skill-sync` is operational: when both master and a mirror have independently changed since the last commit, it classifies the case (no-op / fast-forward / conflict), applies deterministic fast-forwards automatically, and routes true conflicts to an LLM merge that incorporates both sets of changes without dropping content from either side. Mechanically executed by `sync_skills.ps1`. MERGE-CONFLICT markers flag unresolved sections for human review before commit.
+43. `validation-artifacts` enforces the principle **"seeing is believing"** by making validation proof mandatory, not optional. Before any skill claims "validation passed", this skill demands reproducible artifacts: training loss curves + eval metrics on holdout sets, predictions + confusion matrices, test execution logs with exit codes, before/after screenshots + visual diffs, API request/response samples + latency profiles, script execution examples with outputs. Used by `validation`, `checklist`, `tdd-agent`, `debugging`, `git-workflow` to prevent "trust me" claims. Integrates with `headless-browser-verification` (UI artifacts) and `security-review` (security validation artifacts).
 
-44. `consolidation` is the **triplet-based document consolidation pipeline** for living knowledge bases and skill libraries. Extracts subject-predicate-object triplets from each document, computes a pairwise Jaccard similarity matrix (or NLI-based soft Jaccard for semantic matching), runs **greedy nearest-neighbor chain decomposition** (single-linkage chaining) to group related documents, and emits a sorted report with prescriptions: MERGE (≥0.8), migrate (0.5–0.8), xref (0.3–0.5). Groups are sorted by chain length descending — largest clusters first. Sits above `gist_correlation_matrix` (matrix builder) and feeds prescriptions into `skill-wiki` (governance) and `skill-sync` (mechanical merge). Use when the library has grown by ≥5 new entries, semantic search returns contradictory results, or a scheduled consolidation run is due.
+44. `skill-sync` is the **LLM-assisted merge protocol for diverged skill copies** across master and local/remote mirrors. Distinct from `skill-wiki` (governance: intake/staging/lifecycle) â€” `skill-sync` is operational: when both master and a mirror have independently changed since the last commit, it classifies the case (no-op / fast-forward / conflict), applies deterministic fast-forwards automatically, and routes true conflicts to an LLM merge that incorporates both sets of changes without dropping content from either side. Mechanically executed by `sync_skills.ps1`. MERGE-CONFLICT markers flag unresolved sections for human review before commit.
 
-45. `nearest-neighbor-chain` is the **greedy path-cover chain decomposition sub-skill** shared by `consolidation` and any other consumer that needs to partition a similarity matrix into semantic groups. It walks pairs sorted by descending score, extends only chain endpoints (no branching), and emits variable-length chains sorted by length descending. Singletons are docs with no above-τ neighbours. The "chaining effect" of single-linkage is intentional: each chain is a semantic thread; a chain break is a topic boundary. `gist_correlation_matrix` produces the matrix; `nearest-neighbor-chain` decomposes it; `consolidation` adds triplet extraction and MERGE/migrate/xref prescriptions on top.
+45. `consolidation` is the **triplet-based document consolidation pipeline** for living knowledge bases and skill libraries. Extracts subject-predicate-object triplets from each document, computes a pairwise Jaccard similarity matrix (or NLI-based soft Jaccard for semantic matching), runs **greedy nearest-neighbor chain decomposition** (single-linkage chaining) to group related documents, and emits a sorted report with prescriptions: MERGE (â‰¥0.8), migrate (0.5â€“0.8), xref (0.3â€“0.5). Groups are sorted by chain length descending â€” largest clusters first. Sits above `gist_correlation_matrix` (matrix builder) and feeds prescriptions into `skill-wiki` (governance) and `skill-sync` (mechanical merge). Use when the library has grown by â‰¥5 new entries, semantic search returns contradictory results, or a scheduled consolidation run is due.
 
-46. `prompt-optimization` is the **automatic prompt self-improvement skill**. A child of `evaluator-optimizer` that applies optimization algorithms — not manual rewriting. Labeled trainset + multi-step → DSPy MIPROv2 (Bayesian joint instruction+demo search). No trainset + differentiable loss → TextGrad (text-space gradient descent). Demos only → APE. Single instruction → OPRO. `agentic-harness` invokes this when a module's loss metric is stable but prompt quality is the bottleneck. Absorbs `integrate/dspy.md` and `integrate/textgrad.md`.
+45. `nearest-neighbor-chain` is the **greedy path-cover chain decomposition sub-skill** shared by `consolidation` and any other consumer that needs to partition a similarity matrix into semantic groups. It walks pairs sorted by descending score, extends only chain endpoints (no branching), and emits variable-length chains sorted by length descending. Singletons are docs with no above-Ï„ neighbours. The "chaining effect" of single-linkage is intentional: each chain is a semantic thread; a chain break is a topic boundary. `gist_correlation_matrix` produces the matrix; `nearest-neighbor-chain` decomposes it; `consolidation` adds triplet extraction and MERGE/migrate/xref prescriptions on top.
 
-47. `uncertainty-quantification` is the **LLM output confidence protocol**. A child of `validation` for measuring when a model knows vs. doesn't know. Three-tier protocol: Tier 1 = fast (logprobs/verbal, <0.1s), Tier 2 = standard (N=3–5 consistency samples), Tier 3 = thorough (N≥10 + conformal prediction). Semantic entropy (arXiv:2302.09664) outperforms token-level entropy. Always use Tier 3 minimum for irreversible actions. Libraries: `selfcheckgpt`, `lm-polygraph`. Feeds `checklist` for audit trails and `uncertainty-quantification` threshold gates in `agent-governance`.
+46. `prompt-optimization` is the **automatic prompt self-improvement skill**. A child of `evaluator-optimizer` that applies optimization algorithms â€” not manual rewriting. Labeled trainset + multi-step â†’ DSPy MIPROv2 (Bayesian joint instruction+demo search). No trainset + differentiable loss â†’ TextGrad (text-space gradient descent). Demos only â†’ APE. Single instruction â†’ OPRO. `agentic-harness` invokes this when a module's loss metric is stable but prompt quality is the bottleneck. Absorbs `integrate/dspy.md` and `integrate/textgrad.md`.
 
-48. `causal-inference` is the **LLM→DoWhy→LLM causal reasoning chain**. A child of `reasoning`. LLMs hallucinate on formal do-calculus (near-random; arXiv:2306.05836) — all estimation routes through DoWhy, not the LLM. Three-phase protocol: LLM proposes DAG → causal-learn validates (PC/FCI/GES) → DoWhy identifies+estimates. LLM only interprets results. Counterfactual queries use `dowhy.counterfactual_outcomes`. Libraries: `dowhy`, `causal-learn`, `econml`, `pywhy-llm` (experimental).
+47. `uncertainty-quantification` is the **LLM output confidence protocol**. A child of `validation` for measuring when a model knows vs. doesn't know. Three-tier protocol: Tier 1 = fast (logprobs/verbal, <0.1s), Tier 2 = standard (N=3â€“5 consistency samples), Tier 3 = thorough (Nâ‰¥10 + conformal prediction). Semantic entropy (arXiv:2302.09664) outperforms token-level entropy. Always use Tier 3 minimum for irreversible actions. Libraries: `selfcheckgpt`, `lm-polygraph`. Feeds `checklist` for audit trails and `uncertainty-quantification` threshold gates in `agent-governance`.
 
-49. `synthetic-data` is the **LLM-generated training data pipeline**. A child of `stratified-quota-sampling`. Eight paradigms ordered by fidelity: Self-Instruct → Evol-Instruct → GLAN → Magpie → Self-Play → Persona-driven → Task-specific → Preference. Six mandatory quality gates in order: dedup → schema → LLM judge → IFD → coverage → safety. Model collapse risk (arXiv:2305.17493): requires a strong fixed teacher (GPT-4/Llama-3-70B), never train-on-own-outputs without mixing real data. Clean three-stage handoff: `synthetic-data` → `stratified-quota-sampling` → `class-balancing`. Library: `argilla-io/distilabel`.
+48. `causal-inference` is the **LLMâ†’DoWhyâ†’LLM causal reasoning chain**. A child of `reasoning`. LLMs hallucinate on formal do-calculus (near-random; arXiv:2306.05836) â€” all estimation routes through DoWhy, not the LLM. Three-phase protocol: LLM proposes DAG â†’ causal-learn validates (PC/FCI/GES) â†’ DoWhy identifies+estimates. LLM only interprets results. Counterfactual queries use `dowhy.counterfactual_outcomes`. Libraries: `dowhy`, `causal-learn`, `econml`, `pywhy-llm` (experimental).
 
-50. `continual-learning` is the **non-forgetting agent training protocol**. Sits in `learning/` alongside `deep-q-rl`. Prevents catastrophic forgetting when a model must learn a new task without erasing prior skills. Six approaches by compute budget: EWC (regularization, cheapest) → LwF (distillation) → GEM/A-GEM (episodic memory constraint) → PackNet (parameter isolation) → O-LoRA/InfLoRA (LoRA orthogonalization) → MemRL (frozen backbone + episodic Q-value memory, ICML 2026). `procedural-memory` EMA (β=0.9) is intentionally aligned with single-sample EWC. Absorbs `integrate/MemRL` (arXiv:2601.03192). Libraries: Avalanche, Mammoth, HuggingFace PEFT.
+49. `synthetic-data` is the **LLM-generated training data pipeline**. A child of `stratified-quota-sampling`. Eight paradigms ordered by fidelity: Self-Instruct â†’ Evol-Instruct â†’ GLAN â†’ Magpie â†’ Self-Play â†’ Persona-driven â†’ Task-specific â†’ Preference. Six mandatory quality gates in order: dedup â†’ schema â†’ LLM judge â†’ IFD â†’ coverage â†’ safety. Model collapse risk (arXiv:2305.17493): requires a strong fixed teacher (GPT-4/Llama-3-70B), never train-on-own-outputs without mixing real data. Clean three-stage handoff: `synthetic-data` â†’ `stratified-quota-sampling` â†’ `class-balancing`. Library: `argilla-io/distilabel`.
 
-51. `program-synthesis` is the **formal verification + proof-assisted coding skill**. A child of `tdd-agent` — `tdd-agent` escalates here when the property is unbounded, security-critical, or requires exhaustive correctness guarantees. AutoVerus (arXiv:2409.13082): 91.3% on 150 Verus tasks using GPT-4o + Rust ghost code, ~$37 total. EvalPlus (arXiv:2305.01210): pass@k drops 19–28% with exhaustive testing vs. HumanEval — all `tdd-agent` benchmarks should use EvalPlus. Three-phase loop: generate → verify (formal checker) → repair (RLEF feedback). Integration: `tdd-agent` handles empirical tests; `program-synthesis` handles formal properties.
+50. `continual-learning` is the **non-forgetting agent training protocol**. Sits in `learning/` alongside `deep-q-rl`. Prevents catastrophic forgetting when a model must learn a new task without erasing prior skills. Six approaches by compute budget: EWC (regularization, cheapest) â†’ LwF (distillation) â†’ GEM/A-GEM (episodic memory constraint) â†’ PackNet (parameter isolation) â†’ O-LoRA/InfLoRA (LoRA orthogonalization) â†’ MemRL (frozen backbone + episodic Q-value memory, ICML 2026). `procedural-memory` EMA (Î²=0.9) is intentionally aligned with single-sample EWC. Absorbs `integrate/MemRL` (arXiv:2601.03192). Libraries: Avalanche, Mammoth, HuggingFace PEFT.
 
-52. `active-inference` is the **Bayesian POMDP agent skill** based on the Free Energy Principle. Sits in `learning/` as a complement to `deep-q-rl`, not a replacement. Use when: partial observability (can't see full state), no clean scalar reward (prefer EFE preferences), principled tool selection (epistemic value drives info-gathering before committing to action). EFE decomposes into epistemic value (info gain) + pragmatic value (reach preferred obs) — no reward design needed. Russian Doll MCTS ≈ Sophisticated Inference: both use tree search; EFE replaces Q-value as node score. Library: `inferactively-pymdp`. Use `deep-q-rl` when full observability + `evaluate(state)` exists.
+51. `program-synthesis` is the **formal verification + proof-assisted coding skill**. A child of `tdd-agent` â€” `tdd-agent` escalates here when the property is unbounded, security-critical, or requires exhaustive correctness guarantees. AutoVerus (arXiv:2409.13082): 91.3% on 150 Verus tasks using GPT-4o + Rust ghost code, ~$37 total. EvalPlus (arXiv:2305.01210): pass@k drops 19â€“28% with exhaustive testing vs. HumanEval â€” all `tdd-agent` benchmarks should use EvalPlus. Three-phase loop: generate â†’ verify (formal checker) â†’ repair (RLEF feedback). Integration: `tdd-agent` handles empirical tests; `program-synthesis` handles formal properties.
 
-53. `median-bifurcation` is the **universal median-cut discriminative signal skill**. Any useful distinction a model or system must learn is a binary median cut. Three-step protocol: choose partition axis → produce both sides explicitly (hard negatives baked in, not mined post-hoc) → drop unwanted partition at inference. Applied recursively, n bifurcations yield 2^n epistemic cells at zero additional labeling cost. This is data-level contrastive learning: the loss sees ordinary cross-entropy; discriminative pressure comes from the data layout. Inspired by ANOVA factorial designs and k-means via median divisions. `mad-dynamic-batching` is a concrete instantiation for token-length distributions.
+52. `active-inference` is the **Bayesian POMDP agent skill** based on the Free Energy Principle. Sits in `learning/` as a complement to `deep-q-rl`, not a replacement. Use when: partial observability (can't see full state), no clean scalar reward (prefer EFE preferences), principled tool selection (epistemic value drives info-gathering before committing to action). EFE decomposes into epistemic value (info gain) + pragmatic value (reach preferred obs) â€” no reward design needed. Russian Doll MCTS â‰ˆ Sophisticated Inference: both use tree search; EFE replaces Q-value as node score. Library: `inferactively-pymdp`. Use `deep-q-rl` when full observability + `evaluate(state)` exists.
 
-## MCG Foundation — The Conceptual Backbone
+53. `median-bifurcation` is the **universal median-cut discriminative signal skill**. Any useful distinction a model or system must learn is a binary median cut. Three-step protocol: choose partition axis â†’ produce both sides explicitly (hard negatives baked in, not mined post-hoc) â†’ drop unwanted partition at inference. Applied recursively, n bifurcations yield 2^n epistemic cells at zero additional labeling cost. This is data-level contrastive learning: the loss sees ordinary cross-entropy; discriminative pressure comes from the data layout. Inspired by ANOVA factorial designs and k-means via median divisions. `mad-dynamic-batching` is a concrete instantiation for token-length distributions.
+
+43. `skill-sync` is the **LLM-assisted merge protocol for diverged skill copies** across master and local/remote mirrors. Distinct from `skill-wiki` (governance: intake/staging/lifecycle) â€” `skill-sync` is operational: when both master and a mirror have independently changed since the last commit, it classifies the case (no-op / fast-forward / conflict), applies deterministic fast-forwards automatically, and routes true conflicts to an LLM merge that incorporates both sets of changes without dropping content from either side. Mechanically executed by `sync_skills.ps1`. MERGE-CONFLICT markers flag unresolved sections for human review before commit.
+
+44. `consolidation` is the **triplet-based document consolidation pipeline** for living knowledge bases and skill libraries. Extracts subject-predicate-object triplets from each document, computes a pairwise Jaccard similarity matrix (or NLI-based soft Jaccard for semantic matching), runs **greedy nearest-neighbor chain decomposition** (single-linkage chaining) to group related documents, and emits a sorted report with prescriptions: MERGE (â‰¥0.8), migrate (0.5â€“0.8), xref (0.3â€“0.5). Groups are sorted by chain length descending â€” largest clusters first. Sits above `gist_correlation_matrix` (matrix builder) and feeds prescriptions into `skill-wiki` (governance) and `skill-sync` (mechanical merge). Use when the library has grown by â‰¥5 new entries, semantic search returns contradictory results, or a scheduled consolidation run is due.
+
+45. `nearest-neighbor-chain` is the **greedy path-cover chain decomposition sub-skill** shared by `consolidation` and any other consumer that needs to partition a similarity matrix into semantic groups. It walks pairs sorted by descending score, extends only chain endpoints (no branching), and emits variable-length chains sorted by length descending. Singletons are docs with no above-Ï„ neighbours. The "chaining effect" of single-linkage is intentional: each chain is a semantic thread; a chain break is a topic boundary. `gist_correlation_matrix` produces the matrix; `nearest-neighbor-chain` decomposes it; `consolidation` adds triplet extraction and MERGE/migrate/xref prescriptions on top.
+
+46. `prompt-optimization` is the **automatic prompt self-improvement skill**. A child of `evaluator-optimizer` that applies optimization algorithms â€” not manual rewriting. Labeled trainset + multi-step â†’ DSPy MIPROv2 (Bayesian joint instruction+demo search). No trainset + differentiable loss â†’ TextGrad (text-space gradient descent). Demos only â†’ APE. Single instruction â†’ OPRO. `agentic-harness` invokes this when a module's loss metric is stable but prompt quality is the bottleneck. Absorbs `integrate/dspy.md` and `integrate/textgrad.md`.
+
+47. `uncertainty-quantification` is the **LLM output confidence protocol**. A child of `validation` for measuring when a model knows vs. doesn't know. Three-tier protocol: Tier 1 = fast (logprobs/verbal, <0.1s), Tier 2 = standard (N=3â€“5 consistency samples), Tier 3 = thorough (Nâ‰¥10 + conformal prediction). Semantic entropy (arXiv:2302.09664) outperforms token-level entropy. Always use Tier 3 minimum for irreversible actions. Libraries: `selfcheckgpt`, `lm-polygraph`. Feeds `checklist` for audit trails and `uncertainty-quantification` threshold gates in `agent-governance`.
+
+48. `causal-inference` is the **LLMâ†’DoWhyâ†’LLM causal reasoning chain**. A child of `reasoning`. LLMs hallucinate on formal do-calculus (near-random; arXiv:2306.05836) â€” all estimation routes through DoWhy, not the LLM. Three-phase protocol: LLM proposes DAG â†’ causal-learn validates (PC/FCI/GES) â†’ DoWhy identifies+estimates. LLM only interprets results. Counterfactual queries use `dowhy.counterfactual_outcomes`. Libraries: `dowhy`, `causal-learn`, `econml`, `pywhy-llm` (experimental).
+
+49. `synthetic-data` is the **LLM-generated training data pipeline**. A child of `stratified-quota-sampling`. Eight paradigms ordered by fidelity: Self-Instruct â†’ Evol-Instruct â†’ GLAN â†’ Magpie â†’ Self-Play â†’ Persona-driven â†’ Task-specific â†’ Preference. Six mandatory quality gates in order: dedup â†’ schema â†’ LLM judge â†’ IFD â†’ coverage â†’ safety. Model collapse risk (arXiv:2305.17493): requires a strong fixed teacher (GPT-4/Llama-3-70B), never train-on-own-outputs without mixing real data. Clean three-stage handoff: `synthetic-data` â†’ `stratified-quota-sampling` â†’ `class-balancing`. Library: `argilla-io/distilabel`.
+
+50. `continual-learning` is the **non-forgetting agent training protocol**. Sits in `learning/` alongside `deep-q-rl`. Prevents catastrophic forgetting when a model must learn a new task without erasing prior skills. Six approaches by compute budget: EWC (regularization, cheapest) â†’ LwF (distillation) â†’ GEM/A-GEM (episodic memory constraint) â†’ PackNet (parameter isolation) â†’ O-LoRA/InfLoRA (LoRA orthogonalization) â†’ MemRL (frozen backbone + episodic Q-value memory, ICML 2026). `procedural-memory` EMA (Î²=0.9) is intentionally aligned with single-sample EWC. Absorbs `integrate/MemRL` (arXiv:2601.03192). Libraries: Avalanche, Mammoth, HuggingFace PEFT.
+
+51. `program-synthesis` is the **formal verification + proof-assisted coding skill**. A child of `tdd-agent` â€” `tdd-agent` escalates here when the property is unbounded, security-critical, or requires exhaustive correctness guarantees. AutoVerus (arXiv:2409.13082): 91.3% on 150 Verus tasks using GPT-4o + Rust ghost code, ~$37 total. EvalPlus (arXiv:2305.01210): pass@k drops 19â€“28% with exhaustive testing vs. HumanEval â€” all `tdd-agent` benchmarks should use EvalPlus. Three-phase loop: generate â†’ verify (formal checker) â†’ repair (RLEF feedback). Integration: `tdd-agent` handles empirical tests; `program-synthesis` handles formal properties.
+
+52. `active-inference` is the **Bayesian POMDP agent skill** based on the Free Energy Principle. Sits in `learning/` as a complement to `deep-q-rl`, not a replacement. Use when: partial observability (can't see full state), no clean scalar reward (prefer EFE preferences), principled tool selection (epistemic value drives info-gathering before committing to action). EFE decomposes into epistemic value (info gain) + pragmatic value (reach preferred obs) â€” no reward design needed. Russian Doll MCTS â‰ˆ Sophisticated Inference: both use tree search; EFE replaces Q-value as node score. Library: `inferactively-pymdp`. Use `deep-q-rl` when full observability + `evaluate(state)` exists.
+
+53. `median-bifurcation` is the **universal median-cut discriminative signal skill**. Any useful distinction a model or system must learn is a binary median cut. Three-step protocol: choose partition axis â†’ produce both sides explicitly (hard negatives baked in, not mined post-hoc) â†’ drop unwanted partition at inference. Applied recursively, n bifurcations yield 2^n epistemic cells at zero additional labeling cost. This is data-level contrastive learning: the loss sees ordinary cross-entropy; discriminative pressure comes from the data layout. Inspired by ANOVA factorial designs and k-means via median divisions. `mad-dynamic-batching` is a concrete instantiation for token-length distributions.
+
+## MCG Foundation â€” The Conceptual Backbone
 
 The skill library is an implementation of the **Meta Context Graph (MCG)** architecture
 (Tekiner, 2025; Hu et al. arXiv:2512.13564) applied to automated software development.
@@ -206,25 +236,25 @@ The full MCG system comprises two complementary graphs:
 
 | MCG Component | Software Dev Equivalent | Skill |
 |---|---|---|
-| Domain KG — entities & relationships | Codebase / domain model | `agentic_kg_memory` + `kg_ontology` |
+| Domain KG â€” entities & relationships | Codebase / domain model | `agentic_kg_memory` + `kg_ontology` |
 | DKG entity identity layer | Symbol/module canonicalization | `kg_ontology` |
-| Context Graph — decision traces (episodic) | learnings.jsonl, per-task rationale | `agentic-harness` |
-| CG patterns (semantic) | Pattern Store pending → tenure | `skill-wiki` |
-| CG tribal knowledge (semantic) | Pattern Store promoted entries | `skill-wiki` → skill files |
-| CG procedural schemas | **The SKILL.md files themselves** — model-agnostic, slot-in primitives | This whole library |
+| Context Graph â€” decision traces (episodic) | learnings.jsonl, per-task rationale | `agentic-harness` |
+| CG patterns (semantic) | Pattern Store pending â†’ tenure | `skill-wiki` |
+| CG tribal knowledge (semantic) | Pattern Store promoted entries | `skill-wiki` â†’ skill files |
+| CG procedural schemas | **The SKILL.md files themselves** â€” model-agnostic, slot-in primitives | This whole library |
 | L4 Runtime state | Session / active context | `continuity-log`, `memory-bank` |
 | L3 Organisation conventions | Team / project norms | `memory-bank` project brief |
 | L2 Industry / domain | Domain KG per project | `agentic_kg_memory` |
 | L1 Universal best practices | Base skill library | This repo |
 
 **The skills are procedural memory** (CoALA taxonomy, arXiv:2309.02427). They cannot be
-summarized into a prompt and RAG-retrieved with equal effect — they must be invoked. This
+summarized into a prompt and RAG-retrieved with equal effect â€” they must be invoked. This
 is the distinction between a great chef's accumulated technique and a recipe book. The
-Pattern Store vetting pipeline (3 applications → promote) implements the tribal knowledge
-lifecycle from MCG: `tk_candidates` → reviewed → `tribal_knowledge` (active rule) →
+Pattern Store vetting pipeline (3 applications â†’ promote) implements the tribal knowledge
+lifecycle from MCG: `tk_candidates` â†’ reviewed â†’ `tribal_knowledge` (active rule) â†’
 compiled into a skill.
 
-For the full architecture, see `agentic_kg_memory/SKILL.md § MCG Foundation`.
+For the full architecture, see `agentic_kg_memory/SKILL.md Â§ MCG Foundation`.
 
 ## Repository Layout
 
@@ -261,10 +291,10 @@ Use this README as the live-skill audit source of truth for the concepts that we
 
 | `integrate/compiled.md` concept | Live disposition |
 |---|---|
-| `build-observability` | **live skill** → `build-observability` |
-| `codebase-knowledge-graph` | **live skill** → `codebase-knowledge-graph` |
-| `fat-skills` | **closed by absorption** → `skill-wiki` + `agentic-harness` + repo routing guidance + memory / governance split |
-| `dev-pipeline` | **closed by absorption** → `react-agent` + `openspec-workflow` + execution skills + `agentic-harness` + supporting release / safety lanes |
+| `build-observability` | **live skill** â†’ `build-observability` |
+| `codebase-knowledge-graph` | **live skill** â†’ `codebase-knowledge-graph` |
+| `fat-skills` | **closed by absorption** â†’ `skill-wiki` + `agentic-harness` + repo routing guidance + memory / governance split |
+| `dev-pipeline` | **closed by absorption** â†’ `react-agent` + `openspec-workflow` + execution skills + `agentic-harness` + supporting release / safety lanes |
 
 ## Design Principles
 
@@ -280,13 +310,13 @@ Use this README as the live-skill audit source of truth for the concepts that we
 Skills compound over time. Each skill accumulates evidence (EVIDENCE.md) and changelog history (HISTORY.md) alongside its behavioral contract (SKILL.md). The governance lifecycle is:
 
 ```
-integrate/          ← raw intake (awesome-copilot, gstack, llm-wiki, etc.)
-integrate/staged/   ← validated concepts awaiting promotion
-<skill>/SKILL.md    ← active behavioral contract (status: active)
-<superseded>        ← retired skills (status: superseded, superseded_by: <name>)
+integrate/          â† raw intake (awesome-copilot, gstack, llm-wiki, etc.)
+integrate/staged/   â† validated concepts awaiting promotion
+<skill>/SKILL.md    â† active behavioral contract (status: active)
+<superseded>        â† retired skills (status: superseded, superseded_by: <name>)
 ```
 
-Promotion gate: one Tier-1/2 evidence item + one local validation, OR two independent Tier-1–3 items from distinct source types. See `skill-wiki/SKILL.md` for the full governance contract.
+Promotion gate: one Tier-1/2 evidence item + one local validation, OR two independent Tier-1â€“3 items from distinct source types. See `skill-wiki/SKILL.md` for the full governance contract.
 
 SKILL.md frontmatter fields:
 ```yaml
@@ -332,7 +362,7 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | Offline batch eval, regression detection | `checklist` (eval-pipeline section) |
 | Hyperparameter search / training | `optuna-nested-cv`, `mlflow` |
 | Imbalanced classifier class weights | `class-balancing` |
-| PDF→enriched-Markdown pipeline | `pdf-extraction` |
+| PDFâ†’enriched-Markdown pipeline | `pdf-extraction` |
 | Semantic knowledge retrieval | `agentic_kg_memory`, `gist-retriever` |
 | Cross-session episodic recall | `agentic_kg_memory` (episodic section) |
 | RL from code execution feedback | `deep-q-rl` (code-rl section) |
@@ -350,12 +380,12 @@ This library is optimized for automated software development. Skill-to-pipeline 
 - **2026-05-09**: Imported `model-size-reduction` and `generalization-theory` from the local research/wiki intake. `model-size-reduction` now owns architecture-agnostic Hugging Face checkpoint slimming and delta sparsification; `generalization-theory` now owns the eNTK signal-vs-noise diagnostic lens for memorization, grokking, and noisy-preference fine-tuning.
 - **2026-05-02**: Explicitly closed the `fat-skills` and `dev-pipeline` umbrella concepts by absorption rather than promotion. `fat-skills` is now documented as split across `skill-wiki`, `agentic-harness`, repo-level routing guidance, and the existing memory / governance surfaces; `dev-pipeline` is documented as split across `react-agent`, `openspec-workflow`, the execution skills, and `agentic-harness`.
 - **2026-05-02**: Grounded the `agentic-harness` evaluation lane in `DSPy` and `TextGrad`. Added `integrate/dspy.md` and `integrate/textgrad.md`, extended `integrate/compiled.md` with `optimizer-driven-evaluation`, and updated the live `agentic-harness` skill to distinguish structured audit (`checklist`) from metric/reward compile-refine loops (DSPy) and textual-loss refinement loops (TextGrad).
-- **2026-05-02**: Added `class-balancing` (log inverse freq → Box-Cox → ratio weights for imbalanced classifiers) and `pdf-extraction` (full docling pipeline + table enhancement via tabula+camelot+VLM fusion). `hyper-parm_tuning` now frames Weighted Stage Allocation as the canonical cross-skill pattern; `agentic-hyperparm` is the agent-specific instantiation. `arxiv-bridge` was updated with CLI flags and a sequential-only warning.
+- **2026-05-02**: Added `class-balancing` (log inverse freq â†’ Box-Cox â†’ ratio weights for imbalanced classifiers) and `pdf-extraction` (full docling pipeline + table enhancement via tabula+camelot+VLM fusion). `hyper-parm_tuning` now frames Weighted Stage Allocation as the canonical cross-skill pattern; `agentic-hyperparm` is the agent-specific instantiation. `arxiv-bridge` was updated with CLI flags and a sequential-only warning.
 - Imported the portable OpenSpec/Fabro skill family as live agent skills: `openspec-workflow`, `openspec-propose`, `openspec-explore`, `openspec-apply-change`, `openspec-archive-change`, and `fabro-create-workflow`. Current rollout is agent-only first; any dark-factory pipeline promotion remains a separate second pass.
-- **Wave 3 Pareto additions** (Tier 3, scores 6–9): `autoresearch` (new skill); `context-engineering` section → `code`; `eval-pipeline` section → `checklist`; `agent-as-ci-gate` full protocol → `agent-governance`; `code-rl` section → `deep-q-rl`. All 15 Pareto candidates now implemented.
+- **Wave 3 Pareto additions** (Tier 3, scores 6â€“9): `autoresearch` (new skill); `context-engineering` section â†’ `code`; `eval-pipeline` section â†’ `checklist`; `agent-as-ci-gate` full protocol â†’ `agent-governance`; `code-rl` section â†’ `deep-q-rl`. All 15 Pareto candidates now implemented.
 - **Super System Prompt extraction finished**: added `documentation` (timestamped-vs-cumulative doc strategy) and `response-style` (voice preservation, anti-cliche prose, user-facing coherence).
-- **Wave 2 Pareto additions** (Tier 2, scores 12–16): `context-compaction`, `security-review`, `mcp-tool-registry` (new skills); `self-repair` section → `debugging`; `hierarchical-task-planning` section → `agentic-harness`; `episodic-memory` section → `agentic_kg_memory`.
-- **Wave 1 Pareto additions** (Tier 1, all score ≥ 20): `evaluator-optimizer`, `multi-agent-coordination`, `tdd-agent`, `agent-governance`. Fills the largest gaps: iterative generation loop, team topology, test-first lifecycle, and safety rails.
+- **Wave 2 Pareto additions** (Tier 2, scores 12â€“16): `context-compaction`, `security-review`, `mcp-tool-registry` (new skills); `self-repair` section â†’ `debugging`; `hierarchical-task-planning` section â†’ `agentic-harness`; `episodic-memory` section â†’ `agentic_kg_memory`.
+- **Wave 1 Pareto additions** (Tier 1, all score â‰¥ 20): `evaluator-optimizer`, `multi-agent-coordination`, `tdd-agent`, `agent-governance`. Fills the largest gaps: iterative generation loop, team topology, test-first lifecycle, and safety rails.
 - **MCG grounding pass**: Grounded the full skill library in the Meta Context Graph (MCG) architecture (Tekiner 2025, Hu et al. arXiv:2512.13564, CoALA arXiv:2309.02427, ACE arXiv:2510.04618). Added MCG Foundation section to README, MCG Architecture section to `agentic_kg_memory/SKILL.md`, and MCG terminology alignment to `skill-wiki` Pattern Store.
 - **Restored `kg_ontology` to `status: active`**: The prior merge into `agentic_kg_memory` was architecturally wrong. `kg_ontology` owns the DKG entity-identity layer (synset/hypernym BM25 canonicalization); `agentic_kg_memory` owns the CG retrieval side. Two distinct MCG concerns.
 - Added `deep-research` as a child of `agentic-harness`: LangGraph research graph with Selenium fallback fetch pipeline.
@@ -364,10 +394,10 @@ This library is optimized for automated software development. Skill-to-pipeline 
 - Absorbed `integrate\\llm-wiki` into existing live skills instead of promoting it as a standalone branch: compiled memory behavior now lives in `agentic_kg_memory`, staged retrieval behavior in `gist-retriever`, and the project-vs-corpus boundary in `memory-bank`.
 - Second-pass absorption of `integrate\\llm-wiki`: added consolidation tiers (working/episodic/semantic/procedural), temporal decay, supersession, automation hooks, graph traversal for discovery, and an initial crystallization contract to `agentic_kg_memory`. That protocol has since been promoted into the standalone `crystallization` skill.
 - Added `deep-q-rl` under new `learning/` section: DQN + Russian Doll MCTS pattern generalized from chess-deep-q; applies to any scored discrete-action environment.
-- Merged `hyper-parm_tuning` → `optuna-nested-cv`: Methodology Primer section (preconditions checklist, layerwise decomposition, structured search protocol, sampler policy for LLM judges, search space type guide). `hyper-parm_tuning` is now `status: superseded`.
+- Merged `hyper-parm_tuning` â†’ `optuna-nested-cv`: Methodology Primer section (preconditions checklist, layerwise decomposition, structured search protocol, sampler policy for LLM judges, search space type guide). `hyper-parm_tuning` is now `status: superseded`.
 - Fattened `agentic-harness` with gstack-derived patterns: Learnings Compounding (learnings.jsonl schema, 4 persistence layers), Automated Dev Pipeline (Autoship state machine), Review Army (7 specialists + adaptive ceremony), Context Compaction During Long Runs.
 - Fattened `deep-research` with research epistemology: Perspective Diversity (STORM), Source Quality Hierarchy (5-tier), Per-Role Model Strategy, Citation Chain Integrity, Research Anti-Patterns.
-- Added Pattern Store vetting mechanism to `skill-wiki/SKILL.md`: vector store as pre-skill staging, 3-application tenure threshold, confidence decay formula (`e^(-0.1 × months)`), prune gate, promotion pipeline → `integrate/staged/`.
+- Added Pattern Store vetting mechanism to `skill-wiki/SKILL.md`: vector store as pre-skill staging, 3-application tenure threshold, confidence decay formula (`e^(-0.1 Ã— months)`), prune gate, promotion pipeline â†’ `integrate/staged/`.
 - All live and retained-historical `SKILL.md` files now carry `status:` governance frontmatter. `hyper-parm_tuning` remains the preserved superseded predecessor.
 - Added `design-patterns`, `agentic-design-patterns`, and `substrate-selection` as distinct skills so code pattern choice, LangGraph workflow shape, and runtime selection no longer collapse into `agentic-harness`.
 - Absorbed `integrate/gstack` ETHOS: "Boil the Lake" (completeness is cheap with AI) into `code/SKILL.md`; "Search Before Building" (3-layer knowledge taxonomy) into `code/SKILL.md`.

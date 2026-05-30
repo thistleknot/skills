@@ -1,4 +1,4 @@
----
+﻿---
 name: agentic-harness
 description: >
   Protocol for synthesizing, debugging, iterating on, and verifying automated LLM
@@ -104,6 +104,21 @@ Minimum structured surfaces:
 The default goal is **no downstream reparsing of upstream prose** when the same
 information can be carried as typed fields.
 
+### Definition-lock handshake
+
+When one orchestrator, router, or worker hands work to another, require a
+**definition-lock handshake** before side effects:
+
+1. sender emits the structured task packet
+2. receiver emits a structured repeat-back packet
+3. sender compares repeat-back to the original packet
+4. execution proceeds only if the repeat-back preserves the same objective,
+   constraints, and done conditions
+
+This is the machine analogue of two people agreeing on definitions before acting.
+If the receiver cannot repeat the packet back accurately, the communication protocol
+is not yet reliable enough for execution.
+
 ### Structured response design rules
 
 1. use `pydantic` or an equivalent schema validator at every machine-to-machine boundary
@@ -141,7 +156,7 @@ class CriticVerdict(BaseModel):
 These do not have to be the exact class names used in code. They define the
 shape discipline the harness should preserve.
 
-## Core Contract — The Coherence Flag
+## Core Contract â€” The Coherence Flag
 
 **Before touching any harness code**, register a coherence sentinel in SQL:
 
@@ -161,20 +176,20 @@ UPDATE todos SET status = 'done' WHERE id = 'coherence';
 -- coherence = True
 ```
 
-> "Did you fulfill this request?" — answer only after the todo is `done`.
+> "Did you fulfill this request?" â€” answer only after the todo is `done`.
 
 ---
 
-## Compiler Mindset — State Machine Over Conversation
+## Compiler Mindset â€” State Machine Over Conversation
 
-**Core claim:** The failure mode is not the model — it's the workflow. Treating an LLM as a chatbot invites non-deterministic sprawl. Treating it as a compiler collapses that into a single valid path.
+**Core claim:** The failure mode is not the model â€” it's the workflow. Treating an LLM as a chatbot invites non-deterministic sprawl. Treating it as a compiler collapses that into a single valid path.
 
-Replace the conversational loop with: strict input → validated process → deterministic output.
+Replace the conversational loop with: strict input â†’ validated process â†’ deterministic output.
 
 Rules:
 - State transitions require **external tool validation**, not AI self-assessment
 - Each gate is **binary** (pass/fail), not a question posed to the model
-- The AI never decides what work remains — a tool does: `while tool_says_work_remains: do_next_item`
+- The AI never decides what work remains â€” a tool does: `while tool_says_work_remains: do_next_item`
 - Concrete gates: file existence checks, linting, test presence, git diffs on protected files
 
 ### Three Compounding Failure Patterns to Design Against
@@ -183,13 +198,13 @@ Rules:
 |---|---|---|
 | Context accumulation | Output quality degrades monotonically as session grows | Sub-agents with isolated contexts; clear orchestrator regularly |
 | Ambiguous directives | "fix this" / "make it better" = multiple valid interpretations; model picks arbitrarily | Every directive has a specific, verifiable target |
-| AI-maintained to-do lists | Agent declares completion without proof; skips steps under context pressure | **External task tracker only** — agent marks items done via tool, tool decides what's left |
+| AI-maintained to-do lists | Agent declares completion without proof; skips steps under context pressure | **External task tracker only** â€” agent marks items done via tool, tool decides what's left |
 
 All three compound: a long session with vague prompts and self-tracked todos is near-guaranteed to drift.
 
 ### Orchestrator Context Budget
 
-Keep the orchestrator below **50–100K tokens**. Sub-agents burn tokens on actual work and then disappear — their context evaporates; the orchestrator stays lean. If the orchestrator context is filling, the architecture is wrong, not the context limit.
+Keep the orchestrator below **50â€“100K tokens**. Sub-agents burn tokens on actual work and then disappear â€” their context evaporates; the orchestrator stays lean. If the orchestrator context is filling, the architecture is wrong, not the context limit.
 
 ### PRD Phase Discipline
 
@@ -237,9 +252,9 @@ Do not leave the runtime boundary as dead code or test-only scaffolding.
 When the harness claims to support multiple substrates, each run should resolve and
 record an explicit backend stack:
 
-- **orchestrator** — the backbone runtime for planning / interactive control
-- **delegated external harness** — optional bounded child harness for one subproblem
-- **leaf agent** — the narrow code executor for manager-issued one-shot work
+- **orchestrator** â€” the backbone runtime for planning / interactive control
+- **delegated external harness** â€” optional bounded child harness for one subproblem
+- **leaf agent** â€” the narrow code executor for manager-issued one-shot work
 
 Minimum integration standard:
 
@@ -261,7 +276,7 @@ This keeps the stack inspectable and prevents "backend support" from meaning
 
 **Purpose:** Enforce that all work routes through the inner harness by making the outer entry point
 incapable of doing anything except calling `opencode run`. The top-level agent is structurally
-prevented from bypassing the harness — its only tool is the CLI invocation.
+prevented from bypassing the harness â€” its only tool is the CLI invocation.
 
 ### Design
 
@@ -269,9 +284,9 @@ Create a global agent file at `~/.config/opencode/agents/meta-harness.md`:
 
 ```markdown
 ---
-description: Meta-harness entry point — routes all work through inner OpenCode harness
+description: Meta-harness entry point â€” routes all work through inner OpenCode harness
 mode: primary
-model: openrouter/qwen/qwen3.5-9b
+model: openrouter/stepfun/step-3.5-flash
 temperature: 0.1
 permission:
   bash: allow
@@ -295,7 +310,7 @@ Rules:
 - Resume last session:           opencode run -c "<next message>"
 - Resume specific session:       opencode run -s <session-id> "<next message>"
 - Interactive resume:            opencode run -i -c
-- You do not plan, code, edit, or search directly — the inner harness handles all of that
+- You do not plan, code, edit, or search directly â€” the inner harness handles all of that
 - Return the inner harness result verbatim to the user
 ```
 
@@ -328,7 +343,7 @@ opencode run --agent meta-harness "implement feature X"
   The outer profile is just a gated doorbell.
 - `--fork` before continuing protects the session tree from mid-run branching.
 - This pattern is a direct instantiation of the **Harness-as-policy** rung on the
-  Harness Progression Ladder (see §Harness Progression Ladder → 3. Harness-as-policy).
+  Harness Progression Ladder (see Â§Harness Progression Ladder â†’ 3. Harness-as-policy).
 
 ### Invariant
 
@@ -339,8 +354,8 @@ breaks the policy boundary.
 ## Default Agent Settings
 
 Canonical behavioral hyperparameters live in `default_agent_settings.json`
-(same folder as this skill). All harness applications — `deep-research`,
-`react-agent`, and any future harness sub-skill — load this file as their
+(same folder as this skill). All harness applications â€” `deep-research`,
+`react-agent`, and any future harness sub-skill â€” load this file as their
 baseline and override only what diverges from the defaults.
 
 ```json
@@ -363,7 +378,7 @@ baseline and override only what diverges from the defaults.
 
 | Param | Default | What it controls |
 |---|---|---|
-| `retrieval_depth` | 5 | ReAct iterations — think→act→observe loops; agent gets 4 analysis steps before the final answer |
+| `retrieval_depth` | 5 | ReAct iterations â€” thinkâ†’actâ†’observe loops; agent gets 4 analysis steps before the final answer |
 | `reranking` | `llm_judge` | After multi-step analysis, a synthesis call reconciles accumulated steps before output; `"none"` skips |
 | `context_budget` | 512 | Chars of prior-step analysis carried into each next step; 0 = stateless, 2048 = full memory |
 | `planning_depth` | 1 | CoT steps inside the final JSON call; 1 = single-shot answer generation |
@@ -381,16 +396,16 @@ baseline and override only what diverges from the defaults.
 Select `retrieval_depth` using if/then/else conditions **before** the run starts, not after evidence gaps appear mid-execution.
 
 ```
-IF task = single well-defined lookup (find X, what is Y)        → retrieval_depth = 3
-IF task = moderate complexity (multi-file, unclear scope)        → retrieval_depth = 5 (default)
-IF task = multi-hop reasoning / synthesis / long horizon         → retrieval_depth = 8+
-ELSE (scope ambiguous)                                           → ask: "How thorough should this be —
+IF task = single well-defined lookup (find X, what is Y)        â†’ retrieval_depth = 3
+IF task = moderate complexity (multi-file, unclear scope)        â†’ retrieval_depth = 5 (default)
+IF task = multi-hop reasoning / synthesis / long horizon         â†’ retrieval_depth = 8+
+ELSE (scope ambiguous)                                           â†’ ask: "How thorough should this be â€”
                                                                    quick scan (3), standard (5), or
                                                                    exhaustive (8+)?"
 ```
 
 Contingencies to record before dispatch:
-- If early iterations surface contradictions or evidence gaps, raise `retrieval_depth` before final synthesis — not after.
+- If early iterations surface contradictions or evidence gaps, raise `retrieval_depth` before final synthesis â€” not after.
 - If iterations exhaust without convergence, surface the unresolved subquestions rather than generating a speculative answer.
 - If the user stated a time/cost constraint, cap `retrieval_depth` at the constraint ceiling and flag what was skipped.
 
@@ -426,7 +441,7 @@ The source of truth is this global skill. Keep it general enough that a repo cop
 can be exported without rethinking the contract.
 
 - restate the task as objective, wedge, failure modes, and completion artifact
-- keep a visible review ladder: office-hours → CEO review → eng review → design review → QA → ship → retro
+- keep a visible review ladder: office-hours â†’ CEO review â†’ eng review â†’ design review â†’ QA â†’ ship â†’ retro
 - preserve the scope boundary before any side effect
 - fix mechanisms, not one-off outputs
 - require artifact-backed completion, not log-shaped optimism
@@ -558,7 +573,7 @@ Operational rule:
 
 ---
 
-## AutoHarness Thesis — Learn the Harness, Not Just the Prompt
+## AutoHarness Thesis â€” Learn the Harness, Not Just the Prompt
 
 AutoHarness (arXiv:2603.03329) matters because it validates a stronger pattern than
 "retry the prompt until it behaves":
@@ -634,11 +649,11 @@ should be named in state and visible in logs.
 
 Treat the following as canonical patterns:
 
-- **Prompt chaining** — linear stage-by-stage transformations
-- **Routing** — classify work, then send to the right specialist
-- **Parallelization** — fan out independent workers, then reduce
-- **Orchestrator-workers** — one coordinator delegates subproblems
-- **Evaluator-optimizer** — critic loop that scores and refines outputs
+- **Prompt chaining** â€” linear stage-by-stage transformations
+- **Routing** â€” classify work, then send to the right specialist
+- **Parallelization** â€” fan out independent workers, then reduce
+- **Orchestrator-workers** â€” one coordinator delegates subproblems
+- **Evaluator-optimizer** â€” critic loop that scores and refines outputs
 
 Mapping to harness work:
 
@@ -653,12 +668,12 @@ Mapping to harness work:
 Treat harness evaluation as a **stack of complementary patterns**, not one generic
 "judge" blob.
 
-- **`checklist`** — schema-bound artifact audit. Best when you need structured
+- **`checklist`** â€” schema-bound artifact audit. Best when you need structured
   findings, novelty proof, and a reviewable JSON artifact.
-- **DSPy-style evaluation** — metric / reward-first optimization. Best when you
+- **DSPy-style evaluation** â€” metric / reward-first optimization. Best when you
   can score a module, pipeline step, or candidate program explicitly and want
   trace-aware compile / refine loops.
-- **TextGrad-style evaluation** — natural-language loss and textual-gradient
+- **TextGrad-style evaluation** â€” natural-language loss and textual-gradient
   optimization. Best when the evaluator must explain *how* to improve text,
   code, or prompt artifacts and deterministic scalar metrics are incomplete.
 
@@ -862,7 +877,7 @@ A clever policy with illegal actions is not a policy. It is noise with moments o
 
 ---
 
-## AutoHarness Core Methods — Pseudocode
+## AutoHarness Core Methods â€” Pseudocode
 
 Use these as the concrete reference pattern when implementing automatic harness
 learning rather than manual one-off fixes.
@@ -1001,9 +1016,9 @@ produces degraded or diverging output.
 - Never return a sentinel dict (e.g. `{"kind": "ParseError", ...}`) from a
   parse function and pass it to a downstream LLM call.
 - The LLM treats the sentinel as content and generates responses around it,
-  creating new files / new import chains → violation count grows each round.
+  creating new files / new import chains â†’ violation count grows each round.
 - **Fix**: return `[]` / `{}` / `None` on parse failure; log a warning instead.
-  Do **not** salvage truncated JSON — see #3 for the correct upstream fix.
+  Do **not** salvage truncated JSON â€” see #3 for the correct upstream fix.
 
 ### 2. Gate timeouts as false negatives
 - Long-running shell commands in gates (e.g. `pip install -e .`) take 30-40 s
@@ -1014,22 +1029,22 @@ produces degraded or diverging output.
   ([ -f pyproject.toml ] || [ -f setup.py ]) && pip install -e '.[dev]' -q \
     || pip install -r requirements.txt -q 2>/dev/null || true
   ```
-- After fix, measure: gate that took 83 s → 1.2 s.
+- After fix, measure: gate that took 83 s â†’ 1.2 s.
 
 ### 3. LLM output truncation mid-structure
 - At `max_completion_tokens=4096`, the LLM truncates mid-JSON.
-- **Root cause**: the audit/fix prompt asks the LLM to enumerate all violations with no count limit.  The response overflows the token cap, the JSON is malformed, and the parser either silently drops data (salvage) or raises — either way the next round starts with corrupted input.
-- **Fix — bound at the prompt, not the parser**:
+- **Root cause**: the audit/fix prompt asks the LLM to enumerate all violations with no count limit.  The response overflows the token cap, the JSON is malformed, and the parser either silently drops data (salvage) or raises â€” either way the next round starts with corrupted input.
+- **Fix â€” bound at the prompt, not the parser**:
   - Add `LIMIT: Report at most 10 violations.` to the audit prompt.
-  - 10 violations × ~100 tokens each ≈ 1000 tokens — comfortably within the 4096 cap.
+  - 10 violations Ã— ~100 tokens each â‰ˆ 1000 tokens â€” comfortably within the 4096 cap.
   - In the parser, call `json.loads` directly and let it raise on malformed JSON.  A hard failure surfaces the problem immediately rather than hiding it behind partial data.
 - **Do not use a salvage parser** (`rfind("}")` + slice).  Salvage masks token-cap overflows, silently drops violations, and causes the audit loop to believe it is making progress when it is not.
 - Always validate completeness with an EOF sentinel (`# END OF FILE`) for generated code files, but for structured JSON responses prefer prompt-side bounds over post-hoc repair.
 
 ### 4. Violation-count divergence (getting worse, not better)
-- Symptom: violations grow round-over-round (6 → 14, or 7 → 12 → 26).
-- **Primary trigger (most common)**: audit LLM hits token cap mid-JSON — see #3.  The truncated response is misread as fewer violations than actually exist, so the fix pass targets the wrong things and introduces new problems.  Fix #3 first.
-- **Secondary trigger**: sentinel objects fed back as content — see #1.
+- Symptom: violations grow round-over-round (6 â†’ 14, or 7 â†’ 12 â†’ 26).
+- **Primary trigger (most common)**: audit LLM hits token cap mid-JSON â€” see #3.  The truncated response is misread as fewer violations than actually exist, so the fix pass targets the wrong things and introduces new problems.  Fix #3 first.
+- **Secondary trigger**: sentinel objects fed back as content â€” see #1.
 - **Tertiary trigger**: the LLM introduces new imports/files to fix existing violations, creating a cascade.
 - **Distinguish import violations from LLM-reported violations**:
   - Import violations (from actual Python import attempts) are authoritative.
@@ -1067,13 +1082,13 @@ echo "PID $!"
 tail -f /tmp/run.log
 
 # Key log signals to watch for:
-# GOOD:  "reconcile_audit round N: M violation(s) (K from import check)"  — K decreasing
-# GOOD:  "generate_tests: N files"                                         — N > 0
+# GOOD:  "reconcile_audit round N: M violation(s) (K from import check)"  â€” K decreasing
+# GOOD:  "generate_tests: N files"                                         â€” N > 0
 # GOOD:  "gate install_deps: exit=0"
-# BAD:   "reconcile_audit round N: M violation(s) (0 from import check)"  — M growing
-# BAD:   "ReadTimeout on attempt N" × 3+                                  — server overloaded
-# BAD:   "Test for X truncated at turn 5" / SyntaxError                   — test discard
-# BAD:   "gate install_deps: exit=-1"                                      — gate timeout bug
+# BAD:   "reconcile_audit round N: M violation(s) (0 from import check)"  â€” M growing
+# BAD:   "ReadTimeout on attempt N" Ã— 3+                                  â€” server overloaded
+# BAD:   "Test for X truncated at turn 5" / SyntaxError                   â€” test discard
+# BAD:   "gate install_deps: exit=-1"                                      â€” gate timeout bug
 ```
 
 **ReadTimeout handling**: `MAX_RETRIES=4`, backoff `[2, 5, 10, 20]` seconds.
@@ -1155,7 +1170,7 @@ This skill has the following sub-skills. Invoke the relevant sub-skill when the 
 
 ---
 
-## Dark Software Factory — Specific Internals
+## Dark Software Factory â€” Specific Internals
 
 These apply to the `dark_factory` harness at `/home/user/harness`:
 
@@ -1167,11 +1182,11 @@ These apply to the `dark_factory` harness at `/home/user/harness`:
 | `MAX_RETRIES` | `llm.py:308` | 4 | LLM HTTP retries before raising |
 | `DEFAULT_TIMEOUT` | `llm.py:49` | 300 s | Per-attempt HTTP timeout |
 
-**Pipeline flow**: PM → implement → reconcile (audit/fix loop) → generate_tests → install_deps gate → verify → [retry ×3]
+**Pipeline flow**: PM â†’ implement â†’ reconcile (audit/fix loop) â†’ generate_tests â†’ install_deps gate â†’ verify â†’ [retry Ã—3]
 
 **LLM tiers**:
-- `heavy` → `local-qwen` (Qwen3.6-35B-A3B, 127.0.0.1:8081, ~15-20 tok/s, 4096 max out)
-- `fast`/`standard` → `copilot-proxy` (192.168.3.122:8069, gpt-4o / gpt-4.1 / claude-sonnet-4)
+- `heavy` â†’ `local-qwen` (Qwen3.6-35B-A3B, 127.0.0.1:8081, ~15-20 tok/s, 4096 max out)
+- `fast`/`standard` â†’ `copilot-proxy` (192.168.3.122:8069, gpt-4o / gpt-4.1 / claude-sonnet-4)
 
 **Reconcile route logic** (`reconcile.py:231`):
 ```python
@@ -1185,7 +1200,7 @@ Note: `round` increments *after* fix, so 4 fix passes happen before the `< 4` gu
 This avoids pygame `ImportError` at collection time but means test coverage
 of the real implementation requires a separate integration pass.
 
-**Structured TaskSpec input**: `regression_run.py` accepts a JSON file path or inline JSON object in place of a plain idea string.  `_resolve_input()` detects format in order: `.json` file path → inline `{...}` string → plain idea string.  When a `TaskSpec` is detected it is parsed with pydantic and serialised to a Markdown requirements document via `task_spec_to_idea()` before entering the pipeline — all downstream nodes see the enriched Markdown.  The raw JSON is preserved in `state["task_requirements"]` for programmatic inspection.
+**Structured TaskSpec input**: `regression_run.py` accepts a JSON file path or inline JSON object in place of a plain idea string.  `_resolve_input()` detects format in order: `.json` file path â†’ inline `{...}` string â†’ plain idea string.  When a `TaskSpec` is detected it is parsed with pydantic and serialised to a Markdown requirements document via `task_spec_to_idea()` before entering the pipeline â€” all downstream nodes see the enriched Markdown.  The raw JSON is preserved in `state["task_requirements"]` for programmatic inspection.
 
 Treat `TaskSpec` as the intake example of a broader rule: once a task enters the
 harness, planner, router, critic, verifier, and recovery nodes should keep
@@ -1193,14 +1208,14 @@ passing schema-bound payloads in state rather than forcing later nodes to
 reconstruct intent from prose summaries.
 
 `TaskSpec` fields:
-- `title` / `project_name` — human label vs directory slug
-- `datasets`, `data_fields` — HuggingFace or local datasets to use
-- `libraries` — `LibrarySpec(name, install, purpose)` objects
-- `behaviors` — ordered list of what the code must do
-- `constraints` — hard non-negotiable rules (get their own section heading)
-- `llm_output_schema` — `LLMOutputField(key, field_type, required, description)` for structured LLM outputs
-- `acceptance_criteria` — verifiable pass/fail statements
-- `output_format` — free-text description + pydantic model definitions
+- `title` / `project_name` â€” human label vs directory slug
+- `datasets`, `data_fields` â€” HuggingFace or local datasets to use
+- `libraries` â€” `LibrarySpec(name, install, purpose)` objects
+- `behaviors` â€” ordered list of what the code must do
+- `constraints` â€” hard non-negotiable rules (get their own section heading)
+- `llm_output_schema` â€” `LLMOutputField(key, field_type, required, description)` for structured LLM outputs
+- `acceptance_criteria` â€” verifiable pass/fail statements
+- `output_format` â€” free-text description + pydantic model definitions
 
 Schema lives at `dark_factory/schemas/task_spec.py`.
 
@@ -1359,26 +1374,26 @@ execution would bottleneck the pipeline, and sub-problems are clearly separable.
 Before decomposing into an HTP graph, run one structured pass over the task spec.
 This is the harness equivalent of asking hard questions before committing to a plan.
 
-**Six Hats sweep** (one sentence per hat — skip those that don't apply):
+**Six Hats sweep** (one sentence per hat â€” skip those that don't apply):
 
 | Hat | Lens | Ask |
 |---|---|---|
-| ⬜ White | Facts & data | What inputs, artifacts, and environment state are confirmed? |
-| 🔴 Red | Intuition | What feels underspecified or risky in the task spec? |
-| ⬛ Black | Failure modes | What are the harness-breaking failure classes for this task? |
-| 🟡 Yellow | Success | What does a clean artifact + passing gate look like? |
-| 🟢 Green | Alternatives | Is there a simpler decomposition or a reusable sub-harness? |
-| 🔵 Blue | Process | What is the correct topological order? Where are the real blockers? |
+| â¬œ White | Facts & data | What inputs, artifacts, and environment state are confirmed? |
+| ðŸ”´ Red | Intuition | What feels underspecified or risky in the task spec? |
+| â¬› Black | Failure modes | What are the harness-breaking failure classes for this task? |
+| ðŸŸ¡ Yellow | Success | What does a clean artifact + passing gate look like? |
+| ðŸŸ¢ Green | Alternatives | Is there a simpler decomposition or a reusable sub-harness? |
+| ðŸ”µ Blue | Process | What is the correct topological order? Where are the real blockers? |
 
-**Temporal causal tree** — before issuing story cards, map the task as if/then/else:
+**Temporal causal tree** â€” before issuing story cards, map the task as if/then/else:
 
 ```
 TASK_ROOT
- ├─ IF dependency_A satisfied → proceed to Level 1
- │    ├─ IF artifact_B exists → skip generation, use existing
- │    └─ ELSE → generate_B; gate on quality check
- ├─ IF dependency_A missing → unblock_A first (new root sub-task)
- └─ IF ambiguous spec → surface to user before any code runs
+ â”œâ”€ IF dependency_A satisfied â†’ proceed to Level 1
+ â”‚    â”œâ”€ IF artifact_B exists â†’ skip generation, use existing
+ â”‚    â””â”€ ELSE â†’ generate_B; gate on quality check
+ â”œâ”€ IF dependency_A missing â†’ unblock_A first (new root sub-task)
+ â””â”€ IF ambiguous spec â†’ surface to user before any code runs
 ```
 
 Contingencies that **must** be recorded in the HTP graph before dispatch:
@@ -1414,9 +1429,9 @@ class HTPGraph:
 
 ### Decomposition Protocol
 
-1. **Root task**: one sentence — the win condition. No sub-tasks yet.
-2. **Level 1** (≤ 5 children): major phases (e.g., Design, Implement, Test, Document)
-3. **Level 2** (≤ 5 per parent): concrete work items within each phase
+1. **Root task**: one sentence â€” the win condition. No sub-tasks yet.
+2. **Level 1** (â‰¤ 5 children): major phases (e.g., Design, Implement, Test, Document)
+3. **Level 2** (â‰¤ 5 per parent): concrete work items within each phase
 4. **Level 3** (if needed): atomic units that a single agent can complete in one turn
 
 Do not decompose beyond Level 3. Excessive depth creates coordination overhead that
@@ -1482,15 +1497,15 @@ If the next session cannot reload that sheet and continue coherently, the harnes
    - For parse bugs: feed a known-truncated fixture through the parse function.
    - For LLM-output bugs: replay the prompt with a checkpoint.
 5. **Re-run pipeline on a representative prompt** (same complexity as the failing case).
-6. **Check the coherence flag criteria** — only flip when *all* items are cleared.
+6. **Check the coherence flag criteria** â€” only flip when *all* items are cleared.
 
 ---
 
-## Checklist Before Flipping coherence → True
+## Checklist Before Flipping coherence â†’ True
 
 - [ ] Violation count converges (decreases) across reconcile rounds
 - [ ] Gate `install_deps` exits 0 in < 5 s for projects without pyproject.toml
-- [ ] `generate_tests` produces ≥ 1 test file per source module
+- [ ] `generate_tests` produces â‰¥ 1 test file per source module
 - [ ] No ParseError sentinel fed to any downstream LLM call
 - [ ] Pipeline completes without `retry` for a straightforward prompt
 - [ ] All tests in the generated project pass (or known skips are documented)
@@ -1500,16 +1515,16 @@ If the next session cannot reload that sheet and continue coherently, the harnes
 
 ## Skill Authoring Workflow
 
-The same waterfall → agile pipeline used to manage software projects applies to
+The same waterfall â†’ agile pipeline used to manage software projects applies to
 **creating and evolving skills**.
 
 ```
 topics      rough ideas, observations, pain points, things that keep coming up
-    ↓
+    â†“
 plans       structured approach: what the skill covers, what it doesn't, key decisions
-    ↓
+    â†“
 specs       precise behavioral contracts: trigger rules, scope boundaries, interfaces
-    ↓
+    â†“
 tasks       executable changes: which files, what sections, what wording
 ```
 
@@ -1527,9 +1542,9 @@ The harness is its own stationmaster for the skill graph.
 
 Each mature skill folder should carry the three-file complement from `memory-bank`:
 
-- `DESCRIPTION.md` — why this skill exists, when to invoke it
-- `ARCHITECTURE.md` — how it works, design decisions, data flow
-- `HISTORY.md` — changes, milestones, lessons, known gaps
+- `DESCRIPTION.md` â€” why this skill exists, when to invoke it
+- `ARCHITECTURE.md` â€” how it works, design decisions, data flow
+- `HISTORY.md` â€” changes, milestones, lessons, known gaps
 
 `SKILL.md` remains the behavioral contract (the API). The three files carry the
 development context (the internals). Together they allow a new session to onboard
@@ -1605,7 +1620,7 @@ per key+type). No write-time mutation, no race conditions.
 **Decay:** 1pt per 30 days. Stale learnings surface as lower-confidence suggestions, not deletions.
 
 **At skill START:** search top-3 relevant learnings for the current task. Display as
-`"Prior learning applied: [key] (confidence N/10)"` — makes compounding visible.  
+`"Prior learning applied: [key] (confidence N/10)"` â€” makes compounding visible.  
 **At skill END:** log any non-obvious patterns, pitfalls, or architectural insights discovered.
 Don't log obvious facts or one-time transient errors.
 
@@ -1628,30 +1643,30 @@ any phase. The system must recover gracefully.
 
 ```
 START
-  │
-  ▼
-office-hours        ← product/scope clarification
-  │
-  ▼
-autoplan            ← CEO + design + eng + DX review, auto-decisions, single approval gate
-  │
-  ▼
-BUILD               ← /checkpoint auto-save before each phase
-  │
-  ▼
-health-gate         ← composite code quality score ≥ 7.0 (tsc, biome, lint, tests)
-  │ fail → back to BUILD
-  ▼
-review              ← 7 parallel specialist subagents (see Review Army)
-  │ ASK items → back to BUILD
-  ▼
-QA                  ← behavior testing; bugs found → back to BUILD
-  │
-  ▼
-ship                ← WIP squash → PR → merge → deploy
-  │
-  ▼
-checkpoint archive  ← preserve, don't destroy; recovery state for debugging failed runs
+  â”‚
+  â–¼
+office-hours        â† product/scope clarification
+  â”‚
+  â–¼
+autoplan            â† CEO + design + eng + DX review, auto-decisions, single approval gate
+  â”‚
+  â–¼
+BUILD               â† /checkpoint auto-save before each phase
+  â”‚
+  â–¼
+health-gate         â† composite code quality score â‰¥ 7.0 (tsc, biome, lint, tests)
+  â”‚ fail â†’ back to BUILD
+  â–¼
+review              â† 7 parallel specialist subagents (see Review Army)
+  â”‚ ASK items â†’ back to BUILD
+  â–¼
+QA                  â† behavior testing; bugs found â†’ back to BUILD
+  â”‚
+  â–¼
+ship                â† WIP squash â†’ PR â†’ merge â†’ deploy
+  â”‚
+  â–¼
+checkpoint archive  â† preserve, don't destroy; recovery state for debugging failed runs
 ```
 
 Each phase writes to `timeline.jsonl`. Checkpoints auto-save before each phase.  
@@ -1671,18 +1686,18 @@ Run parallel specialist subagents on every diff. JSON-structured findings with
 confidence scores + fingerprint dedup across agents.
 
 **Always-on specialists** (run on every PR):
-- `testing` — coverage gaps, missing edge cases, test quality
-- `maintainability` — coupling, complexity, naming, dead code
+- `testing` â€” coverage gaps, missing edge cases, test quality
+- `maintainability` â€” coupling, complexity, naming, dead code
 
 **Conditional specialists** (triggered by diff content):
-- `security` — OWASP top-10, injection points, auth/authz, secrets
-- `performance` — N+1 queries, blocking I/O, memory hotspots
-- `data-migration` — schema safety, backward compatibility, rollback path
-- `api-contract` — breaking changes, versioning, client impact
-- `design` — UX/DX coherence, consistency with existing patterns
+- `security` â€” OWASP top-10, injection points, auth/authz, secrets
+- `performance` â€” N+1 queries, blocking I/O, memory hotspots
+- `data-migration` â€” schema safety, backward compatibility, rollback path
+- `api-contract` â€” breaking changes, versioning, client impact
+- `design` â€” UX/DX coherence, consistency with existing patterns
 
 **Red team** (triggered on large diffs or critical findings):
-- adversarial review — assume malicious input; find exploitable assumptions
+- adversarial review â€” assume malicious input; find exploitable assumptions
 
 **Finding structure:**
 ```json
@@ -1723,25 +1738,25 @@ the agent's context window.
 
 ```
 Tool output received
-    │
-    ▼
+    â”‚
+    â–¼
 Deterministic rules (regex/JSON, per-tool, <50ms budget each)
-    │ reduction >50% AND exit≠0 (failure compaction risk)
-    ▼
+    â”‚ reduction >50% AND exitâ‰ 0 (failure compaction risk)
+    â–¼
 Claude Haiku verifier (did we strip critical stack frame?)
-    │ over-compaction detected → restore original
-    ▼
+    â”‚ over-compaction detected â†’ restore original
+    â–¼
 Reduced output sent to agent context
 ```
 
 **Built-in tool output bloat patterns to trim:**
-- `npm install` / `pip install` — installed N packages lines → keep only errors
-- `pytest` / `jest` output — pass lines → keep only failures + summary
-- `git diff` — context lines → keep ±3 around changes, not full file
-- `tsc` / `biome` — info/warn → keep only errors
+- `npm install` / `pip install` â€” installed N packages lines â†’ keep only errors
+- `pytest` / `jest` output â€” pass lines â†’ keep only failures + summary
+- `git diff` â€” context lines â†’ keep Â±3 around changes, not full file
+- `tsc` / `biome` â€” info/warn â†’ keep only errors
 
-**Failure compaction guard:** if exit code ≠ 0 AND reduction > 50%, run Haiku
-verifier to confirm no critical stack frame was stripped. Default ON — this is the
+**Failure compaction guard:** if exit code â‰  0 AND reduction > 50%, run Haiku
+verifier to confirm no critical stack frame was stripped. Default ON â€” this is the
 highest-risk case.
 
 **Industry convergence:** Anthropic Compaction API, OpenAI compaction guide, Google
@@ -1750,17 +1765,17 @@ deterministic + LLM hybrid pattern. This is settled consensus, not an experiment
 
 ## Session Lifecycle Hooks (SimpleMem-Cross Pattern)
 
-Session boundaries are the right integration surface for persistent memory. Wire these three hooks at the harness level — not inside individual agents:
+Session boundaries are the right integration surface for persistent memory. Wire these three hooks at the harness level â€” not inside individual agents:
 
 ```python
-# At session start — inject prior context before goal decomposition
+# At session start â€” inject prior context before goal decomposition
 orchestrator.start_session(goal: str) -> prior_context: str
 
-# During execution — each agent records its own actions inline
+# During execution â€” each agent records its own actions inline
 agent.record_tool_use(tool_name: str, inputs: dict, output: str)
 agent.record_file_change(path: str, before_hash: str, after_hash: str)
 
-# At session end — extract observations, write to persistent memory
+# At session end â€” extract observations, write to persistent memory
 orchestrator.stop_session() -> observations: list[str]
 # observations = decisions, discoveries, learnings extracted from the session
 ```
@@ -1785,16 +1800,16 @@ session state = Mermaid graph (node_id per task/file/test/failure)
 verbose logs  = refs/{node_id}.md  (filesystem, retrieved on demand)
 ```
 
-Token budget: canvas constrained to ≤5% of context window. Benchmark result: 61.38% token reduction vs. prose baseline.
+Token budget: canvas constrained to â‰¤5% of context window. Benchmark result: 61.38% token reduction vs. prose baseline.
 
 Canvas node schema for coding sessions:
 
-- `task` — top-level objective
-- `subtask` — decomposed work item
-- `file` — artifact being mutated
-- `test` — test result (pass/fail)
-- `failure` — error class with `ref_id`
-- `patch` — proposed fix with `ref_id`
+- `task` â€” top-level objective
+- `subtask` â€” decomposed work item
+- `file` â€” artifact being mutated
+- `test` â€” test result (pass/fail)
+- `failure` â€” error class with `ref_id`
+- `patch` â€” proposed fix with `ref_id`
 
 Edge types: `depends_on`, `produces`, `tests`, `fixes`, `blocks`.
 
@@ -1824,12 +1839,12 @@ graph TD
 ```
 
 **Serialization rules:**
-- Every node has a unique `type:id` — never bare IDs
+- Every node has a unique `type:id` â€” never bare IDs
 - Verbose tool logs externalized to `refs/{node_id}.md`; graph carries only the `ref_id` pointer
-- Canvas rebuild: parse EventLog → reconstruct current status per object → emit Mermaid
-- A 20-node graph with edges encodes to ~500 tokens — well under 5% of 128K context
+- Canvas rebuild: parse EventLog â†’ reconstruct current status per object â†’ emit Mermaid
+- A 20-node graph with edges encodes to ~500 tokens â€” well under 5% of 128K context
 
-Reference concept: TencentDB-Agent-Memory L0–L3 pyramid (reference architecture only — TypeScript/Node, not an integration target).
+Reference concept: TencentDB-Agent-Memory L0â€“L3 pyramid (reference architecture only â€” TypeScript/Node, not an integration target).
 
 ## Applicability Envelope
 
