@@ -1,7 +1,14 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "openrouter/google/gemma-4-26b-a4b-it",
+  "model": "openrouter/deepseek/deepseek-v4-flash",
   "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://192.168.3.17:11434/v1",
+        "timeout": 480000
+      }
+    },
     "openrouter": {
       "npm": "@ai-sdk/openai-compatible",
       "options": {
@@ -42,6 +49,45 @@
               "reasoning": {
                 "effort": "minimal",
                 "exclude": true
+              }
+            },
+            // Independent planner variants (Plan B in dual-planner panel).
+            // Active: planner_conservative — suppresses gemma's repetition loop problem.
+            // Switch to planner_balanced or planner_creative if output is too terse.
+            "planner_balanced": {
+              "reasoning": {
+                "effort": "medium",
+                "enabled": true
+              },
+              "modelKwargs": {
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "frequency_penalty": 1.4,
+                "presence_penalty": 1.2
+              }
+            },
+            "planner_conservative": {
+              "reasoning": {
+                "effort": "low",
+                "enabled": true
+              },
+              "modelKwargs": {
+                "temperature": 0.1,
+                "top_p": 1.0,
+                "frequency_penalty": 1.6,
+                "presence_penalty": 1.4
+              }
+            },
+            "planner_creative": {
+              "reasoning": {
+                "effort": "high",
+                "enabled": true
+              },
+              "modelKwargs": {
+                "temperature": 1.2,
+                "top_p": 0.95,
+                "frequency_penalty": 1.4,
+                "presence_penalty": 1.2
               }
             }
           }
@@ -151,6 +197,18 @@
               },
               "modelKwargs": {
                 "frequency_penalty": 0.8,
+                "presence_penalty": 0.3
+              }
+            },
+            // Council filter: thinks internally, emits only the merged plan.
+            // Medium effort is sufficient — job is extraction + ranking, not generation.
+            "council": {
+              "reasoning": {
+                "effort": "medium",
+                "enabled": true
+              },
+              "modelKwargs": {
+                "frequency_penalty": 0.5,
                 "presence_penalty": 0.3
               }
             }
@@ -276,6 +334,14 @@
         "C:\\Users\\user\\Documents\\dev\\skills\\todo\\todo_mcp.py"
       ],
       "enabled": true
+    },
+    "task-graph": {
+      "type": "local",
+      "command": [
+        "python",
+        "C:\\Users\\user\\Documents\\dev\\skills\\todo\\task_graph_mcp.py"
+      ],
+      "enabled": true
     }
   },
   "plugin": [
@@ -283,6 +349,7 @@
   ],
   "agent": {
     "orchestrator": {
+      "timeout": 300000,
       "permission": {
         "read": "deny",
         "grep": "deny",
@@ -291,6 +358,40 @@
         "bash": "allow",
         "edit": "allow",
         "subtask": "allow"
+      }
+    },
+    "coder": {
+      "permission": {
+        "read": "allow",
+        "grep": "allow",
+        "glob": "allow",
+        "list": "allow",
+        "bash": "allow",
+        "edit": "allow",
+        "subtask": "allow"
+      }
+    },
+    "aider": {
+      "timeout": 300000,
+      "permission": {
+        "read": "allow",
+        "grep": "allow",
+        "glob": "allow",
+        "list": "allow",
+        "bash": "allow",
+        "edit": "allow",
+        "subtask": "deny"
+      }
+    },
+    "summarizer": {
+      "permission": {
+        "read": "allow",
+        "grep": "deny",
+        "glob": "deny",
+        "list": "deny",
+        "bash": "deny",
+        "edit": "deny",
+        "subtask": "deny"
       }
     }
   },

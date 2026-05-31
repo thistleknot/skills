@@ -8,9 +8,9 @@
   //
   // Agent          | Usage | Qual  | Ctx   | Bld$  | Bld3  | Wgtd  | pLow  | pMid  | pHigh | pComb
   // orchestrator   | 0.25  | 0.543 | 0.942 | 0.767 | 0.751 | 0.188 | 0.200 | 0.250 | 0.300 | 0.250
-  // oracle/planner  | 0.35  | 0.886 | 0.942 | 0.000 | 0.609 | 0.213 | 0.150 | 0.350 | 0.450 | 0.340  (merged designer 0.10 → oracle)
+  // designer       | 0.10  | 0.886 | 0.942 | 0.000 | 0.609 | 0.061 | 0.050 | 0.100 | 0.150 | 0.100
   // fixer          | 0.22  | 0.429 | 0.942 | 0.967 | 0.779 | 0.171 | 0.150 | 0.210 | 0.300 | 0.216
-  // researcher     | 0.06  | 0.543 | 1.000 | 0.767 | 0.770 | 0.046 | 0.030 | 0.060 | 0.100 | 0.062  (absorbed librarian; websearch+context7+grep_app)
+  // librarian      | 0.06  | 0.286 | 1.000 | 0.767 | 0.684 | 0.041 | 0.030 | 0.060 | 0.100 | 0.062
   // observer       | 0.03  | 0.114 | 0.942 | 0.433 | 0.497 | 0.015 | 0.010 | 0.030 | 0.060 | 0.032
   // handyman       | 0.14  | 0.000 | 0.942 | 1.000 | 0.647 | 0.091 | 0.080 | 0.140 | 0.200 | 0.140
   // debugger       | 0.08  | 0.000 | 0.000 | 0.700 | 0.233 | 0.019 | 0.040 | 0.080 | 0.140 | 0.084  <- ctx cliff (198K)
@@ -20,74 +20,69 @@
   "preset": "openrouter",
   "presets": {
     "openrouter": {
-      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.25 | wgtd:0.188
-      // Swapped to Negentropy; local+free, can't call tools but orchestrator work is routing/text
-      "orchestrator": { "model": "ollama/hf.co/Jackrong/Negentropy-claude-opus-4.7-9B-GGUF:Negentropy-claude-opus-4.7-9B-Q6_K.gguf", "variant": "orchestrator", "skills": ["*"], "mcps": ["*", "!context7"] },
-      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.35 | wgtd:0.213 (absorbs designer)
-      // Swapped from gemma-4 (can't call tools); Negentropy is local+free for read-only planning
-      "oracle":       { "model": "ollama/hf.co/Jackrong/Negentropy-claude-opus-4.7-9B-GGUF:Negentropy-claude-opus-4.7-9B-Q6_K.gguf", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
-      // Swapped to Negentropy; local+free, dispatches leaf work to @aider for tool calls
-      "fixer":        {       "model": "ollama/hf.co/Jackrong/Negentropy-claude-opus-4.7-9B-GGUF:Negentropy-claude-opus-4.7-9B-Q6_K.gguf", "variant": "tactical", "displayName": "coder", "skills": [], "mcps": [] },
-      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.22 | wgtd:0.171
-      // Map-reduce pair with @summarizer: researcher gathers raw evidence, summarizer compresses to SPO triplets
-      // Absorbs librarian: snippet-informed multi-hop web+file search (websearch, context7, grep_app)
+      // ctx:1M | DeepSeek V4 Flash: strong tool-calling orchestrator
+      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "orchestrator", "skills": ["*"], "mcps": ["*", "!context7"] },
+      // Primary planner (Plan A). Paired with council for non-trivial tasks.
+      "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
+      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | usage:0.22 | wgtd:0.171
+      "fixer":        { "model": "openrouter/stepfun/step-3.5-flash", "variant": "lean", "displayName": "coder", "skills": [], "mcps": [] },
+      // Map-reduce pair with @summarizer; absorbs librarian role
       "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
-      // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
-      // vl-32b is cheaper than vl-8b on OR; no cost rationale to split; single agent covers docs + clips + tagging
+      // ctx:262K | vision
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "skills": [], "mcps": [] },
       // Leaf editor: bounded single-file codegen, no subtask routing
       "aider":        { "model": "openrouter/stepfun/step-3.5-flash", "variant": "io", "skills": [], "mcps": [] }
     },
     "openrouter-gemma-orchestrator": {
-      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.25 | wgtd:0.188
-      // gemma-4-26b-a4b-it: variant=orchestrator enforces gemma tool-call prompt format
-      // Candidate later swap: evaluate deepseek-v4-flash as the main orchestrator if Gemma's tool-call reliability remains the bottleneck.
+      // Fallback preset: gemma as orchestrator if deepseek tool-call reliability degrades
       "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "orchestrator", "skills": ["*"], "mcps": ["*", "!context7"] },
-      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | ELO:green | usage:0.35 | wgtd:0.213 (absorbs designer)
-      "oracle":       { "model": "openrouter/qwen/qwen3.6-27b", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
-      // Packet decomposer only — dispatches to @aider; same model to avoid competing coding intent
-      "fixer":        {       "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "coder", "skills": [], "mcps": [] },
-      // AA:47 | ctx:1M | in:$0.112 out:$0.224 | blend(3:1):$0.14 | ELO:green | usage:0.22 | wgtd:0.171
-      // Map-reduce pair with @summarizer: researcher gathers raw evidence, summarizer compresses to SPO triplets
-      // Absorbs librarian: snippet-informed multi-hop web+file search (websearch, context7, grep_app)
+      "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
+      "fixer":        { "model": "openrouter/stepfun/step-3.5-flash", "variant": "lean", "displayName": "coder", "skills": [], "mcps": [] },
       "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
-      // AA:~16 | ctx:1M | in:$0.13 out:$0.52 | blend(3:1):$0.23 | usage:0.03 | wgtd:0.015
-      // vl-32b is cheaper than vl-8b on OR; no cost rationale to split; single agent covers docs + clips + tagging
       "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "skills": [], "mcps": [] },
-      // Leaf editor: bounded single-file codegen, no subtask routing
       "aider":        { "model": "openrouter/stepfun/step-3.5-flash", "variant": "io", "skills": [], "mcps": [] }
     }
   },
-  "disabled_agents": ["explorer", "explore"],
+  // Dual-planner council: oracle (qwen3.6-35b) and gemma (gemma-4-26b) generate
+  // independent plans; step-3.5-flash filters and merges as the synthesis councillor.
+  // Councillors run in parallel; step-3.5 receives both plans and emits one merged plan.
+  "council": {
+    "presets": {
+      "default": {
+        "oracle": {
+          "model": "openrouter/qwen/qwen3.6-35b-a3b",
+          "variant": "tactical",
+          "prompt": "You are the primary planner. Generate a complete, concrete, sequenced implementation plan from the provided context. Steps must be actionable. Flag missing context as ASSUMPTION: <text>. No prose outside the plan."
+        },
+        "gemma": {
+          "model": "openrouter/google/gemma-4-26b-a4b-it",
+          "variant": "planner_conservative",
+          "prompt": "You are an independent second planner. Generate a complete implementation plan from the provided context alone. Do not reference other planners. Steps must be actionable. Flag missing context as ASSUMPTION: <text>. No prose outside the plan."
+        }
+      }
+    },
+    "councillor_execution_mode": "parallel",
+    "default_preset": "default"
+  },
+  "disabled_agents": ["explorer", "explore", "scout"],
   "sessionManager": {
     "maxSessionsPerAgent": 2,
     "readContextMinLines": 10,
     "readContextMaxFiles": 8
   },
   "agents": {
-    "oracle": {
-      // Planner: spec decomposition + interface design (sigs + stubs). Absorbs former @designer role.
-      // Local+free on Ollama; read-only (no tool calling needed for design/planning).
-      // NOTE: prompt/orchestratorPrompt not allowed for built-in agents (plugin restriction)
-    "model": "ollama/hf.co/Jackrong/Negentropy-claude-opus-4.7-9B-GGUF:Negentropy-claude-opus-4.7-9B-Q6_K.gguf",
-      "variant": "tactical"
-    },
     "handyman": {
-      // AA:12 | ctx:1M | in:$0.05 out:$0.10 | blend(3:1):$0.06 | usage:0.14 | wgtd:0.091
       "model": "openrouter/ibm-granite/granite-4.1-8b",
       "prompt": "You are Handyman. Mechanical Execution: Zero-reasoning tool calls and file system operations.\n\nRules:\n- Prefer one bounded command over repeated glob/read retries.\n- If asked to sample files, return concrete file paths in the first pass; do not loop on wildcard globs.\n- For CTP2 image inspection, if asked to select 5 random `.tga` files, use one command to enumerate the known target graphics directories, choose 5 concrete `.tga` paths, and stop.\n- For CTP2 preview generation, if given concrete `.tga` paths, use Python + Pillow in one bounded command to convert them to `.png` preview files and return the concrete `.png` paths.\n- For explicit Windows script execution in a known workspace, do not deliberate about shell choice. Use the Windows-native launcher immediately: `.bat`/`.cmd` -> `cmd /c <script>`, `.ps1` -> `powershell -ExecutionPolicy Bypass -File <script>`.\n- Never alternate between `<script>`, `cmd /c <script>`, quoted variants, and `bash` wrappers for the same `.bat`/`.cmd` objective. One execution attempt only, then return the concrete stdout/stderr.\n- If a Windows batch script returns a CLI usage/deprecation error, stop after the first failing run and surface the exact failing flag plus the replacement text from stderr. Do not retry with another shell wrapper.\n- Do not use `read` on wildcard file patterns like `*.tga`.\n- Do not alternate between `glob *.tga` and `read *.tga`; that is a loop.\n- Return results, not plans.",
       "orchestratorPrompt": "@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- For explicit Windows script troubleshooting in a named workspace, use @handyman first to run the script once with the native launcher and return the concrete failure\n- Windows rail: `.bat`/`.cmd` -> `cmd /c <script>`; `.ps1` -> `powershell -ExecutionPolicy Bypass -File <script>`; never spend a parent turn debating `bash` vs `cmd`\n- For CTP2 image inspection, use @handyman for one bounded file-sampling pass and one bounded preview-conversion pass when needed\n- Don't delegate when: any code understanding is required"
     },
     "pi": {
-      // Lightweight delegated harness lane for bounded inner-loop work
       "model": "openrouter/stepfun/step-3.5-flash",
       "variant": "lean",
       "prompt": "You are Pi. Lightweight delegated harness.\n\nRules:\n- Accept exactly one bounded objective from the parent orchestrator.\n- Keep scope local to that packet; do not take over repo-wide orchestration.\n- If the work is a concrete file edit or patch, delegate to @aider.\n- If the work is mechanical file movement/copying/renaming, delegate to @handyman.\n- If the work is validation or failure isolation, delegate to @debugger.\n- Prefer the cheapest sufficient inner route.\n- Return a completed local result or one concrete blocker.\n- Do not broaden into unrelated search or planning once the local route is clear.",
       "orchestratorPrompt": "@pi\n- Role: lightweight delegated harness for one bounded subproblem\n- Delegate when: a task needs a short-horizon inner loop, local coordination, or a clean `opencode -> pi -> aider` lane\n- Pi may route internally to @aider, @handyman, or @debugger\n- Don't delegate when: the task is already a single direct edit (use @aider) or pure mechanical work (use @handyman)"
     },
     "aider": {
-      // Cheap leaf executor for direct bounded edits inside Pi packets
       "model": "openrouter/stepfun/step-3.5-flash",
       "variant": "io",
       "prompt": "You are Aider. Leaf executor for bounded repo-local edits.\n\nRules:\n- Execute the concrete edit packet you were given.\n- Make the smallest correct change that satisfies the packet.\n- Do not spawn other agents.\n- Do not re-plan the parent task.\n- Do not broaden scope beyond the named files and acceptance criteria.\n- If the packet is ambiguous or requires orchestration, return one concrete blocker instead of guessing.",
@@ -100,38 +95,33 @@
       "orchestratorPrompt": "@patcher\n- Role: exact-file hotfix route into @aider\n- Delegate when: the target file is already known and the required change is specific enough to edit directly\n- Prefer routing known-file single-file edits to @aider; keep @patcher as the known-file mutation front door, not a separate leaf model\n- Don't delegate when: the problem is still discovery-only or needs broad repo search first"
     },
     "debugger": {
-      // ELO:~1380 | ctx:198K | in:$0.06 out:$0.40 | blend(3:1):$0.15 | ELO:green | usage:0.08 | wgtd:0.019 <- ctx cliff
       "model": "openrouter/qwen/qwen3.6-35b-a3b",
+      "variant": "tactical",
       "prompt": "You are Debugger. QA Inspector: High-effort error tracing and log analysis to resolve feedback loops.\n\nAlways return: FAILURE_CLASS: logic|schema|environment, CONFIDENCE: high|medium|low, REPAIR_SURFACE: <agent or file>, REASON: <compact explanation>, NEXT: <agent>.",
-      "orchestratorPrompt": "@debugger\n- Role: Reflection critic — QA Inspector for the generate→critique→fix loop; stronger model than aider by design\n- Delegate when: aider/fixer output fails tests, stack traces present, error logs, repeated feedback loops\n- Returns: FAILURE_CLASS + confidence + repair surface + NEXT route\n- Escalate to @thinker only when the failure is logic-framed and the current framing looks wrong\n- Don't delegate when: first fix attempt unless concrete failure evidence already exists"
+      "orchestratorPrompt": "@debugger\n- Role: Reflection critic — QA Inspector for the generate->critique->fix loop; stronger model than aider by design\n- Delegate when: aider/fixer output fails tests, stack traces present, error logs, repeated feedback loops\n- Returns: FAILURE_CLASS + confidence + repair surface + NEXT route\n- Escalate to @thinker only when the failure is logic-framed and the current framing looks wrong\n- Don't delegate when: first fix attempt unless concrete failure evidence already exists"
     },
     "summarizer": {
-      // ELO:~1400 | ctx:262K | in:$0.10 out:$0.30 | blend(4:1):$0.12 | ELO:green | usage:0.03 | wgtd:0.019
       "model": "openrouter/xiaomi/mimo-v2-flash",
       "prompt": "You are Summarizer. Data Parser: Zero-reasoning extraction of semantic triplets. Output JSON only: {triplets: [{subject, predicate, object, origin}]} where origin is 'observed' or 'inferred'. No prose.",
-      "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets or an evidence pack from bulky raw context\n- Agentic design pattern: use at heavy handoff boundaries, especially researcher→summarizer and debugger/researcher→thinker\n- Delegate when: researcher has returned raw evidence that needs structured compression, or any raw text is too large/noisy for the next specialist\n- Don't delegate when: the handoff is already compact and preserving full fidelity matters more than compression"
+      "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets or an evidence pack from bulky raw context\n- Agentic design pattern: use at heavy handoff boundaries, especially researcher->summarizer and debugger/researcher->thinker\n- Delegate when: researcher has returned raw evidence that needs structured compression, or any raw text is too large/noisy for the next specialist\n- Don't delegate when: the handoff is already compact and preserving full fidelity matters more than compression"
     },
     "researcher": {
-      // DeepSeek V4 Flash: strong reasoning at low cost; snippet-informed multi-hop web+file search
-      // Absorbs librarian: now holds websearch, context7, grep_app MCPs
       "model": "openrouter/deepseek/deepseek-v4-flash",
       "variant": "lean",
       "prompt": "You are Researcher. Evidence Gathering: snippet-informed multi-hop search across web, docs, and files. Collect raw evidence only — do not compress or synthesize.\n\nRules:\n- Accept a research objective from orchestrator.\n- Execute multi-hop search: issue query 1, extract top-k snippets, use those snippets as query expansion seeds for query 2, then issue a synthesis query 3 that combines evidence from hops 1 and 2.\n- Use available MCPs (websearch for live web, context7 for library docs, grep_app for codebase).\n- Return raw evidence: source text, file references, URL citations. Do not paraphrase or summarize.\n- Emit a structured evidence block: {sources: [{content, origin, citation}]}.\n- Do not interpret or conclude.\n- If the caller says the evidence is for a stuck logic problem, shape the output so @summarizer can turn it into a thinker-ready evidence pack instead of leaving the evidence isolated.",
-      "orchestratorPrompt": "@researcher\n- Role: Evidence Gathering — snippet-informed multi-hop search (web + docs + files); absorbed former @librarian role\n- Agentic design pattern: researcher→summarizer map-reduce, with optional summarizer→thinker escalation when a stuck logic problem needs evidence-backed reframing\n- MCPs available: websearch (live web), context7 (library docs), grep_app (codebase)\n- Delegate when: need to gather evidence from files, web, or docs before synthesis or before a thinker pass\n- Do not delegate when: information is already in context — go directly to @summarizer or the next grounded route\n- Do not use @librarian — it no longer exists; all web/doc search routes here"
+      "orchestratorPrompt": "@researcher\n- Role: Evidence Gathering — snippet-informed multi-hop search (web + docs + files); absorbed former @librarian role\n- Agentic design pattern: researcher->summarizer map-reduce, with optional summarizer->thinker escalation\n- MCPs available: websearch (live web), context7 (library docs), grep_app (codebase)\n- Delegate when: need to gather evidence from files, web, or docs before synthesis or before a thinker pass\n- Do not delegate when: information is already in context\n- Do not use @librarian — it no longer exists; all web/doc search routes here"
     },
     "thinker": {
-      // Swapped to Negentropy; local+free read-only deep reasoning
-      "model": "ollama/hf.co/Jackrong/Negentropy-claude-opus-4.7-9B-GGUF:Negentropy-claude-opus-4.7-9B-Q6_K.gguf",
-      "variant": "tactical",
+      "model": "openrouter/qwen/qwen3.6-35b-a3b",
+      "variant": "heavy",
       "prompt": "You are Thinker. Deep Reasoning: Extended chain-of-thought analysis for fundamentally stuck logic problems. Re-approach from first principles. Use the debugger classification and any summarizer evidence pack. Surface the root constraint, not just the symptom.",
       "orchestratorPrompt": "@thinker\n- Role: Deep Reasoning — first-principles re-approach when debugger reports a logic failure and the framing still looks wrong\n- Delegate when: debugger classified the failure as logic, lighter routes failed, and a summarizer evidence pack or compact failure history is available\n- Don't delegate when: the problem is primarily schema or environment; route those through cheaper lanes instead"
     },
     "scout": {
-      // AA:27 | ctx:1M | in:$0.04 out:$0.15 | blend(3:1):$0.07 | usage:0.22 | wgtd:0.171
       "model": "openrouter/stepfun/step-3.5-flash",
       "variant": "lean",
       "prompt": "You are Scout. Output contract only.\n\nYou MUST output ONLY the final six-line contract. No headings. No bullets. No markdown fences. No prose before or after. Never write `### Routing Decision`, `### Delegation`, `I will first`, `The first step is`, or any chain like `@scout -> @fixer`.\n\nSearch discipline:\n- Work inside the current workspace only. Do not search memory-bank folders, home directories, .config directories, or unrelated markdown/docs unless the caller explicitly asks for those surfaces.\n- For asset hunts, search only the likeliest concrete paths first. Do not pivot into *.md reconnaissance to infer filenames.\n- For CTP2 or game-asset hunts, your path budget is fixed and narrow. Use only these lanes unless the caller explicitly names others:\n  1. `Scenarios/mom/tools/momjr_csv/*.csv`\n  2. `Scenarios/*/scen0000/default/graphics/pictures/*`\n  3. `ctp2_data/default/graphics/pictures/*`\n  4. at most one gamedata reference-file grep/read if filename mapping is still unclear\n- For CTP2 or game-asset hunts, do NOT use generic repo-wide globs like `**/*.csv`, `**/*.xml`, or `**/graphics/pictures/**` unless all concrete lanes above are empty. If the concrete lanes are empty, return BLOCKED instead of broadening the search.\n- Single-pass rule: once you have directory counts, candidate filenames, or concrete target directories, stop searching and emit the final contract. Do not enter a second self-directed search round for the same objective.\n- If the task already names a concrete directory or small set of directories, complete the directory-local inventory in this single task. Do not return partial guidance that requires another scout search inside the same known directory.\n- Limit extension searches to the smallest plausible set. For CTP2 image work, prioritize `.tga`, then `.png`; do not fan out across `.jpg`, `.bmp`, or additional extensions unless the prompt explicitly requires it.\n- Never repeat the same glob or directory scan for the same extension during one task.\n- Tool budget for a normal CTP2 asset hunt: at most 3 concrete-lane scans plus at most 1 follow-up reference-file read/grep. If that budget is exhausted, return the best bounded result instead of continuing.\n- After at most 2 distinct search turns, return the final contract. If you cannot fill it, return BLOCKED. Do not keep reformulating the same search.\n- For binary/asset file results or any result set > 40 items, summarize by count and parent directory internally, then still emit only the final contract below.\n- Read only — no edits. Cite exact files and line ranges inside the field values only when necessary.\n\nFinal output contract for every search:\nStart with exactly one of these words on its own line:\nFOUND\nPARTIAL\nBLOCKED\nThen emit these exact lines and nothing else:\nPRESENT: <comma-separated concrete files or NONE>\nMISSING: <comma-separated target filenames or NONE>\nTARGET_DIRS: <comma-separated directories or NONE>\nPROXIES: <comma-separated substitute files or NONE>\nNEXT: fixer | handyman | observer | blocked\n- If you have already identified the concrete files, missing files, or target directories, set NEXT to fixer, handyman, or observer. Use NEXT: blocked only when another search cannot resolve the blocker.\n- If a concrete directory is already known, do not use NEXT: blocked just to ask for another search inside that same directory. Return the best bounded inventory and choose NEXT: handyman or fixer.\n- If you cannot fill the full contract, return BLOCKED with the partial fields you do know. Never omit NEXT.\n- Do not spend a third model turn. If the contract is still incomplete after two turns, emit BLOCKED and stop.",
-      "orchestratorPrompt": "@scout\n- Role: Codebase Search — disciplined file/symbol/pattern mapping with strict output limits\n- Delegate when: locating files, tracing execution paths, mapping symbols or affected code areas where the concrete file is not already known\n- Don't delegate when: information is already in context, when a concrete directory is already known and the task is just listing/filtering/copying files there, or when the user already named the CTP2 image workflow (`CSV/schema parsing`, units, city improvements, terrain, observer validation)\n- For CTP2 or game-asset hunts, use @scout only for one bounded first pass across `Scenarios/mom/tools/momjr_csv/*.csv`, `Scenarios/*/scen0000/default/graphics/pictures/*`, `ctp2_data/default/graphics/pictures/*`, and at most one related gamedata reference file. Do not use @scout for generic repo-wide extension sweeps.\n- If scout does not emit the exact contract lines `PRESENT:`, `MISSING:`, `TARGET_DIRS:`, `PROXIES:`, and `NEXT:`, treat that as scout failure and switch agent class immediately. Do not call scout again for the same objective.\n- If scout returns directory counts, candidate files, or target directories, immediately switch to @handyman or @fixer. Do not wait for scout to do another internal search round.\n- After any CTP2 scout pass, do not switch to @explorer, do not query memory-bank or todo tools, and do not route to @oracle for the same objective. Advance only to @handyman, @fixer, or @debugger until those concrete lanes have been acted on.\n- Prefer @scout over @explorer for first-pass codebase search only; use @handyman or @fixer once the relevant directory is already known"
+      "orchestratorPrompt": "@scout\n- Role: Codebase Search — disciplined file/symbol/pattern mapping with strict output limits\n- Delegate when: locating files, tracing execution paths, mapping symbols or affected code areas where the concrete file is not already known\n- Don't delegate when: information is already in context, when a concrete directory is already known and the task is just listing/filtering/copying files there, or when the user already named the CTP2 image workflow\n- For CTP2 or game-asset hunts, use @scout only for one bounded first pass across the known lanes. Do not use @scout for generic repo-wide extension sweeps.\n- If scout does not emit the exact contract lines, treat that as scout failure and switch agent class immediately.\n- If scout returns directory counts, candidate files, or target directories, immediately switch to @handyman or @fixer."
     }
   }
 }

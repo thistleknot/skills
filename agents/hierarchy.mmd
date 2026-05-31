@@ -1,7 +1,4 @@
----
-title: OpenCode Agent Hierarchy
----
-flowchart TD
+﻿flowchart TD
     subgraph ENTRIES ["Entry Points"]
         direction LR
         HB(["heartbeat.ps1\n(watchdog)"])
@@ -10,36 +7,38 @@ flowchart TD
     end
 
     OC["opencode\n(oh-my-opencode-slim)"]
-    ORCH["orchestrator\ngemma-4-26b / \norchestrator\nRoutes — never codes"]
+    ORCH["orchestrator\ndeepseek-v4-flash\norchestrator\nRoutes -- never codes"]
     DB[("task_graph\n.task_graph.db")]
+    COUNCIL["council\nstep-3.5-flash\n(council variant)\nConsensus + merge"]
 
     subgraph EXEC ["Execution Layer"]
         direction LR
         SCOUT["scout\nstep-3.5-flash\nCodebase search\nContract output only"]
-        PATCHER["patcher\nqwen3.6-35b\nExact hotfix / known-file\n(route into aider)"]
+        PATCHER["patcher\nstep-3.5-flash\nExact hotfix / known-file\n(route into aider)"]
         PI["pi\nstep-3.5-flash\nInner harness loop"]
-        FIXER["fixer / coder\nqwen3.6-35b\nMulti-file packets → aider"]
-        AIDER["aider\nstep-3.5-flash\nLeaf editor\n(1 packet · 1 file)"]
+        FIXER["fixer / coder\nstep-3.5-flash\nMulti-file packets -> aider"]
+        AIDER["aider\nstep-3.5-flash\nLeaf editor\n(1 packet . 1 file)"]
         DEBUGGER["debugger\nqwen3.6-35b\nStack traces / QA"]
-        HANDYMAN["handyman\ngranite-4.1-8b\nMechanical file ops"]
+        HANDYMAN["handyman\nstep-3.5-flash\nMechanical file ops"]
     end
 
     subgraph PLAN ["Planning Lane"]
         direction LR
-        ORACLE["oracle / planner\nqwen3.6-27b\nSpec + sig + stubs"]
+        ORACLE["oracle / planner / designer\nqwen3.6-35b-a3b\nSpec + sig + stubs"]
+        GEMMA_PLANNER["planner (gemma)\ngemma-4-26b-a4b-it\nSpec + sig + stubs"]
         THINKER["thinker\nqwen3.6-35b\nFirst-principles fallback\n(stuck 2+ attempts)"]
     end
 
     subgraph EVIDENCE ["Evidence Lane"]
         direction TB
-        OBSERVER["observer\nqwen3-vl-30b\nVisual inspection / audit"]
+        OBSERVER["observer\nqwen3-vl-30b-a3b-instruct\nVisual inspection / audit"]
         RESEARCHER["researcher\ndeepseek-v4-flash\n3-hop web+docs+files\n(absorbed librarian)"]
-        SUMMARIZER["summarizer\nmimo-v2-flash\nSPO triplet extraction"]
+        SUMMARIZER["summarizer\ngranite-4.1-8b\nSPO triplet extraction"]
     end
 
     HUMAN -->|"task prompt"| OC
     RAG -->|"AIDER DIRECT: [task_id=X]"| OC
-    HB -->|"stall → kill+relaunch"| OC
+    HB -->|"stall -> kill+relaunch"| OC
     OC --> ORCH
     ORCH -->|"task graph dispatch / status"| DB
 
@@ -47,8 +46,8 @@ flowchart TD
     ORCH -->|"known-file hotfix\nskip scout"| PATCHER
     ORCH -->|"smoke test"| PI
     ORCH -->|"multi-file / ambiguous"| FIXER
-    ORCH -->|"spec ready"| ORACLE
-    ORCH -->|"plan / spec / sigs"| ORACLE
+    ORCH -->|"plan / spec"| ORACLE
+    ORCH -->|"plan / spec"| GEMMA_PLANNER
     ORCH -->|"logic stalemate\nwith evidence pack"| THINKER
     ORCH -->|"visual inspect"| OBSERVER
     ORCH -->|"evidence / web / docs"| RESEARCHER
@@ -64,7 +63,7 @@ flowchart TD
     PI --> DB
     FIXER --> DB
     FIXER -->|"status / result"| DB
-    FIXER -->|"bounded edit packet\n(1 file · 1 concern)"| AIDER
+    FIXER -->|"bounded edit packet\n(1 file . 1 concern)"| AIDER
     FIXER -->|"AIDER DIRECT"| AIDER
     AIDER -->|"in_progress / done"| DB
     AIDER -->|"run fails / tests fail"| DEBUGGER
@@ -74,7 +73,10 @@ flowchart TD
     DEBUGGER -->|"schema/environment\nreroute"| ORCH
     DEBUGGER -->|"logic + low confidence"| THINKER
     ORACLE --> DB
-    ORACLE -->|"spec ready"| ORCH
+    ORACLE -->|"plan"| COUNCIL
+    GEMMA_PLANNER --> DB
+    GEMMA_PLANNER -->|"plan"| COUNCIL
+    COUNCIL -->|"consensus spec"| ORCH
     THINKER --> DB
     THINKER -->|"root constraint"| ORCH
     RESEARCHER --> DB
@@ -98,7 +100,10 @@ flowchart TD
     class HUMAN,RAG entry
     class HB watchdog
     class OC shell
-    class ORCH,ORACLE,THINKER,OBSERVER,RESEARCHER,FIXER primary
+    class ORCH,ORACLE,GEMMA_PLANNER,THINKER,OBSERVER,RESEARCHER,FIXER,COUNCIL primary
     class SCOUT,PATCHER,PI,DEBUGGER,HANDYMAN,SUMMARIZER subagent
     class AIDER leaf
     class DB db
+
+
+
