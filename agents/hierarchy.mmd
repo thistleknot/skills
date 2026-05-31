@@ -1,4 +1,4 @@
-﻿flowchart TD
+flowchart TD
     subgraph ENTRIES ["Entry Points"]
         direction LR
         HB(["heartbeat.ps1\n(watchdog)"])
@@ -9,7 +9,7 @@
     OC["opencode\n(oh-my-opencode-slim)"]
     ORCH["orchestrator\ndeepseek-v4-flash\norchestrator\nRoutes -- never codes"]
     DB[("task_graph\n.task_graph.db")]
-    COUNCIL["council\nstep-3.5-flash\n(council variant)\nConsensus + merge"]
+    SYNTHESIZER["synthesizer\nstep-3.5-flash\nPlan filter\nConsensus + merge"]
 
     subgraph EXEC ["Execution Layer"]
         direction LR
@@ -73,10 +73,10 @@
     DEBUGGER -->|"schema/environment\nreroute"| ORCH
     DEBUGGER -->|"logic + low confidence"| THINKER
     ORACLE --> DB
-    ORACLE -->|"plan"| COUNCIL
+    ORACLE -->|"plan A"| SYNTHESIZER
     GEMMA_PLANNER --> DB
-    GEMMA_PLANNER -->|"plan"| COUNCIL
-    COUNCIL -->|"consensus spec"| ORCH
+    GEMMA_PLANNER -->|"plan B"| SYNTHESIZER
+    SYNTHESIZER -->|"merged plan"| ORCH
     THINKER --> DB
     THINKER -->|"root constraint"| ORCH
     RESEARCHER --> DB
@@ -100,7 +100,7 @@
     class HUMAN,RAG entry
     class HB watchdog
     class OC shell
-    class ORCH,ORACLE,GEMMA_PLANNER,THINKER,OBSERVER,RESEARCHER,FIXER,COUNCIL primary
+    class ORCH,ORACLE,GEMMA_PLANNER,THINKER,OBSERVER,RESEARCHER,FIXER,SYNTHESIZER primary
     class SCOUT,PATCHER,PI,DEBUGGER,HANDYMAN,SUMMARIZER subagent
     class AIDER leaf
     class DB db
