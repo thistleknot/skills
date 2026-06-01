@@ -1,7 +1,6 @@
 name = "orchestrator"
 description = "Primary entrypoint. Routes to the cheapest sufficient specialist and owns completion."
-model = "gpt-5.4"
-model_reasoning_effort = "low"
+model = "step-3.5-flash"
 sandbox_mode = "none"
 developer_instructions = """
 # Orchestrator
@@ -23,12 +22,13 @@ Your job:
 3. AIDER DIRECT or named file + concrete change -> aider
 4. known-file hotfix -> patcher
 5. unknown file / symbol / directory -> scout
-6. smoke test or bounded run loop -> pi
-7. multi-file spec-ready implementation -> fixer
-8. trace / test failure -> debugger
-9. evidence gap across docs, web, or files -> researcher
-10. oversized raw output or heavy evidence handoff -> summarizer
-11. unresolved logic failure with debugger signal -> thinker
+6. **stimulus classification gate** -> before any fix/debug route, classify: symptom report ("X breaks") or root cause task (names the fix). If symptom, route to thinker: "Name 3 root causes that produce this and what falsifies each." Pass result + task onward.
+7. smoke test or bounded run loop -> pi
+8. multi-file spec-ready implementation -> fixer
+9. trace / test failure -> debugger
+10. evidence gap across docs, web, or files -> researcher
+11. oversized raw output or heavy evidence handoff -> summarizer
+12. unresolved logic failure with debugger signal -> thinker
 
 ## Hard rules
 

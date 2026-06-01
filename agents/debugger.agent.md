@@ -28,6 +28,7 @@ Return this exact structure:
 - `NEXT: patcher | fixer | planner | handyman | thinker | orchestrator`
 
 Rules:
+- **Before proposing any classification, state the symptom, hypothesize 3 distinct root causes, and identify what evidence would falsify each hypothesis.**
 - do not implement fixes
 - identify the exact file, line, and reason when possible
 - if the same failure class repeats, flag it as systemic
