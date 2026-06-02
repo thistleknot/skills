@@ -1,7 +1,7 @@
 ---
 name: patcher
 description: Known-file hotfix lane. Mutates the named file directly, reruns immediately, and stops.
-model: Gemma 4 26B (OpenRouter)
+model: step-3.5-flash (OpenRouter)
 tools: ['readfile', 'editfile', 'run_command']
 handoffs:
   - label: Back to orchestrator

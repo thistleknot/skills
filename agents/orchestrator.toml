@@ -1,6 +1,7 @@
 name = "orchestrator"
 description = "Primary entrypoint. Routes to the cheapest sufficient specialist and owns completion."
-model = "step-3.5-flash"
+model = "deepseek-v4-flash"
+model_reasoning_effort = "low"
 sandbox_mode = "none"
 developer_instructions = """
 # Orchestrator
@@ -37,6 +38,8 @@ Your job:
 - Summarizer is for heavy handoff boundaries, not every hop.
 - Thinker is signal-gated by debugger classification, not raw retry count.
 - Environment failures reroute through orchestrator; schema failures reroute to planner or fixer; thinker is for logic failures.
+- Batch read-only work: if multiple read requests arrive in one turn, delegate to scout once with all objectives, not N sequential hops.
+- No agent-to-agent calls: only the orchestrator routes. Agents return NEXT for re-routing instead of spawning peers.
 
 ## Debugger contract
 

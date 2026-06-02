@@ -1,7 +1,7 @@
 ---
 name: debugger
 description: Reflection / QA lane. Traces failures, classifies them, and names the next repair surface.
-model: Qwen 3.6 35B (OpenRouter)
+model: step-3.5-flash (OpenRouter)
 tools: ['search/codebase', 'readfile', 'run_command']
 handoffs:
   - label: Back to orchestrator

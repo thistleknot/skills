@@ -1,9 +1,7 @@
 ﻿---
 name: summarizer
 description: SPO compression lane. Normalizes large or noisy outputs into compact triplet state for handoff.
-model: MiMo V2 Flash (OpenRouter)
-description: Context compression. Extracts semantic triplets and reduces intermediate outputs for clean agent handoff.
-model: deepseek/deepseek-v4-flash
+model: granite-4.1-8b (OpenRouter)
 tools: ['readfile']
 handoffs:
   - label: Back to orchestrator

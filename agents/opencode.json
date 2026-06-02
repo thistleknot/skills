@@ -200,9 +200,9 @@
                 "presence_penalty": 0.3
               }
             },
-            // Council filter: thinks internally, emits only the merged plan.
-            // Medium effort is sufficient — job is extraction + ranking, not generation.
-            "council": {
+// Synthesizer: receives two plans, emits one merged plan.
+            // Medium effort - extraction + ranking, not generation.
+            "synthesizer": {
               "reasoning": {
                 "effort": "medium",
                 "enabled": true
@@ -368,7 +368,7 @@
         "list": "allow",
         "bash": "allow",
         "edit": "allow",
-        "subtask": "allow"
+        "subtask": "deny"
       }
     },
     "aider": {
@@ -386,6 +386,17 @@
     "summarizer": {
       "permission": {
         "read": "allow",
+        "grep": "deny",
+        "glob": "deny",
+        "list": "deny",
+        "bash": "deny",
+        "edit": "deny",
+        "subtask": "deny"
+      }
+    },
+    "synthesizer": {
+      "permission": {
+        "read": "deny",
         "grep": "deny",
         "glob": "deny",
         "list": "deny",
