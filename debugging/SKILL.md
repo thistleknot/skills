@@ -1,4 +1,4 @@
----
+﻿---
 name: debugging
 description: Debugging protocol for isolating and fixing errors. Use when an error is present, a fix is confirmed broken, or the same class of error is repeating. Covers the Iron Law, 5-phase root-cause protocol, isolation, salience tiers, diagnostic strategy, autonomous iteration, and conversation state tracking.
 status: active
@@ -15,17 +15,17 @@ validation_method: session
 Fixing symptoms creates whack-a-mole debugging. Every fix that doesn't address root cause makes the next bug harder to find. Find the root cause, then fix it.
 
 Red flags that mean you're guessing:
-- "Quick fix for now" — there is no "for now." Fix it right or escalate.
+- "Quick fix for now" â€” there is no "for now." Fix it right or escalate.
 - Proposing a fix before tracing data flow.
-- Each fix reveals a new problem elsewhere — wrong layer, not wrong code.
+- Each fix reveals a new problem elsewhere â€” wrong layer, not wrong code.
 
 ## Canonical Axioms
 
 > *"Most bugs are a result of the execution state not being exactly what you think it is."*
-> — John Carmack
+> â€” John Carmack
 
 > *"Debugging is twice as hard as writing the code in the first place. Therefore, if you write the code as cleverly as possible, you are, by definition, not smart enough to debug it."*
-> — Kernighan's Law
+> â€” Kernighan's Law
 
 > **McDonald's First Law:** The number of ways code can fail is theoretically infinite.
 > Corollary: Assume your code is the problem until quantifiably proven otherwise. For every bug found in a library, find a hundred in your own code first.
@@ -38,17 +38,29 @@ Objective third-party observer. What is the objective? What contributes to unexp
 **Assume nothing.** Nine times out of ten, the bug hides in the one area you think you can take for granted. Check the values of all variables involved. Read stack traces completely. Never withhold evidence from anyone helping you debug.
 
 ## #1 Rule
-If the same class of error repeats: stop patching, revisit the approach. Don't fix symptoms — fix the core issue. If quick fixes aren't working, pivot to an alternative rather than chasing the stray problem endlessly.
+If the same class of error repeats: stop patching, revisit the approach. Don't fix symptoms â€” fix the core issue. If quick fixes aren't working, pivot to an alternative rather than chasing the stray problem endlessly.
 
 ## Isolation Protocol
 ```
-Zoom out → Extract (modularize) → Unit test → Zoom in → Re-apply
+Zoom out â†’ Extract (modularize) â†’ Unit test â†’ Zoom in â†’ Re-apply
 ```
 - Separate the problem; test under controlled conditions before running the full pipeline
 - Never debug through an entire pipeline between fixes
 - Test each layer with confirmed working artifacts (checkpointed)
-- Speed runs over smoke tests — 10 records max for training loops
+- Speed runs over smoke tests â€” 10 records max for training loops
 - MVP regression: remove errors until back to working state, then re-add incrementally
+
+## Seed-Breadcrumb-Fanout Protocol (Dimension-Aware Fix)
+
+Avoid whack-a-mole debugging. When you encounter a defect:
+
+1. **Seed**: Identify the concrete failing instance (file, line, element).
+2. **Breadcrumb**: Trace the pattern's lineage: find the definition, template, shared module, or base class that produced it. Search for similar patterns across the codebase using grep/glob to find all siblings.
+3. **Fanout**: Apply the fix to **all** siblings/peers in the identified dimension simultaneously. Verify consistency across the set.
+
+**Example**: Incorrect unit icon `GameIcons/Archer.png` appears in `data/units/archer.json`. Search for `"Archer.png"` or `"unit_icon"` across the repo, and fix every matching definitionâ€”not just the one you saw.
+
+**Rule**: If a bug appears in one place, assume it exists in its dimension until proven otherwise. Fix the set, not the symptom.
 
 ## Hierarchical Repair-Surface Selection
 
@@ -92,18 +104,18 @@ rule and owns the separate `Silent Bounded-Edit Stall Protocol`.
 
 ## Diagnostic Strategy
 1. Trace errors from the line numbers called out
-2. Survey the situation — what worked, what didn't
+2. Survey the situation â€” what worked, what didn't
 3. Add diagnostic prints near the error; verify inputs, schema, initial conditions
 4. Identify expected vs actual (examine inputs)
 5. **False dichotomy check:** are we forcing a binary? If so, expand the output space
 
 ## Conversation State
 - Track: same error *type* across turns vs different error *location*
-- Independent events are separate base facts — do not presume causation because they appear together
+- Independent events are separate base facts â€” do not presume causation because they appear together
 - Look for common underlying conditions that enabled both
 
 ## Autonomous Iteration
-Run → observe → fix → rerun without asking. Surface only true blockers:
+Run â†’ observe â†’ fix â†’ rerun without asking. Surface only true blockers:
 - Missing credentials
 - Ambiguous requirement
 - Scope-changing architectural decision
@@ -111,19 +123,19 @@ Run → observe → fix → rerun without asking. Surface only true blockers:
 Syntax, imports, schema, logic bugs are yours to resolve.
 
 ## Error Schema Checklist
-Rogue n/a · duplicate keys · missing fields · wrong joins · off-by-one bounds · type mismatches · duplicate function definitions
+Rogue n/a Â· duplicate keys Â· missing fields Â· wrong joins Â· off-by-one bounds Â· type mismatches Â· duplicate function definitions
 
 ## 5-Phase Root Cause Protocol
 
-### Phase 1 — Gather Evidence
+### Phase 1 â€” Gather Evidence
 Collect context before forming any hypothesis.
 1. Read error messages, stack traces, reproduction steps.
 2. Trace the code path from symptom back to potential causes.
-3. Check recent changes: `git log --oneline -20 -- <affected-files>` — regression = root cause is in the diff.
+3. Check recent changes: `git log --oneline -20 -- <affected-files>` â€” regression = root cause is in the diff.
 4. Reproduce deterministically before proceeding. If you can't reproduce, gather more evidence first.
 5. Search prior investigations for the same files. Recurring bugs in the same area are an architectural smell.
 
-**Multi-component systems:** when the error traverses multiple layers (CI→build→signing, API→service→DB),
+**Multi-component systems:** when the error traverses multiple layers (CIâ†’buildâ†’signing, APIâ†’serviceâ†’DB),
 add diagnostic instrumentation at EACH component boundary before forming any hypothesis:
 ```
 for each boundary:
@@ -135,9 +147,9 @@ run once to learn WHERE it breaks, then investigate that specific layer
 ```
 This reveals the failing layer precisely instead of thrashing across all of them.
 
-Output: **"Root cause hypothesis: ..."** — a specific, testable claim.
+Output: **"Root cause hypothesis: ..."** â€” a specific, testable claim.
 
-### Phase 2 — Pattern Recognition
+### Phase 2 â€” Pattern Recognition
 
 | Pattern | Signature | Where to look |
 |---|---|---|
@@ -150,22 +162,22 @@ Output: **"Root cause hypothesis: ..."** — a specific, testable claim.
 
 Recurring bugs in the same files = architectural smell, not coincidence.
 
-### Phase 3 — Hypothesis Testing
+### Phase 3 â€” Hypothesis Testing
 Before writing ANY fix, verify the hypothesis.
 1. Add a temporary log or assertion at the suspected root cause. Run the reproduction. Does the evidence match?
 2. If wrong: gather more evidence. Do not guess. Return to Phase 1.
-3. **3-strike rule:** Three failed hypotheses → STOP. Question whether this is an architectural issue, not a bug.
+3. **3-strike rule:** Three failed hypotheses â†’ STOP. Question whether this is an architectural issue, not a bug.
    Signals it's architectural: each fix reveals new coupling in a different place; fixes require massive refactoring; symptoms migrate but don't resolve. If this pattern appears, discuss architecture before attempting fix #4.
 
-### Phase 4 — Implementation
+### Phase 4 â€” Implementation
 Once root cause is confirmed:
 1. Fix the root cause, not the symptom. Smallest change that eliminates the actual problem.
 2. Minimal diff: fewest files touched, fewest lines changed. Resist refactoring adjacent code.
 3. Write a regression test that **fails** without the fix, **passes** with it.
 4. Run the full test suite. No regressions allowed.
-5. Fix touches >5 files → flag the blast radius and confirm before proceeding.
+5. Fix touches >5 files â†’ flag the blast radius and confirm before proceeding.
 
-### Phase 5 — Verification & Report
+### Phase 5 â€” Verification & Report
 Reproduce the original bug scenario and confirm it's fixed. This is not optional.
 
 ---
@@ -177,10 +189,10 @@ Reproduce the original bug scenario and confirm it's fixed. This is not optional
 standard Phase 1 investigation.
 
 The O(n) git-walk and the O(1) lessons-learned register lookup are two halves of the same protocol.
-Always attempt the register lookup first — it converts the walk into a constant-time operation when
+Always attempt the register lookup first â€” it converts the walk into a constant-time operation when
 the symptom class has been seen before.
 
-### Step 1 — Get the Diff Set
+### Step 1 â€” Get the Diff Set
 
 ```bash
 git log --oneline <last-known-good>..HEAD
@@ -188,36 +200,36 @@ git log --oneline <last-known-good>..HEAD
 
 Produces an ordered list of candidate commits, most recent first.
 
-### Step 2 — Fast-Path: Lessons-Learned Register First
+### Step 2 â€” Fast-Path: Lessons-Learned Register First
 
 Before walking any commit, scan the project's lessons-learned register
 (e.g., `HARNESS.md` gotcha list, or equivalent) for the symptom signature.
 
-- **Match found** → go directly to that fix. Skip the walk entirely.
-- **No match** → proceed to Step 3.
+- **Match found** â†’ go directly to that fix. Skip the walk entirely.
+- **No match** â†’ proceed to Step 3.
 
 The register converts O(n commits) investigation into O(1) lookup.
 
-### Step 3 — Rank Commits by Subsystem Overlap
+### Step 3 â€” Rank Commits by Subsystem Overlap
 
 For each commit, ask: does this change touch the subsystem where the symptom manifests?
 Sort by overlap. Higher overlap = higher prior probability of cause.
 
-### Step 4 — Negative Inference Walk (highest overlap first)
+### Step 4 â€” Negative Inference Walk (highest overlap first)
 
 For each candidate commit, apply the negative inference question:
 
 > *"If this commit were reverted, would the symptom disappear?"*
 
-Not: *"could this be the cause?"* — that accepts too many candidates.
+Not: *"could this be the cause?"* â€” that accepts too many candidates.
 The negative framing forces elimination, not confirmation.
 
-### Step 5 — Stop at First Confirmed Causal Commit
+### Step 5 â€” Stop at First Confirmed Causal Commit
 
 Do not continue walking back once root cause is confirmed.
 Reverting subsequent commits is scope creep, not debugging.
 
-### Step 6 — Register the Pattern (mandatory)
+### Step 6 â€” Register the Pattern (mandatory)
 
 After fixing, append the root cause as a new entry in the lessons-learned register:
 
@@ -238,7 +250,7 @@ facing the same symptom class. Each entry reduces the expected walk length of al
 Self-repair is the execution-feedback loop that closes the debugging cycle without human
 input. It is Phase 4 + Phase 5 run in a tight retry loop.
 
-**When to use:** the failure mode is deterministic (same input → same error), the error
+**When to use:** the failure mode is deterministic (same input â†’ same error), the error
 is machine-readable, and the fix space is bounded (syntax/logic errors, test failures,
 import errors). Do NOT use self-repair for architectural issues or ambiguous requirements.
 
@@ -302,10 +314,10 @@ Never exceed `max_attempts` without surfacing the structured `RepairReport`.
 ### Evidence
 
 - Self-debugging arXiv:2304.05128: execution-feedback loop +12% on TransCoder/MBPP
-- Devin (Cognition, 2025): run→observe→patch→rerun is the core SWE-agent loop
+- Devin (Cognition, 2025): runâ†’observeâ†’patchâ†’rerun is the core SWE-agent loop
 - Claude Code: autonomous tool-call retry on error is native; this formalizes the contract
 DEBUG REPORT
-════════════
+â•â•â•â•â•â•â•â•â•â•â•â•
 Symptom:         [what the user observed]
 Root cause:      [what was actually wrong]
 Fix:             [what was changed, with file:line references]
@@ -313,7 +325,7 @@ Evidence:        [test output proving fix works]
 Regression test: [file:line of the new test]
 Related:         [prior bugs in same area, architectural notes]
 Status:          DONE | DONE_WITH_CONCERNS | BLOCKED
-════════════
+â•â•â•â•â•â•â•â•â•â•â•â•
 ```
 
 ## Applicability Envelope
@@ -325,8 +337,8 @@ Status:          DONE | DONE_WITH_CONCERNS | BLOCKED
 
 **Fails or degrades when:**
 - Intermittent failures with no reproducible trigger (use Phase 2 instrumentation instead)
-- The bug requires deep domain knowledge the agent doesn't have — escalate early
-- 3 hypotheses have failed — stop patching; the approach is wrong, not the hypothesis
+- The bug requires deep domain knowledge the agent doesn't have â€” escalate early
+- 3 hypotheses have failed â€” stop patching; the approach is wrong, not the hypothesis
 
 **Environment assumptions:**
 - Git history is available for regression detection
