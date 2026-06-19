@@ -320,10 +320,40 @@ Extraction   Pattern mining    Neural +      EMA decay
 | **No decay policy** | Memory bloat, degraded retrieval | Add EMA-based forgetting or Ebbinghaus-style decay |
 | **Manual-only procedures** | No auto-discovery from experience | Enable SK-Gen batch distillation |
 
+## Work Memory vs. User Memory
+
+Memory systems serve two distinct purposes that should be named explicitly at design time:
+
+| Dimension | User memory | Work memory |
+|---|---|---|
+| **What it stores** | Preferences, working style, contacts, role | What the agent did, what failed, corrections made |
+| **What it is for** | Engagement — the user feels understood | Performance — the agent gets better at the job |
+| **Canonical artifact** | User profile, preference store | Context graph / LLM wiki of work history |
+| **Primary signal** | User statements, feedback on tone | Correction events, dead-end logs, successful resolutions |
+
+Most memory implementations default to user memory. Brain (Perplexity, 2026) argues work memory is the higher-leverage axis for agent performance — especially on repeated task types where prior sessions contain the relevant context.
+
+**Design implication:** when building Template B or C, decide which axis is primary. A coding agent almost always wants work memory. A customer-facing assistant may weight user memory more. The two are not mutually exclusive — Layer 1 (semantic) can hold both — but the *primary feed* and *overnight synthesis target* should be one or the other.
+
+## Evaluation Metrics for Work Memory Systems
+
+Work-memory systems (Templates B, C, D) should be evaluated on *agent operational metrics*, not only answer quality:
+
+| Metric | What it measures | Target direction |
+|---|---|---|
+| Answer correctness on seen tasks | Did prior work help? | ↑ |
+| Recall on repeated task types | Does the wiki surface the right history? | ↑ |
+| Turns per task (seen vs. unseen) | Fewer turns = memory is doing its job | ↓ |
+| Model calls per task | Dead ends cost calls; correction memory eliminates them | ↓ |
+| Cost per task with historical context | Token investment in sessions → cheaper future tasks | ↓ |
+
+Brain's reported figures (+25% correctness, +16% recall, −13% cost on history-dependent tasks) define the KPI shape to aim for. Always track the seen-task vs. unseen-task split — a work-memory system that only helps on novel tasks is not working.
+
 ## Evidence
 
 - `cognitive-taxonomy` consolidates the shared four-paper taxonomy foundation used by this stack, including the NS-Mem performance figures referenced by Template C.
 - MemGPT (arXiv:2310.08560) tiered memory architecture foundation
+- Brain, Perplexity (2026) — work memory vs. user memory axis; overnight wiki synthesis; operational KPIs
 <!-- consolidation:see-also:start -->
 ## See Also
 [[nearest-neighbor-chain]]  [[codebase-knowledge-graph]]  [[checklist]]

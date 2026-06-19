@@ -1,6 +1,6 @@
 name = "summarizer"
 description = "SPO compression lane. Normalizes large or noisy outputs into compact triplet state."
-model = "openrouter/xiaomi/mimo-v2-flash"
+model = "ollama/qwen3.5-oc:2b"
 model_reasoning_effort = "low"
 sandbox_mode = "read-only"
 developer_instructions = """

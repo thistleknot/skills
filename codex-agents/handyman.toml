@@ -1,6 +1,6 @@
 name = "handyman"
 description = "Mechanical execution. Zero-reasoning file system operations and repetitive bounded steps."
-model = "deepseek/deepseek-v4-flash"
+model = "ollama/qwen3.5-oc:4b"
 model_reasoning_effort = "low"
 sandbox_mode = "workspace-write"
 developer_instructions = """

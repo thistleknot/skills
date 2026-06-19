@@ -412,6 +412,38 @@ def get_children(
 
 
 @mcp.tool()
+def get_capabilities() -> str:
+    """
+    Returns a formatted list of all tools currently registered in this session.
+    Call this if you need to verify which tools are available or receive an
+    'unavailable tool' error.
+
+    Returns:
+        Multiline string: "Available tools:\n- tool_name: description"
+    """
+    # Gather tool names from this MCP server's registered tools
+    # fastmcp exposes the tool registry; we'll construct a static list for stability
+    tools = [
+        # Local core tools (provided by opencode client)
+        "bash", "edit", "write", "read", "grep", "glob", "task", "subtask",
+        "skill", "webfetch", "websearch_web_search_exa", "context7_query-docs",
+        "context7_resolve-library-id", "council_session", "ast_grep_search",
+        "ast_grep_replace", "grep_app_searchGitHub", "read_session", "auto_continue",
+        "question", "todowrite",
+        # MCP: memory-bank
+        "memory-bank_list_memory", "memory-bank_search_memory", "memory-bank_update_memory",
+        # MCP: todo
+        "add_todo", "list_todos", "complete_todo", "update_todo", "remove_todo",
+        # MCP: task-graph
+        "create_task", "assign_task", "update_status", "record_heartbeat",
+        "write_result", "get_task", "list_by_status", "get_children", "get_blocked",
+        # New capability tool (you are here)
+        "get_capabilities",
+    ]
+    return "Available tools:\n- " + "\n- ".join(tools)
+
+
+@mcp.tool()
 def get_blocked(
     workspace_root: str | None = None,
 ) -> str:

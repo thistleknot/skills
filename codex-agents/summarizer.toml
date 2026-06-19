@@ -1,6 +1,6 @@
 name = "summarizer"
 description = "Context compression. Extracts semantic triplets and reduces intermediate outputs for handoff."
-model = "deepseek/deepseek-v4-flash"
+model = "ollama/qwen3.5-oc:2b"
 model_reasoning_effort = "low"
 sandbox_mode = "read-only"
 developer_instructions = """

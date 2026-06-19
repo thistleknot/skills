@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "build-observability/SKILL.md",
+                "file": "agentic-orchestration/SKILL.md",
                 "mode": "source",
                 "source": false
               },
@@ -183,6 +183,21 @@
   },
   "active": "ed08cf9128ec3d7a",
   "lastOpenFiles": [
+    "Untitled 1.canvas",
+    "Untitled.canvas",
+    "build-observability/SKILL.md",
+    "integrate/staged/trust-scoring-feedback/EVIDENCE.md",
+    "integrate/staged/trust-scoring-feedback/SKILL.md",
+    "integrate/staged/episodic-daily-template/EVIDENCE.md",
+    "integrate/staged/episodic-daily-template/SKILL.md",
+    "integrate/staged/memory-migration-threshold/EVIDENCE.md",
+    "integrate/staged/memory-migration-threshold/SKILL.md",
+    "integrate/staged/trust-scoring-feedback",
+    "integrate/staged/episodic-daily-template",
+    "integrate/staged/memory-migration-threshold",
+    "integrate/review/hermes.md",
+    "how-i-use-obsidian-as-the-long-term-memory-backbone-for-my-v0-abyghbd3y0xg1.webp",
+    "integrate/review/memory-obsidian.md",
     "build-observability/HISTORY.md",
     "build-observability/EVIDENCE.md",
     "request-intent-resolution/SKILL.md",
@@ -201,12 +216,7 @@
     "plugins/model-router/plugin.json",
     "plugins/model-router/agents",
     "plugins/model-router",
-    "plugins",
     "debugging/SKILL.md",
-    "Untitled 1.canvas",
-    "consolidation/__pycache__/consolidate.cpython-310.pyc",
-    "consolidation/__pycache__",
-    "Untitled.canvas",
     "README.md",
     "agent-governance/SKILL.md"
   ]

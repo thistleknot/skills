@@ -121,3 +121,21 @@ SELECT id, category, symptom, updated_at FROM lessons ORDER BY updated_at DESC L
 - Dedup happens on (category, symptom) hash — if the same lesson fires again,
   `count` is incremented instead of duplicating
 - `con.commit()` is never optional
+
+## Role in the Memory Stack
+
+This skill is the **correction-capture surface** that feeds `agentic_kg_memory`'s
+overnight synthesis. Each row is a correction in Brain's sense: a logged dead-end
+plus its fix.
+
+The `(category, symptom, root_cause, resolution)` tuple maps to an
+`event_type: "correction"` Episode:
+- `symptom` → what was observed (the failed output)
+- `root_cause` → why it failed
+- `resolution` → the correction applied
+- `agent_context` + `file_scope` → source provenance for the wiki link-back
+
+On each overnight synthesis pass, `agentic_kg_memory` should query this table for
+rows updated since the last run and ingest them as correction episodes. High-`count`
+rows are strong reinforcement signals — the same dead end recurring means the wiki
+has not yet absorbed the lesson.

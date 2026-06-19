@@ -7,6 +7,20 @@
       "options": {
         "baseURL": "http://192.168.3.17:11434/v1",
         "timeout": 480000
+      },
+      "models": {
+        "qwopus-coder-oc:9b": {
+          "name": "Qwopus Coder 9B",
+          "limit": { "context": 49152, "output": 32768 }
+        },
+        "qwen3.5-reasoning-oc:9b": {
+          "name": "Qwen3.5 Reasoning 9B",
+          "limit": { "context": 65536, "output": 32768 }
+        },
+        "hf.co/Jackrong/Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-v2-GGUF:Qwen3.5-9B.Q5_K_M.gguf": {
+          "name": "Qwen3.5 9B Reasoning Distilled",
+          "limit": { "context": 65536, "output": 32768 }
+        }
       }
     },
     "openrouter": {

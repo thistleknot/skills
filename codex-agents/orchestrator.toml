@@ -1,6 +1,6 @@
 name = "orchestrator"
 description = "Primary entrypoint. Routes to specialists, cheapest sufficient delegation. Autonomous routing, no manual subagent selection required."
-model = "gpt-5.4"
+model = "ollama/qwen3.5-oc:2b"
 model_reasoning_effort = "low"
 sandbox_mode = "none"
 developer_instructions = """

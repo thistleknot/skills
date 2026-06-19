@@ -1,6 +1,6 @@
 name = "orchestrator"
 description = "Primary entrypoint. Routes to the cheapest sufficient specialist and owns completion."
-model = "deepseek-v4-flash"
+model = "ollama/qwen3.5-oc:2b"
 model_reasoning_effort = "low"
 sandbox_mode = "none"
 developer_instructions = """

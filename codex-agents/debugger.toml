@@ -1,6 +1,6 @@
 name = "debugger"
 description = "QA inspector. Error tracing, log analysis, format validation, and regression testing."
-model = "gpt-5.4"
+model = "ollama/qwopus-coder-oc:9b"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """

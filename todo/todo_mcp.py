@@ -261,6 +261,63 @@ def remove_todo(todo_id: int, workspace_root: str | None = None) -> str:
         return f"Removed todo #{todo_id} {_scope_label(workspace_root)}"
 
 
+@mcp.tool()
+def get_capabilities() -> str:
+    """
+    Returns a formatted list of all available tools (local and MCP) that can be called
+    in this session. Use this if you are uncertain which tools exist or receive an
+    'unavailable tool' error.
+
+    Returns:
+        Multiline string: "Available tools:\n- name: description"
+    """
+    tools = [
+        # Core local tools
+        ("bash", "Execute a PowerShell command"),
+        ("edit", "Edit a file by replacing exact string"),
+        ("write", "Write content to a file"),
+        ("read", "Read a file or directory"),
+        ("grep", "Search file contents using regex"),
+        ("glob", "Find files by glob pattern"),
+        ("task", "Create a new task for the agent harness"),
+        ("subtask", "Run a child worker session"),
+        ("skill", "Load a specialized skill"),
+        ("webfetch", "Fetch a URL with better extraction"),
+        ("websearch_web_search_exa", "Search the web"),
+        ("context7_query-docs", "Query documentation for a library"),
+        ("context7_resolve-library-id", "Resolve a library ID"),
+        ("council_session", "Launch a multi-LLM council session"),
+        ("ast_grep_search", "Search code patterns with AST"),
+        ("ast_grep_replace", "Replace code patterns with AST"),
+        ("grep_app_searchGitHub", "Find code examples from GitHub"),
+        ("read_session", "Read a previous session transcript"),
+        ("auto_continue", "Toggle auto-continuation for todos"),
+        ("question", "Ask the user a question"),
+        ("todowrite", "Create/update a structured todo list"),
+        # MCP: todo
+        ("add_todo", "Add a new todo item"),
+        ("list_todos", "List todo items"),
+        ("complete_todo", "Mark a todo as complete"),
+        ("update_todo", "Update a todo"),
+        ("remove_todo", "Remove a todo"),
+        # MCP: task-graph
+        ("create_task", "Create a new task node"),
+        ("assign_task", "Assign a task to an agent"),
+        ("update_status", "Update task status"),
+        ("record_heartbeat", "Record a liveness heartbeat"),
+        ("write_result", "Write task result"),
+        ("get_task", "Get a task node details"),
+        ("list_by_status", "List tasks by status"),
+        ("get_children", "Get child tasks"),
+        ("get_blocked", "Get blocked tasks"),
+        # MCP: memory-bank
+        ("memory-bank_list_memory", "List memory bank files"),
+        ("memory-bank_search_memory", "Search memory bank"),
+        ("memory-bank_update_memory", "Update memory bank"),
+    ]
+    return "Available tools:\n" + "\n".join([f"- {name}: {desc}" for name, desc in tools])
+
+
 if __name__ == "__main__":
     import argparse
 

@@ -1,6 +1,6 @@
 name = "observer"
 description = "Visual intelligence. Decodes images, screenshots, diagrams, wireframes, and PDFs."
-model = "gpt-5.4"
+model = "ollama/qwen3-vl:2b"
 model_reasoning_effort = "low"
 sandbox_mode = "read-only"
 developer_instructions = """

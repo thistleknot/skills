@@ -1,6 +1,6 @@
 name = "pi"
 description = "Inner harness loop. Routes one bounded local objective through the cheapest sufficient inner step."
-model = "openrouter/stepfun/step-3.5-flash"
+model = "ollama/qwopus-coder-oc:9b"
 model_reasoning_effort = "low"
 sandbox_mode = "workspace-write"
 developer_instructions = """

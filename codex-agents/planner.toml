@@ -1,6 +1,6 @@
 name = "planner"
 description = "Architect. High-effort reasoning for decomposition, architecture, and checkpoint strategy."
-model = "gpt-5.4"
+model = "ollama/hf.co/Jackrong/Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-v2-GGUF:Qwen3.5-9B.Q5_K_M.gguf"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """

@@ -1,6 +1,6 @@
 name = "scout"
 description = "Disciplined search lane. Returns a compact discovery contract instead of narrative."
-model = "openrouter/stepfun/step-3.5-flash"
+model = "ollama/qwen3.5-oc:4b"
 model_reasoning_effort = "low"
 sandbox_mode = "read-only"
 developer_instructions = """

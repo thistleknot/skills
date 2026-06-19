@@ -60,7 +60,7 @@ For the foreign-repo CTP2 image workflow, do not call memory-bank tools or todo 
 
 9. **Windows batch troubleshooting rail.** For a user request to troubleshoot a named batch file in a named Windows workspace, the first valid delegation is `handyman` to run the batch once with `cmd /c` and return stdout/stderr. If the output names a removed or deprecated CLI flag, the next valid step is `debugger` or `fixer` on that exact flag. Repeating `bash`/`cmd` shell-selection narration is a routing failure, not progress.
 
-10. **Dual-planner council rail.** For non-trivial planning, spawn `@oracle` and `@gemma` in parallel with identical context packets. Pass both to `@council`. Execute council's output. Do not re-plan. If council returns content that was not present in either plan, treat it as council drift — use `@oracle`'s plan directly instead. The exact shape `I will ask oracle to plan, then gemma, then council will filter` expressed as three sequential turns instead of one parallel spawn + one council turn is invalid. Spawn oracle and gemma in the same delegation batch.
+10. **Dual-planner pattern.** For non-trivial planning, spawn `@oracle` and `@gemma` in parallel with identical context packets. The synthesizer merges both plans. Spawn oracle and gemma in the same delegation batch.
 
 ---
 
@@ -266,7 +266,7 @@ You may only delegate to the specialists below unless the runtime provides an ex
 **Purpose**
 - independent second plan, generated without tool access
 - works from orchestrator-provided context packet only
-- feeds directly into `@council`
+- paired with `@oracle` to generate two independent plans
 
 **Use when**
 - orchestrator is running the dual-planner pattern
@@ -276,23 +276,6 @@ You may only delegate to the specialists below unless the runtime provides an ex
 - task is trivially scoped or single-file
 - a plan already exists from a prior turn
 - overhead of a second planning pass exceeds the task complexity
-
----
-
-### `council` (subagent_type: "council")
-**Purpose**
-- plan filter: receives Plan A (oracle) + Plan B (gemma)
-- promotes the strongest ideas already present in both plans
-- discards speculative, redundant, or contradicted steps
-- emits one clean merged plan — no new content generated
-
-**Use when**
-- both `@oracle` and `@gemma` have returned plans for the same objective
-
-**Avoid when**
-- only one plan exists
-- task was never routed through the dual-planner pattern
-- the task is operational (asset hunt, file patch, script run) — council is for planning only
 
 ---
 
@@ -373,8 +356,8 @@ When the task is multi-phase, ambiguous, or architecturally significant:
 
 1. Build a self-contained context packet: task objective, relevant file paths and contents, constraints, acceptance criteria, prior findings.
 2. Spawn `@oracle` and `@gemma` **in parallel** with identical context packets.
-3. Pass both returned plans to `@council` with the original context packet.
-4. Execute `@council`'s merged plan output directly. Do not re-plan after council returns.
+3. The synthesizer merges both plans.
+4. Execute the merged plan directly. Do not re-plan after merge.
 
 **Skip this pattern when:**
 - task is trivially scoped (single-file edit, known fix)
@@ -383,8 +366,6 @@ When the task is multi-phase, ambiguous, or architecturally significant:
 
 **Hard rules:**
 - `@gemma` never receives tool access — orchestrator must pre-pack all needed context
-- `@council` never generates new steps — if it does, treat as a council failure and use `@oracle`'s plan directly
-- Do not route to `@oracle` alone for non-trivial tasks when the dual-planner pattern is available and the cost is justified
 
 ### 5. Design before build
 Route to `designer` before `fixer` when:
@@ -529,9 +510,7 @@ Avoid these patterns — they produce errors or useless output that compound int
 | Agent not found | Delegating to an unregistered agent name | Only delegate to: oracle, designer, fixer, explorer, handyman, debugger, summarizer, observer, scout, thinker |
 | Planner Aggressive Executor mode | Urgency framing ("force restart", "user frustrated", "bypass") in planner prompt | Never use urgency framing; append max-7-phases cap to every planner prompt |
 | Planner micro-step flood | Planner returns 10+ "I will check X" sequential lines | Swarm detected — stop, re-prompt with output cap or escalate to thinker |
-| Council drift | Council generates new steps not in either plan | Council's job is extraction only — if it drifts, use oracle's plan directly |
 | Gemma tool reach | Gemma attempts tool calls or asks for file access | Gemma has no tools; orchestrator must pre-pack context; re-prompt if gemma requests access |
-| Single-planner council | Council called with only one plan | Council requires both Plan A and Plan B; do not call council if gemma did not return |
 
 ---
 

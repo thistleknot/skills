@@ -267,6 +267,18 @@ Recommended event hooks:
 | **on_memory_write** | check for contradictions with existing knowledge, trigger supersession if warranted; also run write-time Jaccard dedup against `isLatest=true` entries — if `sim > τ_merge` (default 0.7), supersede the old entry rather than creating a standalone duplicate: bump `version`, set `parentId`, mark old `isLatest=false` |
 | **on_schedule** | periodic lint, consolidation pass, temporal retention decay |
 
+### Overnight Synthesis Recipe
+
+The `on_schedule` hook should run a nightly synthesis pass in this order:
+
+1. **Session batch** — collect all episodic entries from sessions since the last synthesis run
+2. **Correction integration** — pull all `event_type: "correction"` episodes (and `lessons-learned` rows updated since last run) from the interval; these are the primary self-improvement signal
+3. **Source diff** — check each connector/source document for changes; re-ingest changed pages against the relevant wiki pages
+4. **Wiki update** — for each affected page, run the ingest→reinforce/refine loop in place; record supersession events for any claim that changes; do not append blindly
+5. **Persist** — commit updated `q_score`, page content, and throughline changes; reset `stability` clocks for touched entries
+
+This converts raw session history into a progressively better starting context. Each nightly pass makes the wiki a stronger signal for the next day's tasks. Token cost of prior sessions is the investment; the wiki's improved recall and fewer dead-end turns are the return. Brain (Perplexity, 2026) reports +25% answer correctness on seen tasks and −13% cost on history-dependent tasks from this loop.
+
 The human stays in the loop for curation and direction. Bookkeeping — the part that
 causes people to abandon wikis — should be fully automated.
 
@@ -1280,6 +1292,13 @@ functions, data types, APIs). The CG is everything about how the codebase was bu
 how decisions were made: implementation rationale, correction patterns, architectural
 choices, and the accumulated tribal knowledge about what works.
 
+**Work memory vs. user memory.** The CG is *work memory* in Brain's sense (Perplexity,
+2026): its object is the agent's work (what it did, what failed, what corrections were
+made), and its purpose is performance — helping the agent get better at the job. This
+is the axis that separates it from user-profile memory (preferences, tastes, working
+style). Every entry in the CG should trace back to a session, file, or correction
+source — not to a user attribute.
+
 ### 4-Layer Context Hierarchy (L4 → L1 precedence)
 
 Agents apply the **most specific applicable rule first**, falling back toward universal.
@@ -1363,6 +1382,24 @@ class Episode(BaseModel):
     tags: list[str]
     raw_ref: str | None         # pointer to full turn transcript (cold storage)
 ```
+
+### Corrections as the Primary Self-Improvement Signal
+
+The `event_type: "correction"` episode is the highest-value entry in the episodic store.
+A correction records what the agent produced that was wrong or insufficient, what the
+user or validator changed it to, and the source (session id + file or connector reference).
+
+Every correction must be logged with a `source_ref` linking to the session and artifact
+so the overnight synthesis pass can route it to the relevant wiki pages. This closes the
+loop: corrections are not just logged — they feed the next synthesis cycle and
+progressively eliminate dead ends. An agent that cannot log its corrections cannot
+improve across sessions.
+
+Practical convention: log the failed attempt as `outcome = "failure"` and create a
+second episode with `event_type = "correction"` and `outcome = "success"` for the fix.
+The Pattern Store vetting pipeline then has both halves of the learning signal. High
+recurrence of the same `(symptom, root_cause)` pair means the wiki has not yet absorbed
+the lesson — the overnight pass should force a page update on the next run.
 
 ### Storage and Retrieval
 

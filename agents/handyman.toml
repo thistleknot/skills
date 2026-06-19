@@ -1,6 +1,6 @@
 name = "handyman"
 description = "Mechanical file and command lane. Executes bounded procedural work with minimal reasoning."
-model = "openrouter/ibm-granite/granite-4.1-8b"
+model = "ollama/qwen3.5-oc:4b"
 model_reasoning_effort = "low"
 sandbox_mode = "workspace-write"
 developer_instructions = """

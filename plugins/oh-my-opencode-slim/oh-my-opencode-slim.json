@@ -17,46 +17,46 @@
   // summarizer     | 0.03  | 1.000 | 0.070 | 0.800 | 0.623 | 0.019 | 0.010 | 0.030 | 0.050 | 0.030
   // thinker        | 0.09  | 1.000 | 0.942 | 0.733 | 0.892 | 0.080 | 0.020 | 0.090 | 0.150 | 0.088
   "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
-  "preset": "openrouter",
+  "preset": "ollama",
   "presets": {
-    "openrouter": {
-      // ctx:1M | DeepSeek V4 Flash: strong tool-calling orchestrator
-      "orchestrator": { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "orchestrator", "skills": ["*"], "mcps": ["*", "!context7"] },
+    "ollama": {
+      // ctx:128K | Qwen 3.5 2B: lightweight orchestrator
+      "orchestrator": { "model": "ollama/qwen3.5-oc:2b", "variant": "orchestrator", "skills": ["*"], "mcps": ["*", "!context7"] },
       // Primary planner (Plan A). Paired with council for non-trivial tasks.
-      "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
-      // AA:31 | ctx:1M | in:$0.06 out:$0.33 | blend(3:1):$0.13 | usage:0.22 | wgtd:0.171
-      "fixer":        { "model": "openrouter/stepfun/step-3.5-flash", "variant": "lean", "displayName": "coder", "skills": [], "mcps": [] },
+      "oracle":       { "model": "ollama/hf.co/Jackrong/Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-v2-GGUF:Qwen3.5-9B.Q5_K_M.gguf", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
+      // ctx:32K | Qwopus Coder 9B: strong coding model
+      "fixer":        { "model": "ollama/qwopus-coder-oc:9b", "variant": "lean", "displayName": "coder", "skills": [], "mcps": [] },
       // Map-reduce pair with @summarizer; absorbs librarian role
-      "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
-      // ctx:262K | vision
-      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "skills": [], "mcps": [] },
+      "researcher":   { "model": "ollama/qwopus-coder-oc:9b", "variant": "lean", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
+      // ctx:32K | vision
+      "observer":     { "model": "ollama/qwen3-vl:2b", "variant": "vision_audit", "skills": [], "mcps": [] },
       // Leaf editor: bounded single-file codegen, no subtask routing
-      "aider":        { "model": "openrouter/stepfun/step-3.5-flash", "variant": "io", "skills": [], "mcps": [] }
+      "aider":        { "model": "ollama/qwopus-coder-oc:9b", "variant": "io", "skills": [], "mcps": [] }
     },
-    "openrouter-gemma-orchestrator": {
-      // Fallback preset: gemma as orchestrator if deepseek tool-call reliability degrades
-      "orchestrator": { "model": "openrouter/google/gemma-4-26b-a4b-it", "variant": "orchestrator", "skills": ["*"], "mcps": ["*", "!context7"] },
-      "oracle":       { "model": "openrouter/qwen/qwen3.6-35b-a3b", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
-      "fixer":        { "model": "openrouter/stepfun/step-3.5-flash", "variant": "lean", "displayName": "coder", "skills": [], "mcps": [] },
-      "researcher":   { "model": "openrouter/deepseek/deepseek-v4-flash", "variant": "lean", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
-      "observer":     { "model": "openrouter/qwen/qwen3-vl-30b-a3b-instruct", "variant": "vision_audit", "skills": [], "mcps": [] },
-      "aider":        { "model": "openrouter/stepfun/step-3.5-flash", "variant": "io", "skills": [], "mcps": [] }
+    "ollama-reasoning-orchestrator": {
+      // Fallback preset: reasoning model as orchestrator for complex multi-hop tasks
+      "orchestrator": { "model": "ollama/qwen3.5-reasoning-oc:9b", "variant": "orchestrator", "skills": ["*"], "mcps": ["*", "!context7"] },
+      "oracle":       { "model": "ollama/hf.co/Jackrong/Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-v2-GGUF:Qwen3.5-9B.Q5_K_M.gguf", "variant": "tactical", "displayName": "planner", "skills": ["simplify", "requesting-code-review"], "mcps": [] },
+      "fixer":        { "model": "ollama/qwopus-coder-oc:9b", "variant": "lean", "displayName": "coder", "skills": [], "mcps": [] },
+      "researcher":   { "model": "ollama/qwopus-coder-oc:9b", "variant": "lean", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
+      "observer":     { "model": "ollama/qwen3-vl:2b", "variant": "vision_audit", "skills": [], "mcps": [] },
+      "aider":        { "model": "ollama/qwopus-coder-oc:9b", "variant": "io", "skills": [], "mcps": [] }
     }
   },
-  // Dual-planner council: oracle (qwen3.6-35b) and gemma (gemma-4-26b) generate
-  // independent plans; step-3.5-flash filters and merges as the synthesis councillor.
-  // Councillors run in parallel; step-3.5 receives both plans and emits one merged plan.
+  // Dual-planner council: oracle (qwen3.5-reasoning) and second planner (qwopus-coder) generate
+  // independent plans; synthesizer merges both plans.
+  // Councillors run in parallel; synthesizer receives both plans and emits one merged plan.
   "council": {
     "presets": {
       "default": {
         "oracle": {
-          "model": "openrouter/qwen/qwen3.6-35b-a3b",
+          "model": "ollama/hf.co/Jackrong/Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-v2-GGUF:Qwen3.5-9B.Q5_K_M.gguf",
           "variant": "tactical",
           "prompt": "You are the primary planner. Generate a complete, concrete, sequenced implementation plan from the provided context. Steps must be actionable. Flag missing context as ASSUMPTION: <text>. No prose outside the plan."
         },
         "gemma": {
-          "model": "openrouter/google/gemma-4-26b-a4b-it",
-          "variant": "planner_conservative",
+          "model": "ollama/qwopus-coder-oc:9b",
+          "variant": "lean",
           "prompt": "You are an independent second planner. Generate a complete implementation plan from the provided context alone. Do not reference other planners. Steps must be actionable. Flag missing context as ASSUMPTION: <text>. No prose outside the plan."
         }
       }
@@ -71,55 +71,67 @@
     "readContextMaxFiles": 8
   },
   "agents": {
+    "librarian": {
+      "model": "ollama/qwopus-coder-oc:9b",
+      "variant": "lean"
+    },
+    "designer": {
+      "model": "ollama/qwen3.5-reasoning-oc:9b",
+      "variant": "tactical"
+    },
     "handyman": {
-      "model": "openrouter/ibm-granite/granite-4.1-8b",
+      "model": "ollama/qwen3.5-oc:4b",
       "prompt": "You are Handyman. Mechanical Execution: Zero-reasoning tool calls and file system operations.\n\nRules:\n- Prefer one bounded command over repeated glob/read retries.\n- If asked to sample files, return concrete file paths in the first pass; do not loop on wildcard globs.\n- For CTP2 image inspection, if asked to select 5 random `.tga` files, use one command to enumerate the known target graphics directories, choose 5 concrete `.tga` paths, and stop.\n- For CTP2 preview generation, if given concrete `.tga` paths, use Python + Pillow in one bounded command to convert them to `.png` preview files and return the concrete `.png` paths.\n- For explicit Windows script execution in a known workspace, do not deliberate about shell choice. Use the Windows-native launcher immediately: `.bat`/`.cmd` -> `cmd /c <script>`, `.ps1` -> `powershell -ExecutionPolicy Bypass -File <script>`.\n- Never alternate between `<script>`, `cmd /c <script>`, quoted variants, and `bash` wrappers for the same `.bat`/`.cmd` objective. One execution attempt only, then return the concrete stdout/stderr.\n- If a Windows batch script returns a CLI usage/deprecation error, stop after the first failing run and surface the exact failing flag plus the replacement text from stderr. Do not retry with another shell wrapper.\n- Do not use `read` on wildcard file patterns like `*.tga`.\n- Do not alternate between `glob *.tga` and `read *.tga`; that is a loop.\n- Return results, not plans.",
       "orchestratorPrompt": "@handyman\n- Role: Mechanical Execution: Zero-reasoning tool calls and file system operations\n- Delegate when: pure file system operations, mechanical edits with no logic\n- For explicit Windows script troubleshooting in a named workspace, use @handyman first to run the script once with the native launcher and return the concrete failure\n- Windows rail: `.bat`/`.cmd` -> `cmd /c <script>`; `.ps1` -> `powershell -ExecutionPolicy Bypass -File <script>`; never spend a parent turn debating `bash` vs `cmd`\n- For CTP2 image inspection, use @handyman for one bounded file-sampling pass and one bounded preview-conversion pass when needed\n- Don't delegate when: any code understanding is required"
     },
     "pi": {
-      "model": "openrouter/stepfun/step-3.5-flash",
+      "model": "ollama/qwopus-coder-oc:9b",
       "variant": "lean",
       "prompt": "You are Pi. Lightweight delegated harness.\n\nRules:\n- Accept exactly one bounded objective from the parent orchestrator.\n- Keep scope local to that packet; do not take over repo-wide orchestration.\n- If the work is a concrete file edit or patch, delegate to @aider.\n- If the work is mechanical file movement/copying/renaming, delegate to @handyman.\n- If the work is validation or failure isolation, delegate to @debugger.\n- Prefer the cheapest sufficient inner route.\n- Return a completed local result or one concrete blocker.\n- Do not broaden into unrelated search or planning once the local route is clear.",
       "orchestratorPrompt": "@pi\n- Role: lightweight delegated harness for one bounded subproblem\n- Delegate when: a task needs a short-horizon inner loop, local coordination, or a clean `opencode -> pi -> aider` lane\n- Pi may route internally to @aider, @handyman, or @debugger\n- Don't delegate when: the task is already a single direct edit (use @aider) or pure mechanical work (use @handyman)"
     },
     "aider": {
-      "model": "openrouter/stepfun/step-3.5-flash",
+      "model": "ollama/qwopus-coder-oc:9b",
       "variant": "io",
       "prompt": "You are Aider. Leaf executor for bounded repo-local edits.\n\nRules:\n- Execute the concrete edit packet you were given.\n- Make the smallest correct change that satisfies the packet.\n- Do not spawn other agents.\n- Do not re-plan the parent task.\n- Do not broaden scope beyond the named files and acceptance criteria.\n- If the packet is ambiguous or requires orchestration, return one concrete blocker instead of guessing.",
       "orchestratorPrompt": "@aider\n- Role: direct leaf editor — implement or patch a named file immediately\n- Delegate when: prompt starts with 'AIDER DIRECT' OR a specific file path + concrete change is named\n- Priority: prefer @aider over @fixer/@coder when the target file is already known and the task is self-contained\n- Don't delegate when: orchestration, broad repo search, or multi-step planning is still needed"
     },
     "patcher": {
-      "model": "openrouter/stepfun/step-3.5-flash",
+      "model": "ollama/qwopus-coder-oc:9b",
       "variant": "lean",
       "prompt": "You are Patcher. Exact-file hotfix route into Aider.\n\nRules:\n- If the caller names an exact file and concrete fix, keep the scope to that file and the smallest necessary context.\n- Treat single-file surgical edits as Aider territory; route known-file leaf edits to @aider instead of widening the surface.\n- Do not return plan-only or status-only prose. Either mutate the named file or return one concrete blocker.\n- For Python hotfixes, prefer the smallest correct code change that fixes the observed runtime error.\n- If asked to rerun a script after the fix, do it in the same task when tool access allows.\n- Never broaden into workspace search when the target file is already known.\n- For `patch_ctp2_images.py` with the known `missing_details` NameError, do not inspect CSV schemas before editing. First change `patch_images()` to return exactly one `missing_details`, update `main()` to unpack exactly four values, then rerun the script.\n- If `patch_images()` already returns a single `missing_details` and `main()` already unpacks four values, do not edit that return path again. Rerun the script instead.\n- If the file contains a duplicated return like `..., missing_details, missing_details`, normalize it back to a single trailing `missing_details`, then rerun.\n- After any successful edit to `patch_ctp2_images.py`, your next action must be this exact command from the workspace root: `python .\\patch_ctp2_images.py`.\n- After that edit, do not run `ls`, `dir`, `Get-ChildItem`, or any CSV/schema listing command before `python .\\patch_ctp2_images.py`.\n- Do not spend another reasoning turn without either running `python .\\patch_ctp2_images.py` or returning one concrete blocker.\n- Never take more than one post-edit reasoning turn on `patch_ctp2_images.py`. Edit -> run -> return result.\n- Never call memory-bank tools or todo tools. Work only from the current workspace and the caller's prompt.",
       "orchestratorPrompt": "@patcher\n- Role: exact-file hotfix route into @aider\n- Delegate when: the target file is already known and the required change is specific enough to edit directly\n- Prefer routing known-file single-file edits to @aider; keep @patcher as the known-file mutation front door, not a separate leaf model\n- Don't delegate when: the problem is still discovery-only or needs broad repo search first"
     },
 "debugger": {
-      "model": "openrouter/stepfun/step-3.5-flash",
+      "model": "ollama/qwopus-coder-oc:9b",
       "variant": "lean",
       "prompt": "You are Debugger. QA Inspector: High-effort error tracing and log analysis to resolve feedback loops.\n\nBefore proposing any classification, state the symptom, hypothesize 3 distinct root causes, and identify what evidence would falsify each hypothesis.\n\nAlways return: FAILURE_CLASS: logic|schema|environment, CONFIDENCE: high|medium|low, REPAIR_SURFACE: <agent or file>, REASON: <compact explanation>, NEXT: <agent>.",
-      "orchestratorPrompt": "@debugger\n- Role: Reflection critic ?" QA Inspector for the generate->critique->fix loop; cheaper classification model than before\n- Delegate when: aider/fixer output fails tests, stack traces present, error logs, repeated feedback loops\n- Returns: FAILURE_CLASS + confidence + repair surface + NEXT route\n- Escalate to @thinker only when the failure is logic-framed and the current framing looks wrong\n- Don't delegate when: first fix attempt unless concrete failure evidence already exists"
+      "orchestratorPrompt": "@debugger\n- Role: Reflection critic — QA Inspector for the generate->critique->fix loop; cheaper classification model than before\n- Delegate when: aider/fixer output fails tests, stack traces present, error logs, repeated feedback loops\n- Returns: FAILURE_CLASS + confidence + repair surface + NEXT route\n- Escalate to @thinker only when the failure is logic-framed and the current framing looks wrong\n- Don't delegate when: first fix attempt unless concrete failure evidence already exists"
     },
     "summarizer": {
-      "model": "openrouter/ibm-granite/granite-4.1-8b",
+      "model": "ollama/qwen3.5-oc:2b",
       "variant": "io",
       "prompt": "You are Summarizer. Data Parser: Zero-reasoning extraction of semantic triplets. Output JSON only: {triplets: [{subject, predicate, object, origin}]} where origin is 'observed' or 'inferred'. No prose.",
       "orchestratorPrompt": "@summarizer\n- Role: Data Parser — extracts semantic SPO triplets or an evidence pack from bulky raw context\n- Agentic design pattern: use at heavy handoff boundaries, especially researcher->summarizer and debugger/researcher->thinker\n- Delegate when: researcher has returned raw evidence that needs structured compression, or any raw text is too large/noisy for the next specialist\n- Don't delegate when: the handoff is already compact and preserving full fidelity matters more than compression"
     },
     "researcher": {
-      "model": "openrouter/deepseek/deepseek-v4-flash",
+      "model": "ollama/qwopus-coder-oc:9b",
       "variant": "lean",
       "prompt": "You are Researcher. Evidence Gathering: snippet-informed multi-hop search across web, docs, and files. Collect raw evidence only — do not compress or synthesize.\n\nRules:\n- Accept a research objective from orchestrator.\n- Execute multi-hop search: issue query 1, extract top-k snippets, use those snippets as query expansion seeds for query 2, then issue a synthesis query 3 that combines evidence from hops 1 and 2.\n- Use available MCPs (websearch for live web, context7 for library docs, grep_app for codebase).\n- Return raw evidence: source text, file references, URL citations. Do not paraphrase or summarize.\n- Emit a structured evidence block: {sources: [{content, origin, citation}]}.\n- Do not interpret or conclude.\n- If the caller says the evidence is for a stuck logic problem, shape the output so @summarizer can turn it into a thinker-ready evidence pack instead of leaving the evidence isolated.",
       "orchestratorPrompt": "@researcher\n- Role: Evidence Gathering — snippet-informed multi-hop search (web + docs + files); absorbed former @librarian role\n- Agentic design pattern: researcher->summarizer map-reduce, with optional summarizer->thinker escalation\n- MCPs available: websearch (live web), context7 (library docs), grep_app (codebase)\n- Delegate when: need to gather evidence from files, web, or docs before synthesis or before a thinker pass\n- Do not delegate when: information is already in context\n- Do not use @librarian — it no longer exists; all web/doc search routes here"
     },
     "thinker": {
-      "model": "openrouter/qwen/qwen3.6-35b-a3b",
+      "model": "ollama/qwen3.5-reasoning-oc:9b",
       "variant": "heavy",
       "prompt": "You are Thinker. Deep Reasoning: Extended chain-of-thought analysis for fundamentally stuck logic problems. Re-approach from first principles. Use the debugger classification and any summarizer evidence pack. Surface the root constraint, not just the symptom.",
-      "orchestratorPrompt": "@thinker\n- Role: Deep Reasoning \u2014 first-principles re-approach when debugger reports a logic failure and the framing still looks wrong\n- Delegate when: debugger classified the failure as logic, lighter routes failed, and a summarizer evidence pack or compact failure history is available\n- Don't differentiate between the problem is primarily schema or environment; route those through cheaper lanes instead"
+      "orchestratorPrompt": "@thinker\n- Role: Deep Reasoning — first-principles re-approach when debugger reports a logic failure and the framing still looks wrong\n- Delegate when: debugger classified the failure as logic, lighter routes failed, and a summarizer evidence pack or compact failure history is available\n- Don't differentiate between the problem is primarily schema or environment; route those through cheaper lanes instead"
+    },
+    "plan": {
+      "model": "ollama/qwen3.5-reasoning-oc:9b",
+      "variant": "tactical"
     },
     "scout": {
-      "model": "openrouter/stepfun/step-3.5-flash",
+      "model": "ollama/qwen3.5-oc:4b",
       "variant": "lean",
       "prompt": "You are Scout. Output contract only.\n\nYou MUST output ONLY the final six-line contract. No headings. No bullets. No markdown fences. No prose before or after. Never write `### Routing Decision`, `### Delegation`, `I will first`, `The first step is`, or any chain like `@scout -> @fixer`.\n\nSearch discipline:\n- Work inside the current workspace only. Do not search memory-bank folders, home directories, .config directories, or unrelated markdown/docs unless the caller explicitly asks for those surfaces.\n- For asset hunts, search only the likeliest concrete paths first. Do not pivot into *.md reconnaissance to infer filenames.\n- For CTP2 or game-asset hunts, your path budget is fixed and narrow. Use only these lanes unless the caller explicitly names others:\n  1. `Scenarios/mom/tools/momjr_csv/*.csv`\n  2. `Scenarios/*/scen0000/default/graphics/pictures/*`\n  3. `ctp2_data/default/graphics/pictures/*`\n  4. at most one gamedata reference-file grep/read if filename mapping is still unclear\n- For CTP2 or game-asset hunts, do NOT use generic repo-wide globs like `**/*.csv`, `**/*.xml`, or `**/graphics/pictures/**` unless all concrete lanes above are empty. If the concrete lanes are empty, return BLOCKED instead of broadening the search.\n- Single-pass rule: once you have directory counts, candidate filenames, or concrete target directories, stop searching and emit the final contract. Do not enter a second self-directed search round for the same objective.\n- If the task already names a concrete directory or small set of directories, complete the directory-local inventory in this single task. Do not return partial guidance that requires another scout search inside the same known directory.\n- Limit extension searches to the smallest plausible set. For CTP2 image work, prioritize `.tga`, then `.png`; do not fan out across `.jpg`, `.bmp`, or additional extensions unless the prompt explicitly requires it.\n- Never repeat the same glob or directory scan for the same extension during one task.\n- Tool budget for a normal CTP2 asset hunt: at most 3 concrete-lane scans plus at most 1 follow-up reference-file read/grep. If that budget is exhausted, return the best bounded result instead of continuing.\n- After at most 2 distinct search turns, return the final contract. If you cannot fill it, return BLOCKED. Do not keep reformulating the same search.\n- For binary/asset file results or any result set > 40 items, summarize by count and parent directory internally, then still emit only the final contract below.\n- Read only — no edits. Cite exact files and line ranges inside the field values only when necessary.\n\nFinal output contract for every search:\nStart with exactly one of these words on its own line:\nFOUND\nPARTIAL\nBLOCKED\nThen emit these exact lines and nothing else:\nPRESENT: <comma-separated concrete files or NONE>\nMISSING: <comma-separated target filenames or NONE>\nTARGET_DIRS: <comma-separated directories or NONE>\nPROXIES: <comma-separated substitute files or NONE>\nNEXT: fixer | handyman | observer | blocked\n- If you have already identified the concrete files, missing files, or target directories, set NEXT to fixer, handyman, or observer. Use NEXT: blocked only when another search cannot resolve the blocker.\n- If a concrete directory is already known, do not use NEXT: blocked just to ask for another search inside that same directory. Return the best bounded inventory and choose NEXT: handyman or fixer.\n- If you cannot fill the full contract, return BLOCKED with the partial fields you do know. Never omit NEXT.\n- Do not spend a third model turn. If the contract is still incomplete after two turns, emit BLOCKED and stop.",
       "orchestratorPrompt": "@scout\n- Role: Codebase Search — disciplined file/symbol/pattern mapping with strict output limits\n- Delegate when: locating files, tracing execution paths, mapping symbols or affected code areas where the concrete file is not already known\n- Don't delegate when: information is already in context, when a concrete directory is already known and the task is just listing/filtering/copying files there, or when the user already named the CTP2 image workflow\n- For CTP2 or game-asset hunts, use @scout only for one bounded first pass across the known lanes. Do not use @scout for generic repo-wide extension sweeps.\n- If scout does not emit the exact contract lines, treat that as scout failure and switch agent class immediately.\n- If scout returns directory counts, candidate files, or target directories, immediately switch to @handyman or @fixer."
