@@ -506,5 +506,5 @@ When applying this skill, report:
 - how provenance is preserved without becoming ontology identity
 <!-- consolidation:see-also:start -->
 ## See Also
-[[openspec-explore]]  [[response-style]]  [[tdd-agent]]
+[[openspec-workflow]]  [[response-style]]  [[tdd-agent]]
 <!-- consolidation:see-also:end -->

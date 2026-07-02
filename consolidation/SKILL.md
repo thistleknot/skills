@@ -271,5 +271,5 @@ The elbow is selected at the k with the most-negative second derivative (sharpes
 | Stale report | Docs changed since last run | Re-extract triplets for changed files only (content-hash check) |
 <!-- consolidation:see-also:start -->
 ## See Also
-[[code]]  [[openspec-archive-change]]  [[causal-inference]]
+[[code]]  [[openspec-workflow]]  [[causal-inference]]
 <!-- consolidation:see-also:end -->

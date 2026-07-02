@@ -1,4 +1,4 @@
-﻿# skills
+# skills
 
 Reusable skill library for agentic coding, memory, retrieval, tuning, and orchestration.
 
@@ -48,11 +48,7 @@ skills/
 â”‚   â”‚   â”œâ”€â”€ continuity-log           # compact-safe session memory; distilled decisions, resume points
 â”‚   â”‚   â”œâ”€â”€ pipeline-input-review    # partition a pipeline problem to its minimal failing unit; materialise inputs before harness dispatch; hyper-focused task statements
 â”‚   â”‚   â””â”€â”€ deep-research            # multi-source web evidence pipeline; LangGraph plannerâ†’researcherâ†’synthesizer
-â”‚   â”œâ”€â”€ openspec-workflow            # spec-driven change lifecycle with OpenSpec artifacts and Fabro handoff
-â”‚   â”‚   â”œâ”€â”€ openspec-propose         # create proposal/design/spec/tasks for a new change
-â”‚   â”‚   â”œâ”€â”€ openspec-explore         # think/discover mode around an OpenSpec change or idea
-â”‚   â”‚   â”œâ”€â”€ openspec-apply-change    # implement tasks from an OpenSpec change
-â”‚   â”‚   â””â”€â”€ openspec-archive-change  # archive a completed OpenSpec change
+â”‚   â”œâ”€â”€ openspec-workflow            # single spec-driven change lifecycle (folds in explore/propose/apply/archive) + Fabro handoff
 â”‚   â”œâ”€â”€ fabro-create-workflow        # author Fabro `.fabro` + `.toml` workflows from natural-language requirements
 â”‚   â”œâ”€â”€ substrate-selection          # runtime substrate policy: OpenCode / claw-code / pi / aider / provider boundary
 â”‚   â”œâ”€â”€ ollama-structured            # schema-constrained JSON from Ollama (native SDK + OpenAI compat); Qwen3 thinking suppression
@@ -157,7 +153,7 @@ skills/
 25. `class-balancing` is a general-purpose class weight protocol. It computes log inverse frequency per class, applies Box-Cox normalization to tame the distribution tail, clips negatives, and normalizes to ratios for use as `class_weight` in sklearn or `weight` in PyTorch CrossEntropyLoss. Used anywhere labeled data has heavy class imbalance â€” layout element classification, NER, retrieval judgment labeling.
 25. `stratified-quota-sampling` owns fixed-budget coverage schedulers: Box-Cox tiering, quota allocation, and no-replacement sampling from an imbalanced pool. Pair it with `class-balancing` when quota selection alone still leaves residual label skew inside the loss, and with `optuna-nested-cv` when sample fraction, quota ratios, or tier weighting are part of the tuning contract.
 26. `pdf-extraction` is the end-to-end PDFâ†’enriched-Markdown pipeline workflow: doclingâ†’base64 stripâ†’VLM image descriptionâ†’reinsertâ†’methods extraction (5 phases via `run_pipeline.bat`). Includes a table enhancement sub-pipeline: docling JSON bboxesâ†’pymupdf cropâ†’tabula+camelot extractionâ†’VLM fusionâ†’patched Markdown. The layout classifier uses `class-balancing` for training. Standalone workflow skill; not a child of `agentic-harness`.
-27. `openspec-workflow` is the spec-driven product/change lifecycle skill. Its companion action skills (`openspec-propose`, `openspec-explore`, `openspec-apply-change`, `openspec-archive-change`) are command-shaped entry points into the same OpenSpec operating model.
+27. `openspec-workflow` is the single spec-driven product/change lifecycle skill — explore, propose, apply, and archive are folded into it as sections (the former standalone `openspec-*` action skills were consolidated in; the full explore-mode stance lives in its `references/explore-mode.md`). It is the OpenSpec CLI change-management workflow; for spec-authoring notation (EARS / structural / behavioral / rendered) use `spec`.
 28. `fabro-create-workflow` is the Fabro graph/run-config authoring companion. It can support `openspec-workflow` when a repo needs a new Fabro pipeline, but it is also usable as a standalone workflow-design skill.
 29. `agentic-harness` now has an explicit evaluation mix: `checklist` for structured audit artifacts, DSPy-derived metric/reward compile-refine patterns when scoring is explicit, and TextGrad-derived textual-loss loops when the critic must explain how to improve text/code/prompts. Optimizer scores inform repair; artifact-backed verification still decides completion.
 30. `codebase-knowledge-graph` is the current-repository relationship-mapping protocol. It builds the typed module/file/class/function graph and the foundational-vs-incidental distinction that should exist before `code`, `debugging`, or `validation` edits proceed.
@@ -334,8 +330,8 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | Stage | Skill(s) |
 |---|---|
 | Understand intent, decompose | `reasoning`, `architecture` |
-| Explore requirements before formalizing a change | `openspec-explore`, `reasoning` |
-| Draft OpenSpec artifacts for a new change | `openspec-propose`, `openspec-workflow` |
+| Explore requirements before formalizing a change | `openspec-workflow` (explore mode), `reasoning` |
+| Draft OpenSpec artifacts for a new change | `openspec-workflow` |
 | Execute multi-step task autonomously | `react_agent` |
 | Map an existing repo as a whole system before editing | `codebase-knowledge-graph` |
 | Generate / modify code | `code` |
@@ -343,8 +339,8 @@ This library is optimized for automated software development. Skill-to-pipeline 
 | Isolate and fix bugs | `debugging` |
 | Autonomous fix-run-retry loop | `debugging` (self-repair section) |
 | Verify behavior, write tests | `validation` |
-| Implement tasks from a spec-driven change | `openspec-apply-change`, `openspec-workflow` |
-| Finalize/archive a completed spec-driven change | `openspec-archive-change`, `openspec-workflow` |
+| Implement tasks from a spec-driven change | `openspec-workflow` |
+| Finalize/archive a completed spec-driven change | `openspec-workflow` |
 | Author Fabro workflow graphs and run configs | `fabro-create-workflow` |
 | Produce README / changelog / fixes-applied docs | `documentation` |
 | Iterative output quality improvement | `evaluator-optimizer` |

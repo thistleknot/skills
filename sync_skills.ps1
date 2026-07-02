@@ -44,6 +44,8 @@ param(
     [switch]$DryRun,
     [string]$Username,
     [string]$Password,
+    [string]$OllamaUrl = "http://localhost:11434",
+    [string]$OllamaModel = "qwen3.5:4b",
     [Alias('y')][switch]$Yes
 )
 
@@ -54,11 +56,17 @@ $ErrorActionPreference = "Stop"
 $Master  = "C:\Users\user\Documents\dev\skills"
 $Mirrors = @(
     "C:\Users\user\.copilot\skills",
-    "C:\Users\user\.config\opencode\skills"
+    "C:\Users\user\.config\opencode\skills",
+    "C:\Users\user\.claude\skills",
+    "C:\Users\user\.hermes\skills",
+    "C:\Users\user\.pi\skills"
 )
 $RemoteUser = "root"
 $RemoteHost = "192.168.3.17"
-$RemotePath = "/root/.copilot/skills"
+$RemotePaths = @(
+    "/root/.copilot/skills",
+    "/root/.claude/skills"
+)
 
 if ($Username) {
     $RemoteUser = $Username
@@ -97,9 +105,22 @@ function Get-RelPath($file, $base) {
     $file.Substring($base.TrimEnd('\').Length).TrimStart('\')
 }
 
+# Every mirror path ends in '\skills', so its leaf is always 'skills' and useless
+# for telling mirrors apart in logs / .conflict artifacts. Use the parent dir name
+# (.copilot, opencode, .claude, .hermes, .pi) so output names the real source.
+function Get-MirrorLabel($mirror) {
+    $parent = Split-Path $mirror -Parent
+    if ([string]::IsNullOrEmpty($parent)) { return (Split-Path $mirror -Leaf) }
+    return (Split-Path $parent -Leaf)
+}
+
 function Show-Diff($masterFile, $mirrorFile) {
-    # git diff --no-index gives a unified diff without needing a repo
-    $diff = git diff --no-index --unified=3 -- $masterFile $mirrorFile 2>&1
+    # git diff --no-index gives a unified diff without needing a repo.
+    # -c core.autocrlf=false suppresses git's "LF will be replaced by CRLF" stderr
+    # warning, which under $ErrorActionPreference='Stop' would otherwise surface as
+    # a fatal NativeCommandError and abort the whole reconciliation.
+    $diff = git -c core.autocrlf=false diff --no-index --unified=3 -- $masterFile $mirrorFile 2>&1 |
+            Where-Object { $_ -notmatch '^warning:' }
     if ($diff) {
         # Show at most 80 lines to avoid flooding
         $diff | Select-Object -First 80 | Write-Host -ForegroundColor DarkYellow
@@ -141,11 +162,17 @@ function Test-PathEverTracked($relPath) {
 
 # Classifies a (master, mirror) pair relative to the committed base.
 # Returns: 'no-op' | 'fast-forward-mirror' | 'fast-forward-master' | 'conflict'
-function Get-SyncCase($masterContent, $mirrorContent, $baseContent) {
+function Get-SyncCase($masterContent, $mirrorContent, $baseContent, $masterTime = $null, $mirrorTime = $null) {
     if ($null -eq $baseContent) {
-        # File not in git yet — treat mirror as additive if it differs
+        # No committed base (untracked/new file) — a 3-way compare is impossible.
+        # Fall back to mtime so a STALE downstream copy never wins over a newer master.
         if ($masterContent -eq $mirrorContent) { return 'no-op' }
-        return 'fast-forward-mirror'
+        if ($null -eq $masterContent) { return 'fast-forward-mirror' }   # master absent -> mirror is the only content
+        if ($null -ne $masterTime -and $null -ne $mirrorTime) {
+            if ($mirrorTime -gt $masterTime) { return 'fast-forward-mirror' }   # mirror newer -> promote
+            if ($masterTime -gt $mirrorTime) { return 'fast-forward-master' }   # master newer -> keep master
+        }
+        return 'conflict'   # equal/unknown mtimes but differing content -> let review/merge decide, never blind-copy
     }
     $masterChanged = ($masterContent -ne $baseContent)
     $mirrorChanged = ($mirrorContent -ne $baseContent)
@@ -231,6 +258,276 @@ function Invoke-LlmMerge($relPath, $baseContent, $masterContent, $mirrorContent)
     }
 }
 
+# ── Multi-mirror LLM merge engine (master = anchor) ───────────────────────────
+# Model: master working copy is the source of truth. Every mirror is a set of
+# proposed line-level changes AGAINST master. Identical changes across mirrors are
+# deduplicated. An LLM decides per change whether to KEEP (apply) or DROP. On any
+# ambiguity, conflict, or LLM failure we KEEP MASTER and write a .conflict artifact
+# (master is never silently overwritten by an older/lesser mirror copy).
+
+$script:OllamaReachable = $null
+$script:ResolvedModel   = $OllamaModel
+
+function Test-OllamaUp {
+    if ($null -ne $script:OllamaReachable) { return $script:OllamaReachable }
+    try {
+        $tags = Invoke-RestMethod -Uri "$OllamaUrl/api/tags" -TimeoutSec 5 -ErrorAction Stop
+        $names = @($tags.models | ForEach-Object { $_.name })
+        if ($names -notcontains $OllamaModel) {
+            if ($names.Count -gt 0) {
+                $script:ResolvedModel = $names[0]
+                Write-Host "  [OLLAMA] Model '$OllamaModel' not found; using '$($script:ResolvedModel)'." -ForegroundColor Yellow
+            }
+        }
+        $script:OllamaReachable = $true
+    } catch {
+        $script:OllamaReachable = $false
+    }
+    return $script:OllamaReachable
+}
+
+# Parse master->mirror diff into discrete change records using git -U0 hunks.
+function Get-HunkChanges($masterContent, $mirrorContent) {
+    $changes = [System.Collections.Generic.List[hashtable]]::new()
+    $tmpA = [System.IO.Path]::GetTempFileName()
+    $tmpB = [System.IO.Path]::GetTempFileName()
+    try {
+        # BOM-less writes: Set-Content -Encoding UTF8 (Windows PowerShell 5.1) prepends
+        # a BOM, which turns an "empty master" temp file into a 1-line file and makes
+        # git report a phantom line-1 change. WriteAllText with a BOM-less encoder keeps
+        # empty content truly empty so diffs stay honest.
+        $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+        [System.IO.File]::WriteAllText($tmpA, [string]$masterContent, $utf8NoBom)
+        [System.IO.File]::WriteAllText($tmpB, [string]$mirrorContent, $utf8NoBom)
+        $diff = git -c core.autocrlf=false diff --no-index --unified=0 -- $tmpA $tmpB 2>$null
+        $cur = $null
+        foreach ($line in $diff) {
+            if ($line -match '^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@') {
+                if ($null -ne $cur) { $changes.Add($cur) }
+                $oldStart = [int]$Matches[1]
+                $oldCount = if ($Matches[2]) { [int]$Matches[2] } else { 1 }
+                $cur = @{
+                    OldStart = $oldStart
+                    OldCount = $oldCount
+                    Removed  = [System.Collections.Generic.List[string]]::new()
+                    Added    = [System.Collections.Generic.List[string]]::new()
+                }
+            } elseif ($null -ne $cur -and $line.StartsWith('-') -and -not $line.StartsWith('---')) {
+                $cur.Removed.Add($line.Substring(1))
+            } elseif ($null -ne $cur -and $line.StartsWith('+') -and -not $line.StartsWith('+++')) {
+                $cur.Added.Add($line.Substring(1))
+            }
+        }
+        if ($null -ne $cur) { $changes.Add($cur) }
+    } finally {
+        Remove-Item $tmpA, $tmpB -Force -ErrorAction SilentlyContinue
+    }
+    return $changes
+}
+
+function ConvertTo-ChangeKey($c) {
+    # Identical (location + removed + added) => the same change, regardless of mirror.
+    $sep = [char]0x241F
+    return ('{0}|{1}|R={2}|A={3}' -f $c.OldStart, $c.OldCount, ($c.Removed -join $sep), ($c.Added -join $sep))
+}
+
+function Invoke-OllamaDecisions($rel, $changes) {
+    if (-not (Test-OllamaUp)) { return $null }
+    $sb = [System.Text.StringBuilder]::new()
+    foreach ($c in $changes) {
+        $type = if ($c.OldCount -eq 0) { 'INSERT' } elseif ($c.Added.Count -eq 0) { 'DELETE' } else { 'REPLACE' }
+        [void]$sb.AppendLine("### Change $($c.Id)  [$type]  at master line $($c.OldStart)  (proposed by: $($c.Mirrors -join ', '))")
+        if ($c.Removed.Count -gt 0) {
+            [void]$sb.AppendLine('REMOVES from master:')
+            foreach ($l in $c.Removed) { [void]$sb.AppendLine("  - $l") }
+        }
+        if ($c.Added.Count -gt 0) {
+            [void]$sb.AppendLine('ADDS to master:')
+            foreach ($l in $c.Added) { [void]$sb.AppendLine("  + $l") }
+        }
+        [void]$sb.AppendLine('')
+    }
+    $prompt = @"
+/no_think
+You reconcile skill files. The MASTER copy is the CURRENT SOURCE OF TRUTH. Below are
+proposed line-level changes that mirror copies would apply to master for file: $rel
+
+For EACH change id, decide KEEP (apply to master) or DROP (leave master unchanged).
+Rules:
+- KEEP genuinely additive or improving content (new sections, clarifications, more detail).
+- DROP a change that merely deletes substantial existing master content, unless the
+  removed text is clearly obsolete or self-contradictory.
+- If a change looks like an OLDER / less-complete mirror removing content master already
+  has, DROP it.
+- When uncertain, DROP. Never lose master content silently.
+
+Changes:
+$($sb.ToString())
+You MUST return exactly one decision object for EACH of these change ids: $(($changes | ForEach-Object { $_.Id }) -join ', ').
+"@
+    $schema = @{
+        type       = 'object'
+        properties = @{
+            decisions = @{
+                type  = 'array'
+                items = @{
+                    type       = 'object'
+                    properties = @{
+                        id     = @{ type = 'integer' }
+                        keep   = @{ type = 'boolean' }
+                        reason = @{ type = 'string' }
+                    }
+                    required = @('id', 'keep', 'reason')
+                }
+            }
+        }
+        required = @('decisions')
+    }
+    $body = @{
+        model   = $script:ResolvedModel
+        prompt  = $prompt
+        stream  = $false
+        format  = $schema
+        # API-level thinking toggle. Reasoning models (qwen3.5:*) ignore an in-prompt
+        # /no_think and route all output to the thinking channel, leaving 'response'
+        # empty. think=false forces the answer into 'response' so structured output works.
+        think   = $false
+        options = @{ temperature = 0 }
+    } | ConvertTo-Json -Depth 12
+    try {
+        $resp = Invoke-RestMethod -Uri "$OllamaUrl/api/generate" -Method Post -Body $body -ContentType 'application/json' -TimeoutSec 300 -ErrorAction Stop
+        $raw = if ($resp.PSObject.Properties.Name -contains 'response') { $resp.response } else { $null }
+        if ([string]::IsNullOrWhiteSpace($raw)) {
+            Write-Host "  [OLLAMA ERROR] $rel : empty response from model" -ForegroundColor Red
+            return $null
+        }
+        $parsed = $raw | ConvertFrom-Json -ErrorAction Stop
+        # Strict-mode-safe: accessing a missing property throws under Set-StrictMode,
+        # so probe for the field before dereferencing it.
+        if ($null -eq $parsed -or ($parsed.PSObject.Properties.Name -notcontains 'decisions')) {
+            Write-Host "  [OLLAMA ERROR] $rel : model returned no 'decisions' field (weak/non-conforming output)" -ForegroundColor Red
+            return $null
+        }
+        return @($parsed.decisions)
+    } catch {
+        Write-Host "  [OLLAMA ERROR] $rel : $($_.Exception.Message)" -ForegroundColor Red
+        return $null
+    }
+}
+
+# Reconcile one rel-path across all mirrors. Returns a result hashtable with Status:
+#   'no-op'   — no real changes
+#   'merged'  — Content holds the rebuilt master
+#   'flag'    — keep master; Reason + Changes describe why
+function Invoke-MultiMirrorMerge($entry) {
+    $masterContent = $entry.MasterContent
+
+    # 0. Pure-additive new file. Master has no copy of this path, so every mirror
+    # version is brand-new content (think: an untracked file in git). There is
+    # nothing to 3-way merge — splicing hunks into a zero-line master crashes the
+    # rebuild ("Change out of range"), so fold the new skill straight in. If mirrors
+    # disagree on the new content, that IS a real conflict; flag it.
+    if ([string]::IsNullOrEmpty($masterContent)) {
+        $distinct = @(@($entry.Mirrors | ForEach-Object { $_.Content }) | Sort-Object -Unique)
+        if ($distinct.Count -eq 1) {
+            return @{ Status = 'added'; Content = $distinct[0]; MirrorCount = $entry.Mirrors.Count }
+        }
+        return @{
+            Status  = 'flag'
+            Reason  = "New file with $($distinct.Count) differing versions across $($entry.Mirrors.Count) mirror(s)"
+            Changes = @()
+        }
+    }
+
+    # 1. Collect + deduplicate changes across every mirror.
+    $byKey = [ordered]@{}
+    foreach ($m in $entry.Mirrors) {
+        foreach ($c in (Get-HunkChanges $masterContent $m.Content)) {
+            $k = ConvertTo-ChangeKey $c
+            if ($byKey.Contains($k)) {
+                if ($byKey[$k].Mirrors -notcontains $m.Label) { [void]$byKey[$k].Mirrors.Add($m.Label) }
+            } else {
+                $c.Mirrors = [System.Collections.Generic.List[string]]::new()
+                $c.Mirrors.Add($m.Label)
+                $byKey[$k] = $c
+            }
+        }
+    }
+    $changes = @($byKey.Values)
+    if ($changes.Count -eq 0) { return @{ Status = 'no-op' } }
+    for ($i = 0; $i -lt $changes.Count; $i++) { $changes[$i].Id = $i + 1 }
+
+    # 2. LLM keep/drop decision per change.
+    $decisions = Invoke-OllamaDecisions $entry.Rel $changes
+    if ($null -eq $decisions) {
+        return @{ Status = 'flag'; Reason = 'LLM unreachable or failed'; Changes = $changes }
+    }
+    $keep = @{}
+    foreach ($d in $decisions) { $keep[[int]$d.id] = [bool]$d.keep }
+    # Every change must get an explicit verdict. Missing coverage (e.g. a starved/weak
+    # model returning [] or a partial list) is ambiguity, not consent to drop — flag it
+    # so real additive changes are never silently lost.
+    $covered = @($changes | Where-Object { $keep.ContainsKey($_.Id) }).Count
+    if ($covered -lt $changes.Count) {
+        return @{ Status = 'flag'; Reason = "LLM returned $covered/$($changes.Count) decisions (incomplete)"; Changes = $changes; Decisions = $decisions }
+    }
+    $kept = @($changes | Where-Object { $keep[$_.Id] })
+    if ($kept.Count -eq 0) { return @{ Status = 'no-op'; Changes = $changes; Decisions = $decisions } }
+
+    # 3. Kept changes must not overlap on master lines (else we cannot apply both).
+    $sorted = @($kept | Sort-Object OldStart)
+    for ($i = 1; $i -lt $sorted.Count; $i++) {
+        $prev = $sorted[$i - 1]; $curr = $sorted[$i]
+        $prevEnd = $prev.OldStart + [Math]::Max($prev.OldCount, 1) - 1
+        if ($curr.OldStart -le $prevEnd -or
+            ($curr.OldStart -eq $prev.OldStart -and ($curr.OldCount -eq 0 -or $prev.OldCount -eq 0))) {
+            return @{ Status = 'flag'; Reason = 'Kept changes overlap on master lines'; Changes = $changes; Decisions = $decisions }
+        }
+    }
+
+    # 4. Rebuild master by splicing kept changes bottom-up (indices stay valid).
+    $lines = [System.Collections.Generic.List[string]]::new()
+    if (-not [string]::IsNullOrEmpty($masterContent)) {
+        $lines.AddRange([string[]]$masterContent.Split("`n"))
+    }
+    foreach ($c in @($kept | Sort-Object OldStart -Descending)) {
+        if ($c.OldCount -gt 0) {
+            $idx = $c.OldStart - 1
+            if ($idx -lt 0 -or ($idx + $c.OldCount) -gt $lines.Count) {
+                return @{ Status = 'flag'; Reason = 'Change out of range during rebuild'; Changes = $changes; Decisions = $decisions }
+            }
+            $lines.RemoveRange($idx, $c.OldCount)
+            if ($c.Added.Count -gt 0) { $lines.InsertRange($idx, [string[]]$c.Added) }
+        } else {
+            $idx = $c.OldStart
+            if ($idx -lt 0 -or $idx -gt $lines.Count) {
+                return @{ Status = 'flag'; Reason = 'Insertion out of range during rebuild'; Changes = $changes; Decisions = $decisions }
+            }
+            if ($c.Added.Count -gt 0) { $lines.InsertRange($idx, [string[]]$c.Added) }
+        }
+    }
+    return @{ Status = 'merged'; Content = ($lines -join "`n"); Kept = $kept; Changes = $changes; Decisions = $decisions }
+}
+
+function Write-ConflictArtifact($entry, $result) {
+    $conflictFile = (Join-Path $Master $entry.Rel) + '.conflict'
+    $sb = [System.Text.StringBuilder]::new()
+    [void]$sb.AppendLine("# MANUAL MERGE REQUIRED: $($entry.Rel)")
+    [void]$sb.AppendLine("# Reason: $($result.Reason)")
+    [void]$sb.AppendLine('# Master was left UNCHANGED. Review the proposed mirror changes below, then delete this file.')
+    [void]$sb.AppendLine('#')
+    if ($result.ContainsKey('Changes')) {
+        foreach ($c in $result.Changes) {
+            [void]$sb.AppendLine("## Change $($c.Id) at master line $($c.OldStart) (mirrors: $($c.Mirrors -join ', '))")
+            foreach ($l in $c.Removed) { [void]$sb.AppendLine("- $l") }
+            foreach ($l in $c.Added)   { [void]$sb.AppendLine("+ $l") }
+            [void]$sb.AppendLine('')
+        }
+    }
+    if (-not $DryRun) { Set-Content $conflictFile $sb.ToString() -Encoding UTF8 }
+    Write-Host "  Conflict artifact: $conflictFile" -ForegroundColor Red
+}
+
 function Read-Choice($Prompt, $Default = '', $AutoYesChoice = 'y') {
     if ($Yes) {
         Write-Host "  [AUTO] $Prompt -> $AutoYesChoice" -ForegroundColor DarkGray
@@ -304,7 +601,7 @@ if ($skipReconciliation) {
 
                 $entry = @{
                     Mirror = $mirror
-                    MirrorLabel = (Split-Path $mirror -Leaf)
+                    MirrorLabel = (Get-MirrorLabel $mirror)
                     FolderName = $rel
                     FullPath = $_.FullName
                 }
@@ -323,8 +620,10 @@ if ($skipReconciliation) {
 }
 
 # ── Step 3: Detect locally-modified tracked files ─────────────────────────────
-Write-Header "Checking tracked .md files newer than last commit"
+Write-Header "Checking tracked .md files that differ from master"
 $needsMerge = [System.Collections.Generic.List[hashtable]]::new()
+# Per-rel-path aggregation across ALL mirrors (master = anchor) for the LLM engine.
+$byPath = [ordered]@{}
 
 if ($skipReconciliation) {
     Write-Host "  [SKIP] Reconciliation disabled in current mode; downstream edits will not be promoted." -ForegroundColor DarkGray
@@ -340,23 +639,36 @@ if ($skipReconciliation) {
             $rel          = Get-RelPath $mf $mirror
             $masterFile   = Join-Path $Master $rel
             $mfTime       = (Get-Item $mf).LastWriteTime
+            $masterExists = Test-Path $masterFile
 
-            if ($mfTime -gt $lastCommit) {
-                $masterContent = if (Test-Path $masterFile) { Normalize-LineEndings (Get-Content $masterFile -Raw) } else { $null }
-                $mirrorContent = Normalize-LineEndings (Get-Content $mf -Raw)
-                if ($masterContent -ne $mirrorContent) {
-                    $count++
-                    Write-Host ("  [NEWER] {0,-55} {1}" -f $rel, $mfTime.ToString("yyyy-MM-dd HH:mm")) -ForegroundColor Yellow
-                    $needsMerge.Add(@{
-                        Mirror      = $mirror
-                        MirrorLabel = Split-Path $mirror -Leaf
-                        Rel         = $rel
-                        MirrorFile  = $mf
-                        MasterFile  = $masterFile
-                        MirrorTime  = $mfTime
-                        MasterExists = (Test-Path $masterFile)
-                    })
+            # Direction is NOT decided by timestamp here. master is the anchor; any
+            # mirror whose content differs contributes proposed changes the LLM judges.
+            $masterContent = if ($masterExists) { Normalize-LineEndings (Get-Content $masterFile -Raw) } else { $null }
+            $mirrorContent = Normalize-LineEndings (Get-Content $mf -Raw)
+            if ($masterContent -ne $mirrorContent) {
+                $count++
+                Write-Host ("  [DIFF] {0,-55} {1}" -f $rel, $mfTime.ToString("yyyy-MM-dd HH:mm")) -ForegroundColor Yellow
+                $needsMerge.Add(@{
+                    Mirror      = $mirror
+                    MirrorLabel = Get-MirrorLabel $mirror
+                    Rel         = $rel
+                    MirrorFile  = $mf
+                    MasterFile  = $masterFile
+                    MirrorTime  = $mfTime
+                    MasterExists = $masterExists
+                })
+
+                $mirrorLabel = Get-MirrorLabel $mirror
+                if (-not $byPath.Contains($rel)) {
+                    $byPath[$rel] = @{
+                        Rel           = $rel
+                        MasterFile    = $masterFile
+                        MasterContent = $masterContent
+                        MasterExists  = $masterExists
+                        Mirrors       = [System.Collections.Generic.List[hashtable]]::new()
+                    }
                 }
+                $byPath[$rel].Mirrors.Add(@{ Label = $mirrorLabel; File = $mf; Content = $mirrorContent })
             }
         }
         if ($count -eq 0) { Write-Host "  [OK] $mirror -- no locally-modified files" -ForegroundColor Green }
@@ -418,7 +730,8 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
             $baseContent   = Get-BaseContent $item.Rel
             $masterContent = if ($item.MasterExists) { Normalize-LineEndings (Get-Content $item.MasterFile -Raw) } else { $null }
             $mirrorContent = Normalize-LineEndings (Get-Content $item.MirrorFile -Raw)
-            $case = Get-SyncCase $masterContent $mirrorContent $baseContent
+            $masterTime    = if ($item.MasterExists) { (Get-Item $item.MasterFile).LastWriteTime } else { $null }
+            $case = Get-SyncCase $masterContent $mirrorContent $baseContent $masterTime $item.MirrorTime
             $item['SyncCase']    = $case
             $item['BaseContent'] = $baseContent
             if ($case -eq 'conflict') { $conflicts.Add($item) } else { $fastForwards.Add($item) }
@@ -442,6 +755,36 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
             }
         }
 
+        # Auto mode (-y / 'y'): multi-mirror, change-deduplicated, LLM-judged merge.
+        # master is the anchor; nothing here can silently overwrite master.
+        if ($resp -eq 'y') {
+            if (-not (Test-OllamaUp)) {
+                Write-Host "  [OLLAMA DOWN] $OllamaUrl unreachable -- keeping master for all diffs; writing .conflict artifacts." -ForegroundColor Red
+            } else {
+                Write-Host "  Using model: $($script:ResolvedModel)" -ForegroundColor DarkGray
+            }
+            foreach ($entry in @($byPath.Values)) {
+                $result = Invoke-MultiMirrorMerge $entry
+                switch ($result.Status) {
+                    'added' {
+                        Write-ToMaster $entry $result.Content
+                        Write-Host "  [ADD]       $($entry.Rel) -- new skill folded into master (additive; from $($result.MirrorCount) mirror(s))." -ForegroundColor Green
+                    }
+                    'merged' {
+                        Write-ToMaster $entry $result.Content
+                        Write-Host "  [LLM-MERGE] $($entry.Rel) -- kept $($result.Kept.Count)/$($result.Changes.Count) change(s) from $($entry.Mirrors.Count) mirror(s)" -ForegroundColor Green
+                    }
+                    'flag' {
+                        Write-Host "  [FLAG]      $($entry.Rel) -- $($result.Reason); master kept." -ForegroundColor Yellow
+                        Write-ConflictArtifact $entry $result
+                    }
+                    default {
+                        Write-Host "  [NO-OP]     $($entry.Rel) -- no changes applied (master already current)." -ForegroundColor DarkGray
+                    }
+                }
+            }
+        }
+
         foreach ($item in $needsMerge) {
             if ($resp -eq 'n') {
                 Write-Host "  Skipped all." -ForegroundColor DarkGray
@@ -461,28 +804,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
             }
             $caseColor = if ($syncCase -eq 'conflict') { 'Magenta' } else { 'Cyan' }
 
-            if ($resp -eq 'y') {
-                # Auto-apply: fast-forwards are deterministic; conflicts need LLM merge
-                if ($syncCase -eq 'fast-forward-mirror') {
-                    Write-ToMaster $item $mirrorContent
-                    Write-Host "  $caseLabel Copied  : $($item.Rel)" -ForegroundColor Green
-                } elseif ($syncCase -eq 'fast-forward-master') {
-                    Write-Host "  $caseLabel Skipped : $($item.Rel) (master already ahead)" -ForegroundColor DarkGray
-                } elseif ($syncCase -eq 'conflict') {
-                    Write-Host "  $caseLabel $($item.Rel) -- invoking LLM merge" -ForegroundColor Magenta
-                    $merged = Invoke-LlmMerge $item.Rel $baseContent $masterContent $mirrorContent
-                    if ($null -ne $merged) {
-                        Write-ToMaster $item $merged
-                        Write-Host "  $caseLabel Merged  : $($item.Rel)" -ForegroundColor Green
-                        if ($merged -match '<!--\s*MERGE-CONFLICT') {
-                            Write-Host "  [WARN] MERGE-CONFLICT marker present - flag for human review before commit." -ForegroundColor Yellow
-                        }
-                    } else {
-                        Write-Host "  $caseLabel Skipped : $($item.Rel) (manual merge required -- see .conflict file)" -ForegroundColor Red
-                    }
-                }
-                continue
-            }
+            if ($resp -eq 'y') { continue }  # auto handled by multi-mirror engine above
 
             # Review mode (d): show case, then offer appropriate choices
             Write-Host "`n$caseLabel [$($item.MirrorLabel)] $($item.Rel)  (mirror: $($item.MirrorTime.ToString('yyyy-MM-dd HH:mm')))" -ForegroundColor $caseColor
@@ -513,8 +835,12 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
                 } else {
                     Write-Host "  Skipped: $($item.Rel)" -ForegroundColor DarkGray
                 }
+            } elseif ($syncCase -eq 'fast-forward-master') {
+                # Master is newer than this mirror; copying the mirror would DOWNGRADE master.
+                # Skip — Step 5 pushes master downstream to refresh the stale mirror.
+                Write-Host "  Master is newer than this mirror; keeping master (it will push downstream). Skipped." -ForegroundColor DarkGray
             } else {
-                # Fast-forward: simple copy prompt
+                # Fast-forward (mirror newer/additive): simple copy prompt
                 Show-Diff $item.MasterFile $item.MirrorFile
                 $choice = Read-Choice "  Copy to master? [y/n]" '' 'y'
                 if ($choice -eq 'y') {
@@ -572,10 +898,10 @@ Write-Header "Syncing master -> local mirrors"
 foreach ($mirror in $Mirrors) {
     Write-Host "  -> $mirror"
     if ($DryRun) {
-        robocopy $Master $mirror /MIR /L /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" "__pycache__" ".pytest_cache" ".react_agent" /XF "*.pyc" "*.db" "*.jsonl" 2>&1 |
+        robocopy $Master $mirror /MIR /L /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" "__pycache__" ".pytest_cache" ".react_agent" "ms-playwright" "node_modules" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" 2>&1 |
             Where-Object { $_ -match '\S' } | Select-Object -First 20 | ForEach-Object { Write-Host "     $_" -ForegroundColor DarkGray }
     } else {
-        robocopy $Master $mirror /MIR /NJH /NJS /NDL /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" /XF "*.pyc" "*.db" "*.jsonl" | Out-Null
+        robocopy $Master $mirror /MIR /NJH /NJS /NDL /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" "ms-playwright" "node_modules" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" | Out-Null
         $rc = $LASTEXITCODE
         if ($rc -le 1) {
             Write-Host "     OK (exit $rc)" -ForegroundColor Green
@@ -617,13 +943,15 @@ Write-Host "        DeepSeek: agents\orchestrator.agent.md -> orchestrator.deeps
 Write-Host "        Gemma   : agents\orchestrator.gemma.md -> orchestrator.gemma.md" -ForegroundColor DarkGray
 
 # ── Step 7: Remote guidance ───────────────────────────────────────────────────
-Write-Header "Remote: $RemoteUser@${RemoteHost}:$RemotePath"
+Write-Header "Remote: $RemoteUser@${RemoteHost} -> $($RemotePaths -join ', ')"
 
-Write-Host @"
+foreach ($RemotePath in $RemotePaths) {
+    Write-Host @"
+  [$RemotePath]
   Option A -- WinSCP CLI (if winscp.com is on PATH):
     winscp.com /command ``
       "open sftp://$RemoteUser@$RemoteHost" ``
-      "synchronize remote -filemask=""|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*""  ""$Master"" $RemotePath" ``
+      "synchronize remote -filemask=""|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;ms-playwright/;node_modules/;*.exe;*.dll;*.pak;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*""  ""$Master"" $RemotePath" ``
       "exit"
 
   Option B -- rsync (via WSL or Git Bash):
@@ -634,10 +962,27 @@ Write-Host @"
     User    : $RemoteUser
     Remote  : $RemotePath
     Local   : $Master
-  Mode    : Mirror (remote = local, delete extras)
+    Mode    : Mirror (remote = local, delete extras)
 "@ -ForegroundColor DarkGray
+}
 
-$launch = Read-Choice "`nLaunch WinSCP now? [y/n]" '' 'y'
+if ($DryRun) {
+    # A dry run must never mutate the remote. Report and skip.
+    Write-Host "`n  [DRY] Skipping remote sync launch (dry run)." -ForegroundColor Magenta
+    $launch = 'n'
+} elseif ($Yes) {
+    # Non-interactive: only push to the remote when credentials were explicitly
+    # supplied. Otherwise skip rather than blast the remote or block on a password
+    # prompt (Read-Host has no auto-answer).
+    if ($Username -and $Password) {
+        $launch = 'y'
+    } else {
+        Write-Host "`n  [AUTO] Remote sync skipped (pass -Username and -Password to enable in -Yes mode)." -ForegroundColor DarkGray
+        $launch = 'n'
+    }
+} else {
+    $launch = Read-Choice "`nLaunch WinSCP now? [y/n]" '' 'y'
+}
 if ($launch -eq 'y') {
     if (-not $Username) {
         $inputUser = Read-Host "  SSH username (default: $RemoteUser)"
@@ -654,23 +999,41 @@ if ($launch -eq 'y') {
     $wscp  = Get-Command "winscp.com" -ErrorAction SilentlyContinue
     $rsync = Get-Command "rsync"      -ErrorAction SilentlyContinue
 
-    if ($wscp) {
-        Write-Host "  Launching WinSCP (override remote)..." -ForegroundColor Green
-        & winscp.com /command "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" "synchronize remote -filemask=|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]* ""$Master"" $RemotePath" "exit"
-    } elseif ($rsync) {
-        # rsync --delete = override downstream; remote changes are silently discarded (by design)
-        Write-Host "  winscp.com not found -- falling back to rsync (override remote)..." -ForegroundColor Yellow
-        $localFwd = $Master.Replace('\', '/')
-        $sshPass  = "sshpass -p '$plainPwd'"
-        & bash -c "$sshPass rsync -az --delete --exclude='.*' --exclude='*.db' --exclude='*.jsonl' --exclude='*.pyc' '${localFwd}/' '${RemoteUser}@${RemoteHost}:${RemotePath}/'"
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "  rsync OK" -ForegroundColor Green
+    foreach ($RemotePath in $RemotePaths) {
+        Write-Host "  -> $RemoteUser@${RemoteHost}:$RemotePath" -ForegroundColor Cyan
+        if ($wscp) {
+            & winscp.com /command "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" "synchronize remote -filemask=|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;ms-playwright/;node_modules/;*.exe;*.dll;*.pak;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]* ""$Master"" $RemotePath" "exit"
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "     OK" -ForegroundColor Green
+            } else {
+                Write-Host "     WARN: WinSCP exited $LASTEXITCODE" -ForegroundColor Yellow
+            }
+        } elseif ($rsync) {
+            # rsync --delete = override downstream; remote changes are silently discarded (by design)
+            Write-Host "  winscp.com not found -- falling back to rsync (override remote)..." -ForegroundColor Yellow
+            $localFwd = $Master.Replace('\', '/')
+            $sshPass  = "sshpass -p '$plainPwd'"
+            & bash -c "$sshPass rsync -az --delete --exclude='.*' --exclude='*.db' --exclude='*.jsonl' --exclude='*.pyc' --exclude='ms-playwright' --exclude='node_modules' --exclude='*.exe' --exclude='*.dll' --exclude='*.pak' '${localFwd}/' '${RemoteUser}@${RemoteHost}:${RemotePath}/'"
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "     rsync OK" -ForegroundColor Green
+            } else {
+                Write-Host "     rsync exited $LASTEXITCODE -- check connectivity" -ForegroundColor Red
+            }
         } else {
-            Write-Host "  rsync exited $LASTEXITCODE -- check connectivity" -ForegroundColor Red
+            Write-Host "  Neither winscp.com nor rsync found. Sync manually:" -ForegroundColor Yellow
+            Write-Host "    $Master  -->  $RemoteUser@${RemoteHost}:$RemotePath" -ForegroundColor DarkGray
         }
-    } else {
-        Write-Host "  Neither winscp.com nor rsync found. Sync manually:" -ForegroundColor Yellow
-        Write-Host "    $Master  -->  $RemoteUser@${RemoteHost}:$RemotePath" -ForegroundColor DarkGray
+    }
+}
+
+# ── Step 8: Dry-run preview of what would sync to remote ─────────────────────
+if (-not $DryRun) {
+    $previewChoice = Read-Choice "`nPreview what would sync to remote next time? [y/n]" '' 'n'
+    if ($previewChoice -eq 'y') {
+        Write-Header "Remote sync preview (robocopy /L - files that differ from master)"
+        Write-Host "  Files listed below would be transferred on next remote sync." -ForegroundColor DarkGray
+        robocopy $Master "$env:TEMP\__sync_preview_dummy__" /MIR /L /NJH /NJS /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" "ms-playwright" "node_modules" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" 2>&1 |
+            Where-Object { $_ -match '\S' } | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
     }
 }
 

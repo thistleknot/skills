@@ -87,5 +87,5 @@ Before you stop, confirm:
 4. The response stays coherent with the goal and leaves no load-bearing gap.
 <!-- consolidation:see-also:start -->
 ## See Also
-[[react-agent]]  [[agent-governance]]  [[openspec-explore]]
+[[react-agent]]  [[agent-governance]]  [[openspec-workflow]]
 <!-- consolidation:see-also:end -->

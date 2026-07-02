@@ -185,5 +185,5 @@ fabro validate workflow.fabro            # validate only
 {{user_input}}
 <!-- consolidation:see-also:start -->
 ## See Also
-[[evaluator-optimizer]]  [[openspec-apply-change]]  [[git-workflow]]
+[[evaluator-optimizer]]  [[openspec-workflow]]  [[git-workflow]]
 <!-- consolidation:see-also:end -->

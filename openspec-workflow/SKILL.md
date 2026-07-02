@@ -1,6 +1,14 @@
 ---
 name: openspec-workflow
 description: "All OpenSpec operations in one skill. Covers: explore mode (thinking partner, no implementation), propose (create change + all artifacts in one step), apply (implement tasks from a change), archive (finalize and archive a completed change), and the full spec-driven development lifecycle with OpenSpec + Fabro. Use for any OpenSpec operation. Requires: openspec CLI, fabro CLI, gh CLI, git."
+metadata:
+  supersedes: [openspec-explore, openspec-propose, openspec-apply-change, openspec-archive-change]
+  note: >
+    Single consolidated entry point for OpenSpec. The former granular skills
+    (explore/propose/apply/archive) are folded into the sections below; the full
+    explore-mode stance and examples live in references/explore-mode.md. This is
+    the OpenSpec CLI change-management workflow — for spec-authoring notation
+    (EARS, structural, behavioral, rendered), use the `spec` skill instead.
 ---
 
 # OpenSpec Workflow
@@ -394,7 +402,7 @@ The action:
 5. Deletes the original merged branch
 <!-- consolidation:see-also:start -->
 ## See Also
-[[openspec-apply-change]]  [[code-extraction]]  [[auto-ingest]]
+[[fabro-create-workflow]]  [[spec]]  [[code-extraction]]
 <!-- consolidation:see-also:end -->
 
 ---
@@ -404,6 +412,8 @@ The action:
 Enter explore mode when the user wants to think through something before or during a change. **Thinking partner only — never implement in explore mode.** You may read files, search code, and create OpenSpec artifacts, but NEVER write implementation code.
 
 **The stance:** Curious, not prescriptive. Open threads, not interrogations. Visual (ASCII diagrams). Adaptive. Patient. Grounded in the actual codebase.
+
+For the full stance, entry-point examples (vague idea / specific problem / stuck mid-implementation / comparing options), and endings, see `references/explore-mode.md`.
 
 ```bash
 openspec list --json   # check for active changes at session start
@@ -447,7 +457,7 @@ Implement tasks from an existing OpenSpec change.
 
 1. Identify the change (from context, or prompt via `openspec list --json`). Announce: "Using change: \<name\>".
 2. `openspec status --change "<name>" --json` — understand schema and which artifact has tasks.
-3. `openspec instructions apply --change "<name>" --json` — get `contextFiles`, task list, progress, dynamic instruction.
+3. `openspec instructions apply --change "<name>" --json` — get `contextFiles`, task list, progress, dynamic instruction. Handle `state`: `blocked` (missing artifacts) → report and go back to Propose; `all_done` → congratulate and suggest Archive; otherwise proceed.
 4. Read all files listed in `contextFiles`.
 5. Show current progress (N/M tasks complete).
 6. Loop through pending tasks: implement → mark `- [ ]` → `- [x]` → next.
@@ -465,8 +475,8 @@ Finalize and archive a completed change.
 1. Identify the change (prompt via `openspec list --json` if not provided — always let user choose, never auto-select).
 2. `openspec status --change "<name>" --json` — check artifact completion.
 3. Read tasks file; count incomplete `- [ ]` tasks. Warn if any are incomplete; confirm before proceeding.
-4. If delta specs exist in `openspec/changes/<name>/specs/`: assess sync state, show summary, offer "Sync now (recommended)" or "Archive without syncing".
-5. Archive:
+4. If delta specs exist in `openspec/changes/<name>/specs/`: compare each against its main spec at `openspec/specs/<capability>/spec.md`, determine adds/mods/removals/renames, show a combined summary, then offer "Sync now (recommended)" or "Archive without syncing". If syncing, drive it with an agent (subagent invoking the OpenSpec sync-specs flow), passing the delta summary; proceed to archive regardless of choice.
+5. Archive (fail if the dated target already exists — suggest a different date rather than overwrite):
    ```bash
    mkdir -p openspec/changes/archive
    mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>
