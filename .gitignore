@@ -33,3 +33,5 @@ graph_disposition.txt
 .DS_Store
 Thumbs.db
 .gstack
+# gstack is a vendored clone of github.com/garrytan/gstack (its own git repo)
+/gstack/
