@@ -104,6 +104,23 @@ Every memory-augmented agent system should compose these layers from the bottom 
  +------------------------------------------------------------------------+
 ```
 
+## Deployment Binding — This Machine
+
+The abstract layers above map onto three concrete stores under `~\memory-bank` (see
+`memory-bank` for the authoritative tier contract):
+
+| Store | Path | Substrate | Layers it realizes |
+|---|---|---|---|
+| Global markdown | `C:\Users\user\memory-bank\*.md` | durable, cross-project | L2 semantic (system patterns), curated L3 procedures |
+| Local markdown | `[repo]\.memory-bank\*.md` | durable, project-scoped | L2 episodic + project lessons learned |
+| Global Chroma log | `C:\Users\user\memory-bank\.chroma` | volatile, cross-project | L1 semantic vector recall — the annealing tier |
+
+The **Decay** and **Consolidation** lifecycle boxes are realized concretely by the
+promotion/annealing policy: the Chroma log (`mem-chroma` service, `127.0.0.1:8055`, driven
+by the `memory-index` tool) accepts writes freely; an entry **recalled ≥ 3 times promotes**
+into durable markdown (global for cross-project patterns, local for project lessons), and one
+**recalled fewer times anneals away**. Durable markdown is earned, not assumed.
+
 ## Layer Details and Cross-Layer Relationships
 
 ### Layer 0: Implicit Memory

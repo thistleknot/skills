@@ -31,7 +31,10 @@ Canonical readable memory lives under `~/memory-bank/` in separate lanes:
 - `~/memory-bank/*.md` = the global memory-bank six-file continuity layer
 - `~/memory-bank/projects/skills/` = the repo/local memory-bank six-file layer for this repo
 - `~/memory-bank/global/` = reusable cross-project topical notes
-- `~/memory-bank/vector/chroma/` = snippet index; do not edit manually
+- `~/memory-bank/.chroma/` = global vector store, served by the always-on `mem-chroma`
+  service (`127.0.0.1:8055`, collection `memories`); accessed via the `memory-index` tool
+  (`mem` CLI, `~/Documents/dev/skills/memory-index/mem.py`). Do not edit manually.
+  (The old `vector/chroma/` path is superseded by `.chroma`.)
 
 Read the global memory-bank files in this order:
 
@@ -77,7 +80,25 @@ Always update `~/memory-bank/projects/skills/last_session.md` at the end of ever
 Use the update_memory tool to append timestamped entries. Do not overwrite
 history. Keep entries factual and concise.
 
-Snippet writes use the MCP flow: `query_memory_index` â†’ `read_document_stream` â†’ `upsert_memory_entry` / `merge_memory_entries` / `delete_memory_entry`. Markdown docs and Chroma snippets do not auto-sync; update both intentionally when the same durable fact belongs in both lanes.
+Snippet writes use the MCP flow: `query_memory_index` â†’ `read_document_stream` â†’ `upsert_memory_entry` / `merge_memory_entries` / `delete_memory_entry`. That MCP flow (`query_memory_index` / `upsert_memory_entry`) is the **Copilot/Codex** path; those MCP tools are **not present in Claude Code**. In Claude Code, access the same `.chroma` store via the **`mem` CLI** (`memory-index/mem.py`): `mem search` to recall, `mem log` to jot an ephemeral worked-out bit, `mem add` to write durable markdown, `mem index` to reconcile. Correction to the old note: markdown → Chroma **does** auto-sync (via `mem index`), and the annealing log syncs the reverse way by promotion (below) — so you do not hand-maintain two lanes.
+
+## Annealing Log & Promotion (Chroma tier)
+
+The `.chroma` store holds two kinds of entry: durable markdown indexed for recall, and an
+**annealing log** of ephemeral worked-out bits written cheaply with `mem log`. The log is a
+proving ground:
+
+- A log bit **recalled ≥ 3 times auto-promotes** to durable markdown — global
+  (`~/memory-bank/`) by default, or repo-local (`~/memory-bank/projects/<repo>/`) when logged
+  `--scope local --repo <repo>`. The promoted file carries `promoted_from: chroma-log` +
+  `recalls: N` frontmatter and a body note; the **reading agent is its curator** (keep,
+  refine, or delete — deletion drops it on the next `mem index`).
+- Under-recalled bits are **annealed** (evicted) by the weekly `mem-anneal` Scheduled Task
+  (SYSTEM). Preview anytime with `mem anneal --dry-run`.
+
+So: jot freely into the log; useful bits earn their way into durable markdown, noise decays.
+Full contract lives in the `memory-bank`, `agentic_kg_memory`, and `memory-architecture`
+skills.
 
 ## Todo and Memory Autonomous Triggers
 
@@ -554,7 +575,7 @@ The `spec` skill is the canonical source of truth for design-before-build work i
 - If code and spec disagree, treat the spec/code mismatch as a defect to resolve explicitly.
 - Do not write implementation-first code and backfill the spec later, except for trivial one-line mechanical edits with no behavioral or structural effect.
 
-### Required agent behavior
+### Spec Driven Development
 
 Before proposing or writing code, determine which spec layer governs the work:
 
@@ -600,3 +621,11 @@ A task is not done until:
 - the code matches the spec
 - acceptance tests or validations trace back to the spec
 - any rendered or cataloged artifact required by the spec workflow is reconciled
+
+# Deliberation
+
+Exploration should be constraining our option space, not expanding.  We need steps to resolution.
+
+Each round of deliberation should get us closer to an answer, not lead to scope creep.
+
+Work with what you have, not what you don't have.

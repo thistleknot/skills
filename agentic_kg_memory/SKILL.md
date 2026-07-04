@@ -22,7 +22,13 @@ This skill is **L1** in the three-tier knowledge retrieval cascade:
 | **L1** | **`agentic_kg_memory`** | **Atomic triplets and semantic pages — try if L2 misses** |
 | L0 | `deep-research` | Live web evidence — last resort |
 
-When L1 retrieval surfaces stable, reusable patterns, promote them to L2 (write or update a skill markdown file).
+**Promotion & annealing.** L1 here is a running, self-**annealing** log — the global Chroma
+store at `C:\Users\user\memory-bank\.chroma` (served by the `mem-chroma` service on
+`127.0.0.1:8055`, collection `memories`; see the `memory-index` tool). Entries earn
+durability by use: **recalled ≥ 3 times → promote to L2 durable markdown** (global markdown
+`~\memory-bank\*.md` for cross-project/system patterns; local markdown `[repo]\.memory-bank\`
+for project-specific lessons). **Recalled < 3 times → eventually annealed** (decays out of the
+log). Promotion is one-way, L1 → L2. `memory-bank` is the authority on this tier model.
 
 ## Memory Scope: Global vs Repo
 
@@ -31,7 +37,7 @@ Each wiki page carries a `scope` field:
 - `global` — cross-project facts, patterns, procedures → stored in `C:\Users\user\memory-bank\`
 - `repo` — project-specific context, architecture decisions, code-level facts → stored in `[repo-root]\.memory-bank\`
 
-Not both. If a fact is genuinely reusable across all projects, it is global. If it is specific to one codebase, it is repo-scoped.
+Not both. If a fact is genuinely reusable across all projects, it is global. If it is specific to one codebase, it is repo-scoped. The dense Chroma surface is the global annealing log described above; durable pages are what survive promotion out of it.
 
 ## Scope Boundary
 
@@ -66,12 +72,15 @@ retrieval installation request.
 Use these explicit paths on this machine:
 
 - `C:\Users\user\memory-bank\wiki_memory.sqlite3`
-- `C:\Users\user\memory-bank\chroma\`
+- `C:\Users\user\memory-bank\.chroma\`  (served by the `mem-chroma` service, `127.0.0.1:8055`)
 - `C:\Users\user\memory-bank\clusters.json`
 - `C:\Users\user\memory-bank\cluster_metrics.json`
 
 The SQLite file is the sparse/metadata surface.
-The Chroma directory is the dense embedding surface.
+The Chroma directory is the dense embedding surface — connect via the `mem-chroma`
+`HttpClient` (do not open a second `PersistentClient` on `.chroma`; the service owns it).
+KG triplet sequences use collection `memory-bank-triplet-sequences`, distinct from the
+`memories` recall log in the same server.
 
 > **Scope tags**: each wiki page should carry a `scope` field — `global` or `repo`.
 > Global pages belong in `C:\Users\user\memory-bank\`. Repo-specific pages belong
@@ -90,7 +99,7 @@ When running setup, do all of the following:
    - `embedding_ref`
    - `cluster_id`
 3. Create the graph tables: `kg_nodes`, `kg_edges` (with indexes on `dst_slug` and `edge_type`)
-4. Create `C:\Users\user\memory-bank\chroma\` as the Chroma persist directory
+4. Ensure `C:\Users\user\memory-bank\.chroma\` exists as the Chroma persist directory (the `mem-chroma` service owns it)
 5. Build `triplet_sequence_text` from canonicalized extracted triplets in source order
 6. Embed `triplet_sequence_text` and store vectors in Chroma
 7. Cluster the normalized dense vectors
@@ -1860,6 +1869,84 @@ Throughline / persona (tier 3 — procedural)
 A query at any tier must be able to retrieve the full evidence chain below it. If drill-down is broken at any link, the memory system is opaque. Maps to: `SPO triplet → BIO-tagged span → raw source`.
 
 Reference: SimpleMem (aiming-lab/SimpleMem). Omni-SimpleMem variant adds text/image/audio/video unified memory with KG augmentation (SOTA LoCoMo F1=0.613, +47%).
+
+## Design Rationale — Indexing Decisions
+
+> Consolidated from the retired `semantic-memory` skill. These are the *why* behind the
+> triplet index: how S/P/O are normalized, how source text is addressed, and how the
+> domain vocabulary is frozen. The mechanics elsewhere in this skill assume these choices.
+
+### Two-Sided Index: Signal Left, Source Right
+
+The index is two-sided. The **left side is derived structured signal**; the **right side is
+source text**. S, P, O do not exist as text on the left — only as derived signal (lemma,
+synset, hypernym). The actual text lives exclusively on the right, addressed by span offsets.
+
+```
+LEFT SIDE (index signal)                       RIGHT SIDE (source)
+─────────────────────────────────────────      ───────────────────────
+triplet_id    TEXT PK                          doc_id       TEXT PK
+subj_lemma    TEXT                             title        TEXT
+pred_lemma    TEXT                             abstract     TEXT
+obj_lemma     TEXT                             utility      TEXT  <- highest NLI signal
+subj_synset   TEXT (1st sense only)            sentence_id  TEXT PK
+pred_synset   TEXT (1st sense only)            span_start   INT   (char/token offset)
+obj_synset    TEXT (1st sense only)            span_end     INT   (char/token offset)
+subj_hypernym TEXT (1st order only)            actual_text  TEXT  <- retrieved on hit
+obj_hypernym  TEXT (1st order only)
+pos_tags      TEXT (S/P/O roles)
+spacy_labels  TEXT (NER on S, O)
+epistemics    TEXT ('O' observed | 'I' inferred)
+confidence    REAL (default O=1.0, I=0.5)
+span_id       TEXT FK -> right-side span
+doc_id        TEXT FK -> right-side doc
+```
+
+**The triplet is the extraction event, not a stored string.** At retrieval: BM25 hits the
+left index → ranked triplet IDs → follow span FKs → pull `actual_text` from the right.
+Nothing is reconstructed; the pointer is direct.
+
+### Why the normalization choices
+
+- **Lemma with suffixes retained, not hard lemmatization.** Hard lemmatization loses
+  morphological signal BM25 can exploit. "Shooting" and "shoot" stay distinct enough to
+  weight, but inflection is normalized.
+- **1st synset only, not full expansion.** Full synset expansion at index time causes
+  crosstalk — "shoot" pre-expands to "discharge/fire/release," so a query for "discharge"
+  hits documents that aren't about it. Index lean; expand at query time. 1st sense =
+  dominant sense = enough for precision without noise.
+- **1st-order hypernym only.** Full hypernym chains dilute specificity: `shoot → kill →
+  act → event` — by the third hop the document is lost.
+- **Synsets are index-side; hypernyms are query-side.** Synsets collapse vocabulary at
+  ingest ("kill/shoot/assassinate" → one synset edge) — this *is* the normalization step.
+  Hypernyms expand taxonomically at query time ("violence" → hits kill/shoot synsets).
+- **Stop words are kept.** BM25's IDF discounts them automatically; stripping them manually
+  is redundant and removes signal BM25 would have handled.
+- **Predicates are head-verb lemma only.** "was shot by" → "shoot"; auxiliaries and
+  prepositions are not load-bearing. Synset normalization handles predicate synonym collapse
+  — check synset coverage on predicates specifically, or "kill" and "shoot" become different
+  edges (predicate crosstalk).
+
+### Prebuilt Domain Vocabulary — freeze before production ingest
+
+Build once from a representative sample, then freeze:
+
+1. Run extraction over ~200–500 documents.
+2. Collect all 1st-synset + 1st-hypernym hits.
+3. Manually review thin/wrong sense mappings (domain jargon WordNet misses).
+4. Patch with domain extensions (e.g. arXiv: "transformer," "attention," "latent space").
+5. Freeze — subsequent ingest validates against it; misses/low-confidence senses FLAG for
+   an LLM correction pass on flagged terms only, then re-enter lookup.
+
+Why: closes the vocabulary (coverage gaps visible before ingest), makes query expansion
+deterministic (same list at ingest and query time — no drift), and bounds index size.
+
+### Field weighting for the right side
+
+`utility > predicate > subject/object > title > abstract`. Utility is author-stated purpose —
+highest signal for NLI premise matching. Abstract is noisy and long; title is clean but narrow.
+For corpora without an explicit utility field (novels, news), substitute a first-sentence
+summary or author-extracted claim — don't leave it null.
 
 ## Minimal Output Contract
 

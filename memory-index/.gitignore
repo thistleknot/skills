@@ -1,0 +1,4 @@
+# Chroma vector store — derived index, never commit
+.chroma/
+__pycache__/
+logs/

@@ -1,9 +1,12 @@
 ---
 name: memory-bank
 description: >
-  Operational project memory for long-running work. Use when reading or updating
-  project brief, product context, active context, system patterns, tech context,
-  and progress so work survives session resets and resumes cleanly.
+  Operational project memory for long-running work, and the authority on the memory-tier
+  model: global markdown (~\memory-bank, cross-project system patterns), local markdown
+  (~\memory-bank\projects\<repo>, project lessons learned), and the global annealing Chroma log
+  (~\memory-bank\.chroma) whose entries promote to markdown after 3 recalls or anneal away.
+  Use when reading or updating project brief, product context, active context, system
+  patterns, tech context, and progress so work survives session resets and resumes cleanly.
 status: active
 tier: L2
 last_validated: 2026-04-28
@@ -21,27 +24,69 @@ This skill is **L2** in the three-tier knowledge retrieval cascade:
 | L1 | `agentic_kg_memory` / `gist-retriever` | Try if L2 misses |
 | L0 | `deep-research` | Last resort — live web fetch |
 
-## Memory Scope: Global vs Repo
+## Memory Tiers — Scope, Substrate & Lifecycle
 
-Memory is partitioned into two scopes:
+Memory is split on two axes: **scope** (global / cross-project vs project-local) and
+**substrate** (durable markdown vs the volatile annealing Chroma log). A memory lives in
+exactly one of three stores.
 
-### Global memory — `C:\Users\user\memory-bank\`
+### 1. Global markdown — `C:\Users\user\memory-bank\*.md`  (durable, cross-project)
 
-Cross-project facts, patterns, preferences, and procedures that apply regardless of which repo is active. This is the existing global store.
+Long-term facts that hold regardless of the active repo — **especially common system
+patterns**, plus preferences and reusable procedures. Curated and durable; this is the top
+of the retrieval cascade. `MEMORY.md` indexes the atomic entries.
 
-### Repo-specific memory — `[repo-root]\.memory-bank\`
+### 2. Local markdown — `C:\Users\user\memory-bank\projects\<repo>\*.md`  (durable, project-scoped)
 
-Project-specific operating state: current focus, architecture decisions, code-level context, progress checkpoints. Lives at the root of the relevant repository.
+**Project-specific lessons learned** and operating state: current focus, architecture
+decisions, code-level context, progress checkpoints. Centralized under the global root
+(one lane per repo, e.g. `projects\skills\`) so the service can see it, per the operative
+`AGENTS.md` Memory Bank Protocol. Scoped to one repo; never treated as global.
 
-**Rule**: a fact is either global or repo-scoped — not both. If a pattern is reusable across all projects, it is global. If it only makes sense in one codebase, it is repo-scoped.
+### 3. Global Chroma log — `C:\Users\user\memory-bank\.chroma`  (volatile, cross-project)
+
+A running, self-**annealing** vector log of bits from past conversations that proved to have
+forward utility — the stuff we had to *work out*. Served by the always-on `mem-chroma`
+service (`127.0.0.1:8055`, collection `memories`) and driven by the `memory-index` tool
+(`C:\Users\user\Documents\dev\skills\memory-index\mem.py`; embeds via local Ollama
+`nomic-embed-text`). This tier is **not curated** — write to it freely; low-value entries
+anneal away over time. See [[reference_memory_index_tool]] for the tool contract.
+
+### Promotion & annealing (the lifecycle rule)
+
+The Chroma log is a proving ground; an entry **earns durability by being used**:
+
+- **Recalled ≥ 3 times → promote** it out of the volatile log into durable markdown:
+  - → **global markdown** if it is a cross-project pattern (system patterns especially)
+  - → **local markdown** if it is a project-specific lesson learned
+- **Recalled < 3 times → eventually annealed** (decays out of the log).
+
+So durable markdown is *earned* (promoted, curated); the Chroma log is *cheap* (accumulate
+freely — useful bits rise, noise fades). Promotion direction is always **Chroma log →
+markdown**, never the reverse.
+
+Promotion is automatic and silent to the operator — the **agent** is the curator, not the
+user. A promoted file self-declares its origin: frontmatter carries `promoted_from:
+chroma-log` + `recalls: N`, and the body ends with a note stating it was auto-promoted after
+N recalls. When you read such a file, decide: keep it (remove the note once trusted), refine
+it, or delete it if it does not belong (it drops from the index on the next `mem index`).
+Annealing is not manual — the `mem-anneal` Scheduled Task (SYSTEM, weekly) evicts stale,
+under-recalled log bits on its own.
+
+**Rule**: a memory lives in exactly one place. Cross-project + durable → global markdown.
+Project-specific + durable → local markdown. An unproven worked-out bit → Chroma log,
+pending promotion.
 
 #### Initializing repo-local memory
 
+Repo-local memory is centralized under the global root at
+`C:\Users\user\memory-bank\projects\<repo>\` (repo = the git-root basename, e.g. `skills`).
 Run `memory-bank setup --repo` from the repo root to:
-1. Create `.memory-bank\` at the repo root
-2. Create the six canonical markdown files scoped to this project
-3. Create `.memory-bank\AGENTS.md` pointing at repo memory + referencing global memory as supplementary
-4. Optionally start a repo-scoped MCP server: `python memory_mcp.py --memory-dir .\.memory-bank --port 9003`
+1. Create `C:\Users\user\memory-bank\projects\<repo>\`
+2. Create the six canonical markdown files scoped to this project (+ `last_session.md`,
+   ≤50 lines of per-repo conversation continuity)
+3. Read via the operative `AGENTS.md` Memory Bank Protocol, which lists these paths
+4. Optionally start a repo-scoped MCP server (Copilot/Codex): `python memory_mcp.py --memory-dir "C:\Users\user\memory-bank\projects\<repo>" --port 9003`
 
 ## Scope Boundary
 
@@ -140,7 +185,8 @@ When running setup, do all of the following:
 9. Ensure `fastmcp` is importable in the active Python environment; install it if missing
 10. Ensure the semantic backend directories exist for KG search:
    - `C:\Users\user\memory-bank\wiki_memory.sqlite3`
-   - `C:\Users\user\memory-bank\chroma\`
+   - `C:\Users\user\memory-bank\.chroma\` (the running global Chroma log — served by the
+     `mem-chroma` service on `127.0.0.1:8055`; see the `memory-index` tool)
 
 ### MCP startup script
 
@@ -291,8 +337,8 @@ from pathlib import Path
 import chromadb
 
 SQLITE_PATH = Path(r"C:\Users\user\memory-bank\wiki_memory.sqlite3")
-CHROMA_DIR = Path(r"C:\Users\user\memory-bank\chroma")
-COLLECTION_NAME = "memory-bank-triplet-sequences"
+CHROMA_DIR = Path(r"C:\Users\user\memory-bank\.chroma")   # shared with the mem-chroma service
+COLLECTION_NAME = "memory-bank-triplet-sequences"          # distinct from the `memories` recall log
 
 
 def ensure_semantic_backend() -> chromadb.Collection:
@@ -316,7 +362,14 @@ def ensure_semantic_backend() -> chromadb.Collection:
         )
         conn.commit()
 
-    client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+    # The mem-chroma service OWNS .chroma, so connect to it (HttpClient) rather than
+    # opening a second PersistentClient on the same dir, which would lock-conflict.
+    # Fall back to PersistentClient only if the service is down (nothing else holds it then).
+    try:
+        client = chromadb.HttpClient(host="127.0.0.1", port=8055)
+        client.heartbeat()
+    except Exception:
+        client = chromadb.PersistentClient(path=str(CHROMA_DIR))
     return client.get_or_create_collection(
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
@@ -341,7 +394,10 @@ When the user says **`memory-bank setup`**, the agent should:
 may provision the persistent stores required by `agentic_kg_memory`:
 
 - SQLite metadata store at `C:\Users\user\memory-bank\wiki_memory.sqlite3`
-- Chroma persist directory at `C:\Users\user\memory-bank\chroma\`
+- Chroma persist directory at `C:\Users\user\memory-bank\.chroma\`, served by the
+  always-on `mem-chroma` service (`127.0.0.1:8055`). The annealing recall log lives in
+  collection `memories`; KG triplet sequences in `memory-bank-triplet-sequences` — two
+  collections, one server, one persist dir.
 
 This lets the project-memory server and the KG-memory skill share a stable backend
 without collapsing their responsibilities into one skill.
