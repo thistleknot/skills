@@ -690,6 +690,10 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
         }
         $resp = Read-Choice "`nRestore these stale mirror folders into master? [y/n/d=show contents first] (default: n)" 'n' 'y'
         foreach ($item in $staleFolders) {
+            if (-not (Test-Path $item.FullPath)) {
+                Write-Host "  [GONE] $($item.FolderName) -- folder removed since scan; skipping." -ForegroundColor DarkGray
+                continue
+            }
             if ($resp -eq 'd') {
                 Write-Host "`n  Contents of stale mirror folder $($item.FolderName):" -ForegroundColor Cyan
                 Get-ChildItem $item.FullPath | ForEach-Object { Write-Host "    $($_.Name)" }
@@ -709,6 +713,10 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
         }
         $resp = Read-Choice "`nCopy these new folders to master? [y/n/d=show contents first] (default: d)" 'd' 'y'
         foreach ($item in $newFolders) {
+            if (-not (Test-Path $item.FullPath)) {
+                Write-Host "  [GONE] $($item.FolderName) -- folder removed since scan; skipping." -ForegroundColor DarkGray
+                continue
+            }
             if ($resp -eq 'd') {
                 Write-Host "`n  Contents of $($item.FolderName):" -ForegroundColor Cyan
                 Get-ChildItem $item.FullPath | ForEach-Object { Write-Host "    $($_.Name)" }
@@ -727,6 +735,13 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
         $conflicts    = [System.Collections.Generic.List[hashtable]]::new()
         $fastForwards = [System.Collections.Generic.List[hashtable]]::new()
         foreach ($item in $needsMerge) {
+            # Mirror file may have been moved/deleted between scan and reconciliation
+            # (e.g. a skill relocated while the script waits at a prompt). Never fatal.
+            if (-not (Test-Path $item.MirrorFile)) {
+                $item['SyncCase'] = 'gone'
+                Write-Host "  [GONE] $($item.Rel) ($($item.MirrorLabel)) -- mirror file removed since scan; skipping." -ForegroundColor DarkGray
+                continue
+            }
             $baseContent   = Get-BaseContent $item.Rel
             $masterContent = if ($item.MasterExists) { Normalize-LineEndings (Get-Content $item.MasterFile -Raw) } else { $null }
             $mirrorContent = Normalize-LineEndings (Get-Content $item.MirrorFile -Raw)
@@ -789,6 +804,11 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
             if ($resp -eq 'n') {
                 Write-Host "  Skipped all." -ForegroundColor DarkGray
                 break
+            }
+            if ($item['SyncCase'] -eq 'gone') { continue }   # vanished at classification
+            if (-not (Test-Path $item.MirrorFile)) {
+                Write-Host "  [GONE] $($item.Rel) -- mirror file removed mid-run; skipped." -ForegroundColor DarkGray
+                continue
             }
 
             $syncCase      = $item['SyncCase']
@@ -855,6 +875,10 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
 
     # Apply folder copies
     foreach ($item in $pendingFolderCopies) {
+        if (-not (Test-Path $item.FullPath)) {
+            Write-Host "  [GONE] Folder vanished before copy: $($item.FolderName) -- skipped." -ForegroundColor Yellow
+            continue
+        }
         $dest = Join-Path $Master $item.FolderName
         if (-not $DryRun) {
             robocopy $item.FullPath $dest /E /NJH /NJS /NDL /NC /NS | Out-Null

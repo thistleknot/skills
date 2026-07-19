@@ -1,7 +1,7 @@
 ---
 name: validation
 status: active
-last_validated: 2026-04-28
+last_validated: 2026-07-19
 description: Validation and testing protocol. Use when confirming a working implementation, writing tests, or verifying pipeline outputs.
 ---
 # Validation
@@ -86,6 +86,48 @@ Do NOT skip to production without completing all stages. Each reveals different 
 **Validation progression:** 1 → 10 → 20 → 100 → 200 → production
 
 Unit test on 1 element first — catches n/a, outliers, schema issues (use `break`). Before expensive loops: 10–20 first, then 100–200.
+
+## Sample size for comparative / benchmark evals (A/B config, retrieval, model deltas)
+
+When the test is "does config B beat config A" (retrieval configs, model variants,
+prompt changes), the sample size that matters is **the number of independent test
+items (queries/records), not the number of scored sub-comparisons**. Two axes get
+conflated constantly — separate them explicitly:
+
+- **Items (queries/records) = statistical power.** Drives the confidence interval
+  on the delta. This is the axis to grow.
+- **Scored pairs / judge calls / pooled candidates = cost.** Grows with items ×
+  pool-depth. Inflating this (deeper pools, more candidates per query) raises
+  *cost*, not power — a bigger pool does not tighten the delta CI.
+
+### Default: n≈20 items, detect deltas ≥5%
+
+**A lift worth shipping shows at n≈20 within a ~5% delta.** If an effect needs
+n=100 to surface, it is too small to productionize — disposition it as "no
+shippable lift" rather than chasing significance. Start at 20; only grow the
+*item* count (not the pool) if a delta lands right at the 5% threshold and the
+decision hinges on it.
+
+### Prefer deterministic ground truth over an LLM judge when you can define relevance
+
+If you authored the test items, you already know the right answers — encode a
+**fixed gold set per item** (deterministic labels) instead of pooling candidates
+and paying an LLM judge per pair. Deterministic labels: 0 judge cost, independent
+ground truth (no judge saturation), runs in seconds → you can afford more items.
+Reserve the LLM-judge/pooling design for when relevance genuinely can't be
+pre-specified. Watch for **judge saturation** — if the judge marks a large
+fraction of candidates "relevant", the metric rewards recall *volume*, not
+correctness, and can no longer discriminate configs.
+
+### The ground-truth definition IS the experiment
+
+A technically-clean eval on the wrong relevance definition gives a confidently
+*wrong* decision. Before trusting a comparative result, verify the test items
+live in the regime the hypothesis is about (e.g. a graph/expansion leg only earns
+its keep on queries whose answer is NOT co-located with the query in the base
+signal's space — testing it on easy in-regime queries measures nothing).
+Report deltas **per regime/cutoff**, not one global number — an effect can flip
+sign between the head (top-k precision/MRR) and the tail (deep recall).
 
 ## Reversibility
 Transformations must be reversible. Validate both forward and backward data perspective.

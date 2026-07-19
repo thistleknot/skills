@@ -25,8 +25,8 @@ metadata:
     - "convert this code to a spec"
     - "requirements for this component"
   status: active
-  last_validated: 2026-07-02
-  validation_method: source-grounded (Codeplain plain docs incl. canonical section order + Mavin EARS ruleset + Fission-AI/OpenSpec concepts.md + Algol-tradition algorithmic pseudocode conventions + Evans DDD tactical patterns)
+  last_validated: 2026-07-18
+  validation_method: source-grounded (Codeplain plain docs incl. canonical section order + Mavin EARS ruleset + Fission-AI/OpenSpec concepts.md + Algol-tradition algorithmic pseudocode conventions + Evans DDD tactical patterns); self-consistency pass 2026-07-03 (example validated against own checklist); TOON tabular collapse added 2026-07-18, grounded in toon-format/spec, self-consistency pass 2026-07-18 (fixed decision-table checklist conflict; TOON example validates against own checklist)
   supersedes: plain-spec, hybrid-spec, structural-spec
 ---
 
@@ -47,13 +47,22 @@ composes them inside a single document:
 Nothing here depends on any other skill or external format. The rendered
 layer *is* the final artifact — there is no promotion step out of this skill.
 
+Spec evolution is out of scope by design: this skill has no delta/changelog
+format. Updating an existing spec means rewriting it in place via Repair
+mode. Do not invent a versioning scheme; version control belongs to the
+repository, not the spec grammar.
+
 ## Layer Selection
 
 1. Order and persistence load-bearing (a step depends on what a prior step
    left behind, or a variable resets at one loop level and survives
-   another) → **Behavioral**.
+   another) → **Behavioral**. This rule scopes to a **single procedure in
+   isolation** — "pseudocode this loop," "spec this retry logic."
 2. The question is what should exist — class vs. function, method vs. free
    function, constant vs. config, what role a class plays → **Structural**.
+   A whole module enters here **even when it contains stateful procedures**;
+   those procedures get Behavioral blocks hosted under their structural
+   lines (see Handoff to Behavioral). Rule 1 never routes a module.
 3. Conditions and observable outcomes with no ordering constraints →
    **Requirements**.
 4. Producing the module's durable source-of-truth document → **Rendered**,
@@ -72,11 +81,14 @@ picking the wrong entry layer is the error this section prevents.
 | Algorithmic pseudocode (Algol tradition) | typed symbol table; `Loop forever/while/over`; scoped persistence | Behavioral |
 | Plain | `:Concept:` discipline; section order; nested acceptance tests; modal verbs | Rendered |
 | Business logic (DDD) | classification tests; entity/value/service/repository roles | Structural |
+| TOON | tabular collapse of uniform arrays: `name[N]{fields}:` header + rows | Rendered |
 
 These are attributions, not dependencies, and each names the convention as
 borrowed, not an originator — the substrate is older in every case (RFC-2119
-keywords under OpenSpec, when/if requirements predating EARS). The grammar
-below is complete on its own.
+keywords under OpenSpec, when/if requirements predating EARS). OpenSpec's
+change-proposal/delta workflow is deliberately **not** absorbed — only its
+scenario syntax and strength keywords (see Scope). The grammar below is
+complete on its own.
 
 ---
 
@@ -113,6 +125,14 @@ Rules:
 While the result of [table.csv](table.csv) is "Response 1": <response>
 ```
 
+- Decision-table schema: one column per condition, left to right; final
+  column is the response; one row per condition combination. No other
+  columns, no merged cells.
+- A small decision table may inline as a TOON table (see Layer 4, Tabular
+  collapse) rather than an external CSV — `decision[N]{cond1,cond2,response}:`
+  with the same left-to-right schema. Keep the external CSV form once the
+  table would push the spec past its line budget.
+
 ---
 
 ## Layer 2 — Structural
@@ -141,6 +161,13 @@ inheritance, and a spec must never be mistakable for code. `varies by` is
 mandatory on every `Config` line. The free function's "why it isn't a
 method" clause is required — it's the artifact of having run the
 classification test.
+
+**Type ownership.** Every type named in a signature is either **owned** by
+the module — then it must appear as a `class` line with a bracketed role —
+or **external** — then it is referenced bare and never classified. A
+module's spec classifies only what the module is responsible for; classifying
+someone else's type is a boundary violation. If ownership is unclear, flag
+it (`Receipt — owned or external?`) rather than silently picking.
 
 ### Classification tests
 
@@ -187,8 +214,24 @@ One symbol per line, type/range required:
 ```
 Input: <symbol> — <role>, <type/domain>
 Parameters: <symbol> ∈ <range>
+Uses: <symbol> — <external operation>, <signature or result domain>
 Initialize: <symbol> ← <value>
 ```
+
+- `Input` — data the caller passes for this invocation.
+- `Parameters` — caller-supplied tuning knobs, per invocation. If a value is
+  supplied by the environment/deployment rather than the caller, it is a
+  Layer-2 `Config`: reference it by name in steps, never re-declare it as a
+  `Parameters` line. Caller-supplied wins the tie only when the caller can
+  genuinely vary it per call.
+- `Uses` — external operations the behavior invokes (gateway calls, other
+  modules' functions). Declares the result domain so clause conditions have
+  something to gate on. Anything invoked in a step must appear here or be
+  owned by the module.
+- `Initialize` — placement determines persistence tier (below).
+
+Assignment steps (`x ← ...`) are exempt from the Layer-1 subject/response
+rule — the assignment is its own subject and response.
 
 ### Control flow
 
@@ -237,11 +280,21 @@ Inline, one type per annotation, stack with `;`:
 <line>   (Assert: <checkpoint check>)
 ```
 
-`Maintain` scope follows the enclosing construct: on a class it holds across
-every method call; inside a `Loop` it holds across iterations. Same keyword,
-two scopes, by design — when a method carries both a structural line and a
-behavioral block, the two `Maintain`s are different claims; don't collapse
-them.
+`Maintain` binding and scope:
+
+- On a class line or member → holds across every method call on the class.
+- Inside a Behavioral block → binds to the **nearest enclosing `Loop`** and
+  holds across that loop's iterations, regardless of how many clause blocks
+  sit between the annotation and the loop. To bind to an outer loop, attach
+  the annotation to that loop's own line.
+- When a method carries both a structural `Maintain` and a behavioral one,
+  they are different claims; don't collapse them.
+
+`Assert` fires at its written position on the paths that reach it. An
+`Assert` after a loop therefore claims nothing about aborted or
+early-exited runs — if the check should only hold on normal completion, the
+control flow already says so; if it must hold on every exit path including
+aborts, state that explicitly in the assert text.
 
 ---
 
@@ -276,9 +329,11 @@ import:
 
 Rules:
 
-- Concept names are **globally unique** across the whole import namespace,
-  not just within one file. Charset: `+ - . 0-9 A-Z _ a-z`, colon-wrapped at
-  both ends; each definition starts with the concept being defined.
+- Concept names are unique **within this file and its declared imports**.
+  Charset: `+ - . 0-9 A-Z _ a-z`, colon-wrapped at both ends; each
+  definition starts with the concept being defined. When an import cannot be
+  read at validation time, flag the collision check as unverified — never
+  assert uniqueness you couldn't check.
 - Not every functional spec needs a `:Concept:` — plain English is valid
   where no domain concept is at stake.
 - Modal verbs: `should` / `must not` / `may`.
@@ -290,7 +345,8 @@ Rules:
 
 - Structural class → one `:Concept:` definition, role noted in prose;
   `state:` symbols become `:Concept:`s only when they carry cross-cutting
-  meaning.
+  meaning. External types are referenced bare in prose, never defined as
+  concepts.
 - Structural method + contracts → one functional-spec bullet;
   `Require`/`Guarantee` fold into its nested acceptance test.
 - Requirements statement → one functional-spec bullet, condition kept in the
@@ -299,8 +355,61 @@ Rules:
   bullet per branch (`Otherwise` chains fold into one bullet — exclusivity
   is noted in prose); `Assert`/`Guarantee`/`Then` → nested acceptance test;
   global and loop-scoped symbols → `:Concept:`s with reset scope noted in
-  prose; transient symbols stay prose.
-- `Config`/`Constant` lines → implementation reqs.
+  prose; transient symbols stay prose; `Uses` lines → implementation reqs.
+- `Config`/`Constant` lines → implementation reqs; when two or more share a
+  shape, collapse them into a TOON table (see Tabular collapse) rather than
+  one prose bullet each.
+
+### Tabular collapse (TOON)
+
+Uniform arrays in the Rendered layer collapse into a TOON table instead of
+one prose bullet per element. A table declares the field schema once and
+streams rows:
+
+```
+<name>[<N>]{<field>,<field>,...}:
+  <val>,<val>,...          # one row per element, N rows total
+```
+
+`[N]` is the element count — a guardrail, not decoration: row count MUST
+equal N or the table is malformed. Fields are declared once in `{}`; every
+row supplies them in that order. Values containing a comma, colon, or
+leading/trailing space are double-quoted.
+
+Collapse only where the region is **uniform and flat**:
+
+- Two or more `Config` lines → `config[N]{key,role,type,varies_by}:`.
+- Two or more `Constant` lines → `constant[N]{name,meaning}:`.
+- A set of same-shape `Given/When/Then` scenarios with no per-scenario
+  nesting → `scenarios[N]{given,when,then}:`.
+- A flat battery of same-clause requirements (all `When`, all `While`, …)
+  with no nested acceptance tests → `reqs[N]{condition,response,strength}:`.
+
+Do **not** collapse when:
+
+- Any element carries a nested acceptance test — nesting has no TOON form;
+  those stay bullets.
+- The elements are non-uniform — different fields, or mixed EARS keywords
+  that change what a column means. A table would misrepresent their shape.
+- There is exactly one element — a header plus one row costs more than a
+  plain bullet.
+
+A TOON table declares data shape, not control flow, so it does not trip the
+"never mistakable for code" rule. Field names are column labels, not
+`:Concept:` definitions, so they do not count against concept uniqueness —
+but a field naming a defined concept still uses the concept charset.
+
+Example — two configs and a scenario battery in collapsed form:
+
+```
+config[2]{key,role,type,varies_by}:
+  tax_rate,fraction applied to subtotal,decimal,tenant
+  currency,ISO code used for pricing,string,tenant
+
+scenarios[2]{given,when,then}:
+  one chargeable order,retry completes normally,order charged exactly once
+  charge returns gateway_outage,retry aborts,no order charged more than once
+```
 
 ---
 
@@ -309,18 +418,23 @@ Rules:
 1. Restate the intent; pick the entry layer via Layer Selection. Say which
    and why in one line.
 2. Requirements: one subject + one response per statement; keywords only
-   from the reserved set; over three preconditions → decision table.
-3. Structural: enumerate everything the module needs, run all four
-   classification tests before writing lines, tag every class with exactly
-   one bracketed role.
+   from the reserved set; over three preconditions → decision table with
+   the fixed schema.
+3. Structural: enumerate everything the module needs, settle owned vs.
+   external for every type in every signature, run all four classification
+   tests before writing lines, tag every owned class with exactly one
+   bracketed role.
 4. Behavioral: classify every symbol (global / loop-scoped / transient)
-   before it appears in a step; if more than one loop, draw the nesting and
-   settle which symbol resets where before writing steps; write loops
-   outermost-first, scoped `Initialize` directly under each; mark each
-   clause independent or `Otherwise`-chained.
-5. Attach contracts and strength keywords where correctness depends on them.
-6. Rendered: fold per the rules above, verify section order and concept
-   uniqueness.
+   before it appears in a step; declare every external operation with a
+   `Uses` line; if more than one loop, draw the nesting and settle which
+   symbol resets where before writing steps; write loops outermost-first,
+   scoped `Initialize` directly under each; mark each clause independent or
+   `Otherwise`-chained.
+5. Attach contracts and strength keywords where correctness depends on
+   them; check every `Assert` against the abnormal-exit paths that skip it.
+6. Rendered: fold per the rules above; collapse uniform flat regions into
+   TOON tables (Tabular collapse); verify section order and concept
+   uniqueness within file plus readable imports.
 7. Validate against the checklist.
 
 ## Validation Checklist
@@ -329,10 +443,16 @@ Requirements:
 
 - Every conditional header is While/When/If/Where — no invented keywords.
 - Every statement has one subject and at least one concrete response.
-- Blocks over three preconditions moved to a decision-table resource.
+- Blocks over three preconditions moved to a decision-table matching the
+  fixed schema (conditions left-to-right, response last, one row per
+  combination) — an external CSV resource, or an inline TOON
+  `decision[N]{...}` table while small.
 
 Structural:
 
+- Every type in every signature is either declared with a role (owned) or
+  referenced bare (external) — no unclassified owned types, no classified
+  external types, no silent picks on ambiguous ownership.
 - Every class has exactly one role in square brackets; parenthetical roles
   are a syntax violation; ambiguity uses `[role? role?]`, never a silent
   pick.
@@ -349,25 +469,38 @@ Behavioral:
 
 - Every symbol classifiable as global / loop-scoped / transient from its
   `Initialize` placement or absence.
+- Every external operation invoked in a step has a `Uses` line with a
+  result domain.
+- No `Parameters` line duplicates a Layer-2 `Config`; environment-supplied
+  values referenced by Config name.
 - Every `Loop` states `forever` or explicit termination.
 - Complementary clauses `Otherwise`-chained or confirmed intentional as
   independent.
 - Every symbol appears in the table before use; none redefined.
+- Every `Assert` consistent with every path that reaches it — an assert
+  contradicted by a declared abort/early-exit branch is a spec bug.
 - Assignment steps (`x ← ...`) exempt from the subject/response rule.
 
 Rendered:
 
 - Section order: definitions → implementation reqs → test reqs → functional
   specs.
-- Every referenced concept defined first; names globally unique; charset
+- Every referenced concept defined first; names unique within file plus
+  readable imports; unreadable imports flagged as unverified; charset
   valid.
 - Acceptance tests nested under their functional bullet, indentation
   meaningful.
+- Every TOON table's row count equals its declared `[N]`; each row supplies
+  exactly the declared `{fields}` in order; no row carries a nested
+  acceptance test; single-element regions stay prose bullets.
 - 20–60 lines; over 80 → propose the split.
 
 Contracts (all layers):
 
 - Exactly one of Require/Guarantee/Maintain/Assert per annotation.
+- Every behavioral `Maintain` bound to the intended loop — nearest
+  enclosing by default, attached to the outer loop's line when the claim is
+  outer-scoped.
 - Class-scoped and loop-scoped `Maintain`s on the same member kept as
   separate claims.
 
@@ -378,6 +511,16 @@ Contracts (all layers):
   header.
 - Symbol used before declaration → add to correct tier; ask if scope is
   ambiguous.
+- External operation invoked without a `Uses` line → add the line; ask for
+  the result domain if it can't be inferred from the gating clauses.
+- Owned type without a role, or external type with one → fix per the type
+  ownership rule; ask when ownership itself is ambiguous.
+- `Parameters` line shadowing a `Config` → remove the Parameters line,
+  reference the Config by name; confirm the value is genuinely
+  environment-supplied first.
+- Assert contradicted by an abort/early-exit path → rescope the assert to
+  the paths where it holds, or move the claim into a Given/When/Then
+  happy-path scenario; ask which the author meant.
 - Complementary clauses not chained → ask exclusive or independent; don't
   assume.
 - Class with no state and no invariant → propose demotion; ask before
@@ -405,6 +548,9 @@ Contracts (all layers):
 
 ## Example (layers composed)
 
+Entry layer: Structural — this is a module ("what exists"), hosting one
+Behavioral block for the stateful retry procedure.
+
 ```
 ### OrderService, for placing and pricing customer orders
 
@@ -419,6 +565,11 @@ class Order [entity]: a customer's in-progress or placed purchase
 
 class LineItem [value]: an immutable quantity/price pair on an order
 
+class Receipt [value]: immutable proof of a completed placement
+
+class RetryReport [entity]: per-run accumulation of charge outcomes,
+    mutated only within retry_failed_charges
+
 class OrderService [service]: coordinates order placement and pricing
     place(order: Order) -> Receipt: MUST reject empty orders
         (Require: order.status == draft; Guarantee: order.status == placed)
@@ -426,7 +577,9 @@ class OrderService [service]: coordinates order placement and pricing
         with bounded retries; fails closed on gateway outage
 
         Input: batch — orders with failed charges, list[Order]
-        Parameters: max_attempts ∈ ℤ⁺
+        Parameters: max_attempts ∈ ℤ⁺        # caller-supplied per run, not a Config
+        Uses: charge — external payment gateway call,
+              Order -> enum{success, gateway_outage, decline}
         Initialize: report ← empty RetryReport        # global to this run
 
         Loop over each order o in batch:
@@ -439,19 +592,29 @@ class OrderService [service]: coordinates order placement and pricing
                     abort the batch                   (Guarantee: no partial double-charge)
                 Otherwise:
                     attempts ← attempts + 1
-        Assert: every order in batch appears in report exactly once
+        Assert: on normal completion (no abort), every order in batch
+                appears in report exactly once
 
         Given a batch with one chargeable order, When retry_failed_charges
-          completes, Then report MUST show that order charged exactly once.
+          completes normally, Then report MUST show that order charged
+          exactly once.
+        Given a batch where charge returns gateway_outage, When
+          retry_failed_charges aborts, Then no order MUST be charged more
+          than once.
 
 def apply_discount(total: Money, pct: Decimal) -> Money: pure transform,
     no order state involved — belongs outside any class
 ```
 
-Rendered form of the same module folds `Order`, `OrderService` into
-`:Concept:` definitions, `Config`/`Constant` into implementation reqs, each
-method into a functional-spec bullet with its `Guarantee`/`Then` as nested
-acceptance tests.
+`Money` and `Decimal` are external types — referenced bare, never
+classified. The `Maintain` on `record o in report` binds to the nearest
+enclosing loop (the inner retry loop) per the binding rule; the claim also
+holds at the outer loop, but the annotation asserts only the inner scope.
+
+Rendered form of the same module folds `Order`, `OrderService`,
+`RetryReport` into `:Concept:` definitions, `Config`/`Constant`/`Uses` into
+implementation reqs, each method into a functional-spec bullet with its
+`Guarantee`/`Then` as nested acceptance tests.
 
 ## Notes for This Stack
 

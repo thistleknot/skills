@@ -8,7 +8,7 @@ description: >
   one for gaps.
 status: active
 tier: L2
-last_validated: 2026-05-03
+last_validated: 2026-07-04
 supersedes: []
 validation_method: documentation_review
 ---
@@ -112,7 +112,7 @@ The abstract layers above map onto three concrete stores under `~\memory-bank` (
 | Store | Path | Substrate | Layers it realizes |
 |---|---|---|---|
 | Global markdown | `C:\Users\user\memory-bank\*.md` | durable, cross-project | L2 semantic (system patterns), curated L3 procedures |
-| Local markdown | `[repo]\.memory-bank\*.md` | durable, project-scoped | L2 episodic + project lessons learned |
+| Local markdown | `C:\Users\user\memory-bank\projects\<repo>\*.md` | durable, project-scoped | L2 episodic + project lessons learned |
 | Global Chroma log | `C:\Users\user\memory-bank\.chroma` | volatile, cross-project | L1 semantic vector recall — the annealing tier |
 
 The **Decay** and **Consolidation** lifecycle boxes are realized concretely by the

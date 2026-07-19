@@ -1,0 +1,32 @@
+# Dedicated neo4j for the data-science-skills entity graph.
+#
+# Separate instance from `neo4j-music` (which holds the default host ports
+# 7474/7687) — this one maps to 7475/7688 so both can run without collision.
+# Auth is disabled: local single-user dev graph, driver connects with no creds.
+#
+# Reuses the neo4j:latest image already on the machine (no pull needed).
+#
+# Bring up:  docker compose -f neo4j-compose.yml up -d
+# Bring down: docker compose -f neo4j-compose.yml down          (keeps data)
+#             docker compose -f neo4j-compose.yml down -v       (drops the volume — full reset)
+# Browser:   http://localhost:7475      Bolt (driver): bolt://localhost:7688
+
+services:
+  dss-neo4j:
+    image: neo4j:latest
+    container_name: dss-neo4j
+    restart: unless-stopped
+    ports:
+      - "7475:7474"   # HTTP browser
+      - "7688:7687"   # Bolt (ingest_skills.py neo4j driver connects here)
+    environment:
+      NEO4J_AUTH: none
+      # APOC is bundled/available; enable if graph procedures are needed later.
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - dss_neo4j_data:/data
+      - dss_neo4j_logs:/logs
+
+volumes:
+  dss_neo4j_data:
+  dss_neo4j_logs:

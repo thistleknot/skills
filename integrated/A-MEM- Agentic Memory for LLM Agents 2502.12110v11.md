@@ -65,15 +65,21 @@ Our proposed agentic memory system draws inspiration from the Zettelkasten metho
 
 Building upon the Zettelkasten method's principles of atomic note-taking and flexible organization, we introduce an LLM-driven approach to memory note construction. When an agent interacts with its environment, we construct structured memory notes that capture both explicit information and LLMgenerated contextual understanding. Each memory note m i in our collection M = { m 1 , m 2 , ..., m N } is represented as:
 
-<!-- formula-not-decoded -->
+$$
+m_{i}=\{c_{i},t_{i},K_{i},G_{i},X_{i},e_{i},L_{i}\}
+$$
 
 where c i represents the original interaction content, t i is the timestamp of the interaction, K i denotes LLM-generated keywords that capture key concepts, G i contains LLM-generated tags for categorization, X i represents the LLM-generated contextual description that provides rich semantic understanding, and L i maintains the set of linked memories that share semantic relationships. To enrich each memory note with meaningful context beyond its basic content and timestamp, we leverage an LLM to analyze the interaction and generate these semantic components. The note construction process involves prompting the LLM with carefully designed templates P s 1 :
 
-<!-- formula-not-decoded -->
+$$
+K_{i},G_{i},X_{i}\leftarrow\text{LLM}(c_{i}\;\Vert t_{i}\;\Vert P_{s1})
+$$
 
 Following the Zettelkasten principle of atomicity, each note captures a single, self-contained unit of knowledge. To enable efficient retrieval and linking, we compute a dense vector representation via a text encoder [27] that encapsulates all textual components of the note:
 
-<!-- formula-not-decoded -->
+$$
+e_{i}=f_{\text{enc}}[\;\text{concat}(c_{i},K_{i},G_{i},X_{i})\;]
+$$
 
 By using LLMs to generate enriched components, we enable autonomous extraction of implicit knowledge from raw interactions. The multi-faceted note structure ( K i , G i , X i ) creates rich representations that capture different aspects of the memory, facilitating nuanced organization and retrieval. Additionally, the combination of LLM-generated semantic components with dense vector representations provides both context and computationally efficient similarity matching.
 
@@ -81,15 +87,21 @@ By using LLMs to generate enriched components, we enable autonomous extraction o
 
 Our system implements an autonomous link generation mechanism that enables new memory notes to form meaningful connections without predefined rules. When the constrctd memory note m n is added to the system, we first leverage its semantic embedding for similarity-based retrieval. For each existing memory note m j ∈ M , we compute a similarity score:
 
-<!-- formula-not-decoded -->
+$$
+s_{n,j}=\frac{e_{n}\cdot e_{j}}{|e_{n}||e_{j}|}
+$$
 
 The system then identifies the topk most relevant memories:
 
-<!-- formula-not-decoded -->
+$$
+\mathcal{M}_{\text{near}}^{n}=\{m_{j}|\;\text{rank}(s_{n,j})\leq k,m_{j}\in\mathcal{M}\}
+$$
 
 Based on these candidate nearest memories, we prompt the LLM to analyze potential connections based on their potential common attributes. Formally, the link set of memory m n update like:
 
-<!-- formula-not-decoded -->
+$$
+L_{i}\leftarrow\text{LLM}(m_{n}\;\Vert\mathcal{M}_{\text{near}}^{n}\;\Vert P_{s2})
+$$
 
 Each generated link l i is structured as: L i = { m i , ..., m k } . By using embedding-based retrieval as an initial filter, we enable efficient scalability while maintaining semantic relevance. A-MEM can quickly identify potential connections even in large memory collections without exhaustive comparison. More importantly, the LLM-driven analysis allows for nuanced understanding of relationships that goes beyond simple similarity metrics. The language model can identify subtle patterns, causal relationships, and conceptual connections that might not be apparent from embedding similarity alone. We implements the Zettelkasten principle of flexible linking while leveraging modern language models. The resulting network emerges organically from memory content and context, enabling natural knowledge organization.
 
@@ -99,7 +111,9 @@ After creating links for the new memory, A-MEM evolves the retrieved memories ba
 
 neighbor set M n near , the system determines whether to update its context, keywords, and tags. This evolution process can be formally expressed as:
 
-<!-- formula-not-decoded -->
+$$
+m_{j}^{*}\leftarrow\text{LLM}(m_{n}\;\Vert\mathcal{M}_{\text{near}}^{n}\setminus m_{j}\;\Vert m_{j}\;\Vert P_{s3})
+$$
 
 The evolved memory m ∗ j then replaces the original memory m j in the memory set M . This evolutionary approach enables continuous updates and new connections, mimicking human learning processes. As the system processes more memories over time, it develops increasingly sophisticated knowledge structures, discovering higher-order patterns and concepts across multiple memories. This creates a foundation for autonomous memory learning where knowledge organization becomes progressively richer through the ongoing interaction between new experiences and existing memories.
 
@@ -107,15 +121,21 @@ The evolved memory m ∗ j then replaces the original memory m j in the memory s
 
 In each interaction, our A-MEM performs context-aware memory retrieval to provide the agent with relevant historical information. Given a query text q from the current interaction, we first compute its dense vector representation using the same text encoder used for memory notes:
 
-<!-- formula-not-decoded -->
+$$
+e_{q}=f_{\text{enc}}(q)
+$$
 
 The system then computes similarity scores between the query embedding and all existing memory notes in M using cosine similarity:
 
-<!-- formula-not-decoded -->
+$$
+s_{q,i}=\frac{e_{q}\cdot e_{i}}{|e_{q}||e_{i}|},\text{where}\;e_{i}\in m_{i},\;\forall m_{i}\in\mathcal{M}
+$$
 
 Then we retrieve the k most relevant memories from the historical memory storage to construct a contextually appropriate prompt.
 
-<!-- formula-not-decoded -->
+$$
+\mathcal{M}_{\text{retrieved}}=\{m_{i}|\text{rank}(s_{q,i})\leq k,m_{i}\in\mathcal{M}\}
+$$
 
 These retrieved memories provide relevant historical context that helps the agent better understand and respond to the current interaction. The retrieved context enriches the agent's reasoning process by connecting the current interaction with related past experiences stored in the memory system.
 
@@ -340,21 +360,33 @@ MemGPT [25] presents a novel virtual context management system drawing inspirati
 
 The F1 score represents the harmonic mean of precision and recall, offering a balanced metric that combines both measures into a single value. This metric is particularly valuable when we need to balance between complete and accurate responses:
 
-<!-- formula-not-decoded -->
+$$
+\text{F1}=2\cdot\frac{\text{precision}\cdot\text{recall}}{\text{precision}+\text{recall}}
+$$
 
-<!-- formula-not-decoded -->
+$$
+\text{precision}=\frac{\text{true positives}}{\text{true positives}+\text{false positives}}
+$$
 
-<!-- formula-not-decoded -->
+$$
+\text{recall}=\frac{\text{true positives}}{\text{true positives}+\text{false negatives}}
+$$
 
 In question-answering systems, the F1 score serves a crucial role in evaluating exact matches between predicted and reference answers. This is especially important for span-based QA tasks, where systems must identify precise text segments while maintaining comprehensive coverage of the answer.
 
 BLEU-1 [26] provides a method for evaluating the precision of unigram matches between system outputs and reference texts:
 
-<!-- formula-not-decoded -->
+$$
+\text{BLEU-1}=BP\cdot\exp(\tsum\slimits@_{n=1}^{1}w_{n}\log p_{n})
+$$
 
-<!-- formula-not-decoded -->
+$$
+BP=\begin{cases}1&\text{if }c>r\\ e^{1-r/c}&\text{if }c\leq r\end{cases}
+$$
 
-<!-- formula-not-decoded -->
+$$
+p_{n}=\frac{\tsum\slimits@_{i}\tsum\slimits@_{k}\min(h_{ik},m_{ik})}{\tsum\slimits@_{i}\tsum\slimits@_{k}h_{ik}}
+$$
 
 where where
 
@@ -362,33 +394,51 @@ Here, c is candidate length, r is reference length, h ik is the count of n-gram 
 
 ROUGE-L [19] measures the longest common subsequence between the generated and reference texts.
 
-<!-- formula-not-decoded -->
+$$
+\text{ROUGE-L}=\frac{(1+\beta^{2})R_{l}P_{l}}{R_{l}+\beta^{2}P_{l}}
+$$
 
-<!-- formula-not-decoded -->
+$$
+R_{l}=\frac{\text{LCS}(X,Y)}{|X|}
+$$
 
-<!-- formula-not-decoded -->
+$$
+P_{l}=\frac{\text{LCS}(X,Y)}{|Y|}
+$$
 
 where X is reference text, Y is candidate text, and LCS is the Longest Common Subsequence. ROUGE-2 [19] calculates the overlap of bigrams between the generated and reference texts.
 
-<!-- formula-not-decoded -->
+$$
+\text{ROUGE-2}=\frac{\tsum\slimits@_{\text{bigram}\in\text{ref}}\min(\text{Count}_{\text{ref}}(\text{bigram}),\text{Count}_{\text{cand}}(\text{bigram}))}{\tsum\slimits@_{\text{bigram}\in\text{ref}}\text{Count}_{\text{ref}}(\text{bigram})}
+$$
 
 Both ROUGE-L and ROUGE-2 are particularly useful for evaluating the fluency and coherence of generated answers, with ROUGE-L focusing on sequence matching and ROUGE-2 on local word order.
 
 METEOR [5] computes a score based on aligned unigrams between the candidate and reference texts, considering synonyms and paraphrases.
 
-<!-- formula-not-decoded -->
+$$
+\text{METEOR}=F_{\text{mean}}\cdot(1-\text{Penalty})
+$$
 
-<!-- formula-not-decoded -->
+$$
+F_{\text{mean}}=\frac{10P\cdot R}{R+9P}
+$$
 
-<!-- formula-not-decoded -->
+$$
+\text{Penalty}=0.5\cdot(\frac{\text{ch}}{m})^{3}
+$$
 
 where P is precision, R is recall, ch is number of chunks, and m is number of matched unigrams. METEOR is valuable for QA evaluation as it considers semantic similarity beyond exact matching, making it suitable for evaluating paraphrased answers.
 
 SBERT Similarity [27] measures the semantic similarity between two texts using sentence embeddings.
 
-<!-- formula-not-decoded -->
+$$
+\text{SBERT\_Similarity}=\cos(\text{SBERT}(x),\text{SBERT}(y))
+$$
 
-<!-- formula-not-decoded -->
+$$
+\cos(a,b)=\frac{a\cdot b}{\|a\|\|b\|}
+$$
 
 SBERT( x ) represents the sentence embedding of text. SBERT Similarity is particularly useful for evaluating semantic understanding in QA systems, as it can capture meaning similarities even when the lexical overlap is low.
 
