@@ -181,7 +181,9 @@ def topic_branch(store, query: str, topics: list, k: int) -> list:
 # tf from tsvector position counts; b=0 (HybridChunker => chunks ~equidistant).
 # =============================================================================
 
-BM25_K1 = 1.5   # b=0 (no length norm): HybridChunker keeps chunks ~equidistant
+BM25_K1 = 1.5
+BM25_B = 0.0    # length-norm weight; TRUE-dl CV=0.65 (length varies) — eval whether b>0 helps
+BM25_AVGDL = 72.1  # exact avg content_len (= sum of tf = true dl) over the collection
 
 
 def build_bm25_idf(conn) -> int:
@@ -207,27 +209,33 @@ def build_bm25_idf(conn) -> int:
     return n
 
 
-def ts_bm25_seed(conn, query: str, k: int) -> list:
-    """True BM25 (k1=1.5, b=0) over content_tsv, computed IN-DB in one query:
-    tf from lexeme position counts, IDF joined from the materialized bm25_idf.
-    Returns [(chunk_id, content, skill_slug, score), ...] best-first."""
+def ts_bm25_seed(conn, query: str, k: int, b: float = None, avgdl: float = None) -> list:
+    """True BM25 (k1=1.5) over content_tsv, computed IN-DB in one query: tf from
+    lexeme position counts, IDF joined from the materialized bm25_idf. Length norm
+    via b (default BM25_B): denom = tf + k1*((1-b) + b*dl/avgdl), dl=length(tsv).
+    b=0 drops the length term entirely. Returns [(cid, content, slug, score), ...]."""
+    b = BM25_B if b is None else b
+    avgdl = BM25_AVGDL if avgdl is None else avgdl
     with conn.cursor() as cur:
         cur.execute("""
-            WITH ql AS (SELECT unnest(tsvector_to_array(to_tsvector('english', %s))) AS lex),
+            WITH ql AS (SELECT unnest(tsvector_to_array(to_tsvector('english', %(q0)s))) AS lex),
                  orq AS (SELECT string_agg(lex, ' | ') q FROM ql WHERE lex ~ '^[a-z0-9]+$')
             SELECT e.cmetadata->>'chunk_id', e.document, e.cmetadata->>'skill_slug',
-                   sum(i.idf * (tf.cnt*(%s+1.0))/(tf.cnt+%s)) AS score
+                   sum(i.idf * (tf.cnt*(%(k1)s+1.0))
+                       / (tf.cnt + %(k1)s*((1.0-%(b)s) + %(b)s*e.content_len/%(avg)s))) AS score
             FROM langchain_pg_embedding e
             JOIN langchain_pg_collection col ON col.uuid=e.collection_id
             JOIN LATERAL (SELECT u.lexeme lx, array_length(u.positions,1) cnt
                           FROM unnest(e.content_tsv) u
                           WHERE u.lexeme IN (SELECT lex FROM ql)) tf ON true
             JOIN bm25_idf i ON i.word = tf.lx
-            WHERE col.name=%s AND (SELECT q FROM orq) <> ''
+            WHERE col.name=%(col)s AND (SELECT q FROM orq) <> ''
               AND e.content_tsv @@ to_tsquery('english', (SELECT q FROM orq))
             GROUP BY e.cmetadata->>'chunk_id', e.document, e.cmetadata->>'skill_slug'
-            ORDER BY score DESC LIMIT %s
-        """, (query, BM25_K1, BM25_K1, COLLECTION, k))
+            ORDER BY score DESC LIMIT %(k)s
+        """, {"q0": query, "k1": BM25_K1, "b": b, "avg": avgdl, "col": COLLECTION, "k": k,
+              # psycopg named+positional can't mix; pass query via named too:
+              })
         return [(cid, doc, slug, float(sc)) for cid, doc, slug, sc in cur.fetchall()]
 
 
