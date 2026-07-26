@@ -24,6 +24,16 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:/Users/user/.claude/hooks/verify_gate.py"
+          }
+        ]
+      }
     ]
   },
   "effortLevel": "low",
