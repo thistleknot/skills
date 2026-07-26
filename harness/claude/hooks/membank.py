@@ -22,7 +22,9 @@ Require   - nothing. A missing memory bank is a valid state, not an error.
 Guarantee - writes a bounded context block to stdout: MEMORY.md index, the
             global six-file layer, and the repo-local layer + last_session.md
             when cwd resolves to a git repo that has a bank under projects/.
-Maintain  - per-section cumulative ceilings, so the global layer can never
+Maintain  - total output stays under TOTAL; section ceilings sit below it to
+            leave room for the unbudgeted headers. Ceilings are cumulative, so
+            the global layer can never
             starve the repo layer (the more actionable half). Volatile logs are
             excerpted tail-first so the newest entries survive; stable docs
             head-first so the thesis survives. This hook must never re-create
@@ -56,7 +58,13 @@ try:
 except (AttributeError, OSError):
     pass
 
-BUDGET = 6000
+# TOTAL is the real contract. Fixed headers and the foreign-repo guard print
+# outside the budgeted path, so the section ceilings are set below TOTAL to leave
+# room for them -- otherwise the script overruns the cap it advertises.
+TOTAL = 6000
+HEADER_RESERVE = 450
+BUDGET = TOTAL - HEADER_RESERVE
+
 CEIL_INDEX = 900
 CEIL_GLOBAL = 3000
 CEIL_REPO = BUDGET
