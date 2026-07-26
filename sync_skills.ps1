@@ -6,11 +6,25 @@
     1. Checks non-master mirrors for .md files newer than the last git commit.
     2. Reports potential local promotions (skill files edited outside master).
     3. Diff/merge them back to master before overwriting.
-    4. Syncs master -> all local mirrors via robocopy /MIR.
-    5. Provides WinSCP guidance for the remote server.
+    4. Reconciles ~/.claude harness config against the harness\claude vault.
+    5. Syncs master -> all local mirrors via robocopy /MIR.
+    6. Provides WinSCP guidance for the remote server.
 
     Tracked scope: root-level .md files + all */SKILL.md + all *.md in skill subdirs.
     Master copy: C:\Users\user\Documents\dev\skills
+
+    HARNESS SCOPE (Step 4.5). ~/.claude is the primary harness, not merely a skills
+    mirror, so its authored config is version-controlled in $Master\harness\claude:
+      files : CLAUDE.md, SOUL.md, AGENTS.md, settings.json
+      dirs  : agents\, rules\, docs\, commands\, hooks\, output-styles\
+    Excluded by contract: settings.local.json (the local-override/secrets lane), plus
+    runtime state -- sessions\, jobs\, cache\, *.log, *.lock, history.jsonl.
+    The live ~/.claude tree is NEVER robocopy /MIR'd; every write is a targeted
+    single-file copy, so a stale vault can never delete live harness state. Only .md
+    files are eligible for LLM merge -- structured files (settings.json, hooks) are
+    flagged on conflict rather than line-spliced into something that will not parse.
+    The vault is excluded from both the local mirror push and the remote sync, so it
+    never lands inside any */skills/ tree.
 
 .PARAMETER Force
     Skip reconciliation, just sync master -> mirrors.
@@ -31,10 +45,21 @@
 .PARAMETER Yes
     Auto-confirm interactive yes/no prompts so the script can be re-run non-interactively.
 
+.PARAMETER Priority
+    Mirror label (.claude, .copilot, opencode, .hermes, .pi) to rank FIRST when
+    reconciling. Rank is a tie-breaker only -- it never makes the process less
+    additive. It applies at exactly three junctions:
+      1. New file present in several mirrors with differing content.
+      2. Untracked file where master and mirror differ but mtimes cannot separate them.
+      3. The LLM keep/drop pass, where a residual conflict resolves toward the
+         ranked source instead of the default "when uncertain, keep master".
+    Omit it and master (dev/skills) is 1st rank, which is the historical behaviour.
+
 .EXAMPLE
     .\sync_skills.ps1
     .\sync_skills.ps1 -DryRun
     .\sync_skills.ps1 -Force
+    .\sync_skills.ps1 -Priority .claude
     .\sync_skills.ps1 -OverwriteDownstream -y
     .\sync_skills.ps1 -Username root -Password hunter2 -y
 #>
@@ -46,6 +71,7 @@ param(
     [string]$Password,
     [string]$OllamaUrl = "http://localhost:11434",
     [string]$OllamaModel = "qwen3.5:4b",
+    [Alias('rank')][string]$Priority = '',
     [Alias('y')][switch]$Yes
 )
 
@@ -114,6 +140,29 @@ function Get-MirrorLabel($mirror) {
     return (Split-Path $parent -Leaf)
 }
 
+# ── Rank resolution ───────────────────────────────────────────────────────────
+# $Priority names the mirror whose version wins a tie. Empty => master is 1st rank
+# (historical behaviour). Matching is leading-dot- and case-insensitive so
+# '-Priority claude', '-Priority .claude' and '-Priority .CLAUDE' all resolve.
+# An unrecognised label is a typo, and silently falling back to master-first would
+# hide it -- so fail loudly rather than sync with the wrong rank.
+$script:PriorityLabel = ''
+if (-not [string]::IsNullOrWhiteSpace($Priority)) {
+    $knownLabels = @($Mirrors | ForEach-Object { Get-MirrorLabel $_ })
+    $want = $Priority.Trim().TrimStart('.')
+    $match = @($knownLabels | Where-Object { $_.TrimStart('.') -ieq $want })
+    if ($match.Count -eq 0) {
+        throw "Unknown -Priority '$Priority'. Known mirror labels: $($knownLabels -join ', ') (or omit -Priority to rank master first)."
+    }
+    $script:PriorityLabel = $match[0]
+}
+
+# True when $label is the ranked-first source for tie-breaking.
+function Test-IsPriority($label) {
+    if ([string]::IsNullOrEmpty($script:PriorityLabel)) { return $false }
+    return ($label -eq $script:PriorityLabel)
+}
+
 function Show-Diff($masterFile, $mirrorFile) {
     # git diff --no-index gives a unified diff without needing a repo.
     # -c core.autocrlf=false suppresses git's "LF will be replaced by CRLF" stderr
@@ -162,7 +211,7 @@ function Test-PathEverTracked($relPath) {
 
 # Classifies a (master, mirror) pair relative to the committed base.
 # Returns: 'no-op' | 'fast-forward-mirror' | 'fast-forward-master' | 'conflict'
-function Get-SyncCase($masterContent, $mirrorContent, $baseContent, $masterTime = $null, $mirrorTime = $null) {
+function Get-SyncCase($masterContent, $mirrorContent, $baseContent, $masterTime = $null, $mirrorTime = $null, $mirrorLabel = $null) {
     if ($null -eq $baseContent) {
         # No committed base (untracked/new file) — a 3-way compare is impossible.
         # Fall back to mtime so a STALE downstream copy never wins over a newer master.
@@ -172,6 +221,11 @@ function Get-SyncCase($masterContent, $mirrorContent, $baseContent, $masterTime 
             if ($mirrorTime -gt $masterTime) { return 'fast-forward-mirror' }   # mirror newer -> promote
             if ($masterTime -gt $mirrorTime) { return 'fast-forward-master' }   # master newer -> keep master
         }
+        # Rank junction 2: mtimes cannot separate them (equal or unknown) and the
+        # content differs. Without a rank this is an unresolvable tie -> conflict.
+        # With one, the ranked source wins; mtime still takes precedence above, so
+        # rank never promotes a demonstrably STALE copy over a newer master.
+        if (Test-IsPriority $mirrorLabel) { return 'fast-forward-mirror' }
         return 'conflict'   # equal/unknown mtimes but differing content -> let review/merge decide, never blind-copy
     }
     $masterChanged = ($masterContent -ne $baseContent)
@@ -347,6 +401,23 @@ function Invoke-OllamaDecisions($rel, $changes) {
         }
         [void]$sb.AppendLine('')
     }
+    # Rank junction 3. The default tie-break is "when uncertain, DROP" (keep master).
+    # A rank overrides that tie-break ONLY for changes the ranked source proposed, and
+    # ONLY where the model is otherwise undecided -- the additive/anti-deletion rules
+    # above it still bind, so rank cannot license wholesale removal of master content.
+    $rankRule = if ([string]::IsNullOrEmpty($script:PriorityLabel)) {
+        "- RANK: master is ranked 1st. When uncertain, DROP. Never lose master content silently."
+    } else {
+        @"
+- RANK: '$($script:PriorityLabel)' is ranked 1st, ahead of master, for this run.
+  When you are UNCERTAIN about a change and its 'proposed by' list includes
+  '$($script:PriorityLabel)', decide KEEP. That source is the operator's current
+  working copy and its edits are the more recent intent.
+  When you are uncertain about a change NOT proposed by '$($script:PriorityLabel)',
+  decide DROP as usual. Rank breaks ties only -- it never licenses deleting
+  substantial master content, which the DROP rules above still forbid.
+"@
+    }
     $prompt = @"
 /no_think
 You reconcile skill files. The MASTER copy is the CURRENT SOURCE OF TRUTH. Below are
@@ -359,7 +430,7 @@ Rules:
   removed text is clearly obsolete or self-contradictory.
 - If a change looks like an OLDER / less-complete mirror removing content master already
   has, DROP it.
-- When uncertain, DROP. Never lose master content silently.
+$rankRule
 
 Changes:
 $($sb.ToString())
@@ -431,6 +502,18 @@ function Invoke-MultiMirrorMerge($entry) {
         $distinct = @(@($entry.Mirrors | ForEach-Object { $_.Content }) | Sort-Object -Unique)
         if ($distinct.Count -eq 1) {
             return @{ Status = 'added'; Content = $distinct[0]; MirrorCount = $entry.Mirrors.Count }
+        }
+        # Rank junction 1: mirrors disagree on brand-new content. There is no master
+        # copy to fall back on, so without a rank this can only be flagged. With one,
+        # the ranked mirror's version is taken as authoritative.
+        $ranked = @($entry.Mirrors | Where-Object { Test-IsPriority $_.Label })
+        if ($ranked.Count -gt 0) {
+            return @{
+                Status      = 'added'
+                Content     = $ranked[0].Content
+                MirrorCount = $entry.Mirrors.Count
+                RankedBy    = $ranked[0].Label
+            }
         }
         return @{
             Status  = 'flag'
@@ -576,6 +659,11 @@ if ($Force) {
 }
 if ($OverwriteDownstream) {
     Write-Host "  Mode        : overwrite downstream (clean master is source of truth)" -ForegroundColor Yellow
+}
+if ($script:PriorityLabel) {
+    Write-Host "  Rank 1st    : $($script:PriorityLabel) (tie-breaks resolve toward this mirror, not master)" -ForegroundColor Cyan
+} else {
+    Write-Host "  Rank 1st    : master (default; pass -Priority <label> to rank a mirror ahead of it)" -ForegroundColor DarkGray
 }
 if ($DryRun) { Write-Host "  [DRY RUN -- no changes will be made]" -ForegroundColor Magenta }
 
@@ -746,7 +834,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
             $masterContent = if ($item.MasterExists) { Normalize-LineEndings (Get-Content $item.MasterFile -Raw) } else { $null }
             $mirrorContent = Normalize-LineEndings (Get-Content $item.MirrorFile -Raw)
             $masterTime    = if ($item.MasterExists) { (Get-Item $item.MasterFile).LastWriteTime } else { $null }
-            $case = Get-SyncCase $masterContent $mirrorContent $baseContent $masterTime $item.MirrorTime
+            $case = Get-SyncCase $masterContent $mirrorContent $baseContent $masterTime $item.MirrorTime $item.MirrorLabel
             $item['SyncCase']    = $case
             $item['BaseContent'] = $baseContent
             if ($case -eq 'conflict') { $conflicts.Add($item) } else { $fastForwards.Add($item) }
@@ -783,7 +871,11 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
                 switch ($result.Status) {
                     'added' {
                         Write-ToMaster $entry $result.Content
-                        Write-Host "  [ADD]       $($entry.Rel) -- new skill folded into master (additive; from $($result.MirrorCount) mirror(s))." -ForegroundColor Green
+                        if ($result.Contains('RankedBy')) {
+                            Write-Host "  [ADD/RANK]  $($entry.Rel) -- new skill, mirrors disagreed; took '$($result.RankedBy)' as 1st rank (of $($result.MirrorCount) mirror(s))." -ForegroundColor Cyan
+                        } else {
+                            Write-Host "  [ADD]       $($entry.Rel) -- new skill folded into master (additive; from $($result.MirrorCount) mirror(s))." -ForegroundColor Green
+                        }
                     }
                     'merged' {
                         Write-ToMaster $entry $result.Content
@@ -916,21 +1008,236 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
     Write-Host "`n[Skip] Reconciliation bypassed; master will overwrite downstream targets." -ForegroundColor Yellow
 }
 
+# ── Step 4.5: Reconcile ~/.claude harness config <-> master vault ────────────
+# ~/.claude is no longer just a skills mirror -- it is the primary harness, and its
+# authored config (CLAUDE.md, SOUL.md, agents/, rules/, docs/, hooks/, settings.json)
+# is edited in place and lives nowhere else. This step version-controls it.
+#
+# Vault  : $Master\harness\claude   (git-tracked; namespaced so it cannot collide
+#                                    with master's pre-existing root agents/ folder,
+#                                    and /XD-excluded from the Step 5 mirror push so
+#                                    it is never sprayed into every */skills/ tree)
+# Live   : $env:USERPROFILE\.claude (authoritative working copy)
+#
+# Direction is symmetric and uses the SAME 3-way machinery as skills (Get-SyncCase,
+# rank tie-break, Invoke-LlmMerge). Two hard guardrails distinguish it from Step 5:
+#   1. NEVER robocopy /MIR the live tree. Deleting live harness state is unrecoverable,
+#      so every write here is a targeted single-file copy.
+#   2. Only .md files are eligible for LLM merge. A line-spliced .json or .ps1 can be
+#      syntactically broken by a merge that looks fine line-by-line, so non-markdown
+#      conflicts are flagged for human review and both sides are left untouched.
+$ClaudeHome  = Join-Path $env:USERPROFILE '.claude'
+$ClaudeVault = Join-Path $Master 'harness\claude'
+# Mirror/remote pushes exclude the whole harness ROOT, not just harness\claude.
+# Excluding only the leaf still lets robocopy /MIR create an empty 'harness' shell in
+# every mirror -- harmless but confusing, since it looks like a partial leak.
+$ClaudeVaultRoot = Join-Path $Master 'harness'
+
+# Allowlist. Authored config only -- runtime state (sessions/, jobs/, cache/, logs,
+# lockfiles) is deliberately absent, and settings.local.json is the documented
+# local-override/secrets lane so it is excluded by contract, not by accident.
+$ClaudeRootFiles = @('CLAUDE.md', 'SOUL.md', 'AGENTS.md', 'settings.json')
+$ClaudeDirs      = @('agents', 'rules', 'docs', 'commands', 'hooks', 'output-styles')
+$ClaudeExcludeRx = '(^|\\)(settings\.local\.json|.*\.log|.*\.lock|.*\.status\.json|history\.jsonl|stats-cache\.json)$'
+
+# Enumerate allowlisted paths under a root, returned as root-relative paths.
+function Get-HarnessRelPaths($root) {
+    $rels = [System.Collections.Generic.List[string]]::new()
+    if (-not (Test-Path $root)) { return $rels }
+    foreach ($name in $ClaudeRootFiles) {
+        if (Test-Path (Join-Path $root $name)) { $rels.Add($name) }
+    }
+    foreach ($dir in $ClaudeDirs) {
+        $full = Join-Path $root $dir
+        if (-not (Test-Path $full)) { continue }
+        Get-ChildItem $full -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+            $rels.Add((Get-RelPath $_.FullName $root))
+        }
+    }
+    return @($rels | Where-Object { $_ -notmatch $ClaudeExcludeRx })
+}
+
+# Single-file copy with parent-dir creation. The ONLY write primitive in this step.
+function Copy-HarnessFile($srcFile, $dstFile, $track) {
+    if ($DryRun) { return }
+    $parent = Split-Path $dstFile -Parent
+    if (-not (Test-Path $parent)) { New-Item $parent -ItemType Directory -Force | Out-Null }
+    Copy-Item $srcFile $dstFile -Force
+    if ($track) { [void]$touchedPaths.Add($dstFile) }
+}
+
+if ($skipReconciliation) {
+    Write-Header "Harness config (~/.claude): skipped"
+    Write-Host "  [SKIP] Reconciliation disabled in current mode." -ForegroundColor DarkGray
+} elseif (-not (Test-Path $ClaudeHome)) {
+    Write-Header "Harness config (~/.claude): not found"
+    Write-Host "  [SKIP] $ClaudeHome does not exist." -ForegroundColor DarkGray
+} else {
+    Write-Header "Reconciling harness config: ~/.claude <-> harness\claude"
+
+    $liveRels  = Get-HarnessRelPaths $ClaudeHome
+    $vaultRels = Get-HarnessRelPaths $ClaudeVault
+    $allRels   = @(@($liveRels) + @($vaultRels) | Sort-Object -Unique)
+
+    if ($allRels.Count -eq 0) {
+        Write-Host "  Nothing allowlisted found under $ClaudeHome." -ForegroundColor DarkGray
+    }
+
+    $hStats = @{ Promoted = 0; Pushed = 0; Merged = 0; Flagged = 0; NoOp = 0; Restored = 0 }
+
+    foreach ($rel in $allRels) {
+        $liveFile  = Join-Path $ClaudeHome  $rel
+        $vaultFile = Join-Path $ClaudeVault $rel
+        $liveOk    = Test-Path $liveFile
+        $vaultOk   = Test-Path $vaultFile
+        $isMd      = [System.IO.Path]::GetExtension($rel) -ieq '.md'
+
+        # New in live, absent from vault -> pure capture. Always additive.
+        if ($liveOk -and -not $vaultOk) {
+            Copy-HarnessFile $liveFile $vaultFile $true
+            Write-Host "  [CAPTURE]   $rel -- new in ~/.claude, added to vault." -ForegroundColor Green
+            $hStats.Promoted++
+            continue
+        }
+
+        # In vault but gone from live. Could be an intentional delete OR data loss, and
+        # the two are indistinguishable from here -- so never silently restore. Ask.
+        if ($vaultOk -and -not $liveOk) {
+            Write-Host "  [ABSENT]    $rel -- in vault, missing from ~/.claude." -ForegroundColor Yellow
+            # AutoYesChoice is 'n' here, unlike every other prompt in this script. A
+            # deliberate delete and accidental data loss look identical from here, and
+            # an unattended -y run must not resurrect a rule the operator removed on
+            # purpose. The vault copy is retained either way, so declining loses nothing.
+            $choice = Read-Choice "    Restore it to ~/.claude? [y/n]" 'n' 'n'
+            if ($choice -eq 'y') {
+                Copy-HarnessFile $vaultFile $liveFile $false
+                Write-Host "    Restored to $liveFile" -ForegroundColor Green
+                $hStats.Restored++
+            } else {
+                Write-Host "    Left alone (vault copy retained as history)." -ForegroundColor DarkGray
+            }
+            continue
+        }
+
+        $liveContent  = Normalize-LineEndings (Get-Content $liveFile  -Raw -ErrorAction SilentlyContinue)
+        $vaultContent = Normalize-LineEndings (Get-Content $vaultFile -Raw -ErrorAction SilentlyContinue)
+        if ($liveContent -eq $vaultContent) { $hStats.NoOp++; continue }
+
+        # 3-way against the committed vault copy. Live plays the 'mirror' role and
+        # carries the '.claude' label, so -Priority .claude ranks it ahead of the vault
+        # exactly as it does for skills.
+        $vaultRel  = Join-Path 'harness\claude' $rel
+        $base      = Get-BaseContent $vaultRel
+        $liveTime  = (Get-Item $liveFile).LastWriteTime
+        $vaultTime = (Get-Item $vaultFile).LastWriteTime
+        $case = Get-SyncCase $vaultContent $liveContent $base $vaultTime $liveTime '.claude'
+
+        switch ($case) {
+            'fast-forward-mirror' {
+                Copy-HarnessFile $liveFile $vaultFile $true
+                Write-Host "  [PROMOTE]   $rel -- ~/.claude is ahead; captured to vault." -ForegroundColor Green
+                $hStats.Promoted++
+            }
+            'fast-forward-master' {
+                Copy-HarnessFile $vaultFile $liveFile $false
+                Write-Host "  [PUSH]      $rel -- vault is ahead; pushed to ~/.claude." -ForegroundColor Cyan
+                $hStats.Pushed++
+            }
+            'conflict' {
+                if (-not $isMd) {
+                    # Line-splicing structured text can produce a file that merges cleanly
+                    # and still fails to parse. Never risk it on settings.json or a hook.
+                    Write-Host "  [FLAG]      $rel -- both sides diverged (non-markdown; no auto-merge). Both copies left as-is." -ForegroundColor Yellow
+                    if (-not $DryRun) {
+                        $art = "$vaultFile.conflict"
+                        $d = git -c core.autocrlf=false diff --no-index --unified=3 -- $vaultFile $liveFile 2>&1 |
+                             Where-Object { $_ -notmatch '^warning:' }
+                        Set-Content $art (@(
+                            "# MANUAL MERGE REQUIRED: $rel",
+                            "# vault: $vaultFile",
+                            "# live : $liveFile",
+                            "# Structured (non-markdown) file -- auto-merge disabled by contract.",
+                            "# Reconcile by hand, then delete this file.",
+                            "#"
+                        ) + $d -join "`n") -Encoding UTF8
+                    }
+                    $hStats.Flagged++
+                } else {
+                    $merged = Invoke-LlmMerge $vaultRel $base $vaultContent $liveContent
+                    if ($null -eq $merged) {
+                        Write-Host "  [FLAG]      $rel -- merge failed; both copies left as-is (.conflict written)." -ForegroundColor Yellow
+                        $hStats.Flagged++
+                    } else {
+                        if (-not $DryRun) {
+                            $parent = Split-Path $vaultFile -Parent
+                            if (-not (Test-Path $parent)) { New-Item $parent -ItemType Directory -Force | Out-Null }
+                            Set-Content $vaultFile $merged -Encoding UTF8 -NoNewline
+                            Set-Content $liveFile  $merged -Encoding UTF8 -NoNewline
+                            [void]$touchedPaths.Add($vaultFile)
+                        }
+                        Write-Host "  [MERGE]     $rel -- both sides diverged; merged into vault AND ~/.claude." -ForegroundColor Green
+                        $hStats.Merged++
+                    }
+                }
+            }
+            default { $hStats.NoOp++ }
+        }
+    }
+
+    Write-Host ("`n  Harness: {0} promoted, {1} pushed, {2} merged, {3} flagged, {4} restored, {5} unchanged." -f `
+        $hStats.Promoted, $hStats.Pushed, $hStats.Merged, $hStats.Flagged, $hStats.Restored, $hStats.NoOp) -ForegroundColor Cyan
+
+    # Commit the vault separately from the skills reconciliation above -- staging only
+    # harness paths keeps unrelated worktree changes out of the commit.
+    $vaultDirty = @($touchedPaths | Where-Object { $_ -like "$ClaudeVault*" })
+    if ($vaultDirty.Count -gt 0 -and -not $DryRun) {
+        $commit = Read-Choice "`n  Commit harness config changes to master? [y/n]" '' 'y'
+        if ($commit -eq 'y') {
+            git -C $Master add -- $vaultDirty
+            $staged = git -C $Master diff --cached --name-only 2>$null
+            if ($staged) {
+                git -C $Master commit -m "Sync ~/.claude harness config to harness/claude vault`n`nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+                Write-Host "  Committed." -ForegroundColor Green
+            } else {
+                Write-Host "  Nothing staged; skipped commit." -ForegroundColor DarkGray
+            }
+        }
+    }
+}
+
 # ── Step 5: Sync master -> local mirrors ──────────────────────────────────────
 Write-Header "Syncing master -> local mirrors"
 
 foreach ($mirror in $Mirrors) {
     Write-Host "  -> $mirror"
     if ($DryRun) {
-        robocopy $Master $mirror /MIR /L /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" "__pycache__" ".pytest_cache" ".react_agent" "ms-playwright" "node_modules" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" 2>&1 |
+        robocopy $Master $mirror /MIR /L /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" "__pycache__" ".pytest_cache" ".react_agent" "ms-playwright" "node_modules" "$ClaudeVaultRoot" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" 2>&1 |
             Where-Object { $_ -match '\S' } | Select-Object -First 20 | ForEach-Object { Write-Host "     $_" -ForegroundColor DarkGray }
     } else {
-        robocopy $Master $mirror /MIR /NJH /NJS /NDL /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" "ms-playwright" "node_modules" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" | Out-Null
+        robocopy $Master $mirror /MIR /NJH /NJS /NDL /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" "ms-playwright" "node_modules" "$ClaudeVaultRoot" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" | Out-Null
         $rc = $LASTEXITCODE
         if ($rc -le 1) {
             Write-Host "     OK (exit $rc)" -ForegroundColor Green
+        } elseif ($rc -eq 3) {
+            # 3 = files copied + extra files present. Not an error.
+            Write-Host "     OK (exit 3: copied, extras present)" -ForegroundColor Green
         } else {
             Write-Host "     WARN: robocopy exit $rc" -ForegroundColor Yellow
+        }
+
+        # /XD exempts a dir from purging as well as from copying, so a 'harness' shell
+        # left by an earlier run would persist forever. Remove it -- but ONLY when it
+        # is genuinely empty, so this can never delete mirror content. Scoped to the
+        # mirror; the live ~/.claude tree is never touched by this step.
+        $shell = Join-Path $mirror 'harness'
+        if (Test-Path $shell) {
+            $contents = @(Get-ChildItem $shell -Recurse -File -Force -ErrorAction SilentlyContinue)
+            if ($contents.Count -eq 0) {
+                Remove-Item $shell -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Host "     Cleared empty 'harness' shell." -ForegroundColor DarkGray
+            } else {
+                Write-Host "     WARN: $shell is NOT empty ($($contents.Count) file(s)); left in place for review." -ForegroundColor Yellow
+            }
         }
     }
 }
@@ -975,11 +1282,11 @@ foreach ($RemotePath in $RemotePaths) {
   Option A -- WinSCP CLI (if winscp.com is on PATH):
     winscp.com /command ``
       "open sftp://$RemoteUser@$RemoteHost" ``
-      "synchronize remote -filemask=""|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;ms-playwright/;node_modules/;*.exe;*.dll;*.pak;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*""  ""$Master"" $RemotePath" ``
+      "synchronize remote -filemask=""|.git/;.gitignore;harness/;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;ms-playwright/;node_modules/;*.exe;*.dll;*.pak;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*""  ""$Master"" $RemotePath" ``
       "exit"
 
   Option B -- rsync (via WSL or Git Bash):
-    rsync -avz --delete --exclude='.*' "$($Master.Replace('\','/'))" $RemoteUser@${RemoteHost}:$RemotePath
+    rsync -avz --delete --exclude='.*' --exclude='harness/' "$($Master.Replace('\','/'))" $RemoteUser@${RemoteHost}:$RemotePath
 
   Option C -- Manual WinSCP:
     Host    : $RemoteHost
@@ -1026,7 +1333,7 @@ if ($launch -eq 'y') {
     foreach ($RemotePath in $RemotePaths) {
         Write-Host "  -> $RemoteUser@${RemoteHost}:$RemotePath" -ForegroundColor Cyan
         if ($wscp) {
-            & winscp.com /command "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" "synchronize remote -filemask=|.git/;.gitignore;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;ms-playwright/;node_modules/;*.exe;*.dll;*.pak;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]* ""$Master"" $RemotePath" "exit"
+            & winscp.com /command "open sftp://${RemoteUser}:${plainPwd}@$RemoteHost" "synchronize remote -filemask=|.git/;.gitignore;harness/;.copilot/;.config/;.DS_Store;.*/;pytest_cache/;todo/;react_agent/;__pycache__/;copilot/;ms-playwright/;node_modules/;*.exe;*.dll;*.pak;`$Recycle.Bin/;`$AV_ASW/;`$AV_ASW`$VAULT/;*[0-9a-f][0-9a-f][0-9a-f][0-9a-f]* ""$Master"" $RemotePath" "exit"
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "     OK" -ForegroundColor Green
             } else {
@@ -1056,7 +1363,7 @@ if (-not $DryRun) {
     if ($previewChoice -eq 'y') {
         Write-Header "Remote sync preview (robocopy /L - files that differ from master)"
         Write-Host "  Files listed below would be transferred on next remote sync." -ForegroundColor DarkGray
-        robocopy $Master "$env:TEMP\__sync_preview_dummy__" /MIR /L /NJH /NJS /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" "ms-playwright" "node_modules" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" 2>&1 |
+        robocopy $Master "$env:TEMP\__sync_preview_dummy__" /MIR /L /NJH /NJS /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" "ms-playwright" "node_modules" "$ClaudeVaultRoot" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" 2>&1 |
             Where-Object { $_ -match '\S' } | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
     }
 }
