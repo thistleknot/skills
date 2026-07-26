@@ -273,3 +273,67 @@ The elbow is selected at the k with the most-negative second derivative (sharpes
 ## See Also
 [[code]]  [[openspec-workflow]]  [[causal-inference]]
 <!-- consolidation:see-also:end -->
+
+---
+
+## Second axis: niche collision (added 2026-07-26)
+
+The pipeline above scores ONE axis and prescribes by magnitude. Magnitude cannot
+separate *"these are the same skill"* from *"these are adjacent topics"* — which
+is exactly the merge-vs-cross-reference call. A second axis can.
+
+| | high niche collision | low collision |
+|---|---|---|
+| **high relatedness** | **MERGE** — same ground | **XREF** — adjacent topics |
+| **low relatedness** | **RENAME** — name/content mismatch | **SEPARATE** |
+
+- **axis A, relatedness** — dense cosine (`nomic-embed-text`), `consolidation/two_axis.py`
+- **axis B, niche collision** — differentiating-term Jaccard from skill `mmr-dst`,
+  via `consolidation/term_axis.py`. Not a fold: `mmr-dst` keeps its standalone
+  query-expansion job, and this calls it the way Step 3 calls
+  `nearest-neighbor-chain`.
+
+```
+python consolidation/two_axis.py      # screen  -> merge_report.md
+python consolidation/merge_judge.py   # adjudicate MERGE bucket -> merge_verdicts.md
+```
+
+### Calibration — measured, do not re-litigate
+
+- **Axis A must be thresholded by percentile, never a fixed cosine.** Over 8,778
+  pairs: min 0.439, **median 0.709**, max 0.921. A fixed 0.72 floor sat one
+  hundredth above the median and admitted 1,012 MERGE pairs (11.5% of the corpus).
+  `A_PCT=97` → 0.814 → 29 pairs. This is the same failure the graph step already
+  documents for cosine thresholds.
+- **Axis B is not genre-inflated** — median 0.032, which independently equals the
+  ceiling of a 10-pair hand-labelled negative set. `B_HI=0.15` (~p99) buys
+  precision over recall on purpose: a missed merge lands in XREF (harmless), a
+  false merge destroys content.
+- **`diff_top_n=16`**, swept over {8,16,24,32,48,64} against a 20-pair gold set:
+  AUC 0.925. At the default 8 the term lists are hard-capped, so any downstream
+  top-K slice is inert — sweeping K instead of `diff_top_n` measures nothing.
+- **The salient lane is useless as a pairwise axis** — 0.000 Jaccard on every
+  pair. It is within-doc MMR, so each doc's top terms are idiosyncratic by
+  construction. Use the differentiating lane only.
+- **Corpus size matters.** On a 12-doc sample the differentiating lane separated
+  families only weakly (0.040 vs 0.007, false positives by rank 4); on the full
+  133 it is clean. Its redundancy term is estimated from how often a word is
+  salient in *other* docs, so it needs the whole corpus — hence `MIN_CORPUS=40`.
+
+### Judge placement
+
+The judge (`qwen3.5-reasoning-thinking-256k:9b`) runs on the MERGE bucket **only**
+— 29 pairs, not 8,778. The screen removes 99.7% of the work; the judge supplies
+the semantics the screen cannot. It may only downgrade or confirm.
+
+**A structural override runs ahead of the judge.** If either skill's text names
+the other alongside a relationship word (sub-skill, parent, calls, see also), the
+pair is XREF by construction. Measured: asked to judge `consolidation` vs
+`nearest-neighbor-chain` — where this file literally says "sub-skill called in
+Step 3" — the judge described the relationship correctly in its own reason and
+returned MERGE anyway. Structure beats instruction.
+
+**The judge still hallucinates.** In the same run it justified merging
+`continual-learning` into `mergekit` by asserting MemRL is "the core methodology
+behind mergekit" — it is not; mergekit is TIES/DARE weight merging. Treat every
+verdict as a candidate for human review, never as an execution trigger.

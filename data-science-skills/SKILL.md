@@ -1,229 +1,105 @@
 ---
 name: data-science-skills
 description: >
-  Ingestion + graph-augmented retrieval for the stackskills data-science
-  skill corpus (C:\Users\user\Documents\wiki\data science\stackskills\skills_master\,
-  1,467 markdown files). Covers: Docling HybridChunker -> nomic-embed-text ->
-  langchain PGVector (collection `data_science_skills`, chunks as Documents,
-  KG/frontmatter data in `cmetadata` JSONB); a KG entity extractor that stores
-  SPO triplets and spaCy named-entity types as chunk metadata and builds an
-  entity graph in a dedicated neo4j container (`dss-neo4j`); WordNet
-  synsets/hypernyms kept only as enrichment tokens (NOT as entity identity —
-  a deliberate departure from kg_ontology); a synset->hypernym ontology graph +
-  entity co-occurrence graph in neo4j, kept for per-skill "tag" generation and
-  ablation diagnostics; and a FastMCP retrieval service whose DEFAULT path is
-  DENSE-ONLY whole-skill retrieval (RETRIEVAL_MODE="dense") — the measured
-  winner for topical-cluster retrieval (LLM-judged eval: dense nDCG@10 0.856 >
-  dense+entity-BM25 0.789 > dense+ontology-graph 0.734; the BM25/graph legs
-  dilute topical recall). RETRIEVAL_MODE="fusion" (dense ⊕ entity-BM25 RRF) is
-  the toggle for exact-skill lookup, and "cascade" (graph-expand -> MMR ->
-  ColBERTv2) is retained diagnostic-only (measured net-negative). Registered as
-  a Windows service via NSSM. Use this skill whenever the user
-  wants to ingest the stackskills corpus, rebuild its pgvector collection,
-  query it via MCP, debug the data-science-skills service, run the retrieval
-  eval, or extend the ingestion/retrieval pipeline itself. Triggers on:
-  "ingest the skills corpus", "query the data science skills service",
-  "rebuild the skills_master pgvector collection", "data_science_skills MCP",
-  "graph retrieval for the stackskills wiki", "register the skills retrieval
-  service", or any question about how that corpus's KG/retrieval pipeline works.
+  USE THIS to look up or ground any data-science or reinforcement-learning
+  concept before implementing it — a searchable, curated knowledge base of 1,467
+  enriched skills (regression, classification, clustering/dim-reduction, trees &
+  ensembles, model-eval, optimization, neural nets, probability & stats, data-prep,
+  RL, and more) distilled from 9 textbooks (ISL, Sutton & Barto, Deep RL in Action,
+  ML Algorithms, Statistics for ML, Applied Regression Modeling, Data Mining for
+  Business Analytics, Basic Statistics, Advanced ML with Python). It is the CONSUMER
+  layer: it does not store the corpus or run retrieval itself — it routes a query
+  through a query expander (local ollama: query + ToC + tags -> rephrased query)
+  into the parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever engine, which
+  ingested the corpus into pgvector + neo4j and serves whole-skill retrieval over
+  MCP. Trigger whenever you (or the user) are about to implement, explain, choose
+  between, or debug a data-science / RL technique and want the corpus's grounded,
+  cross-referenced treatment instead of reinventing it. Triggers on: "how do I
+  implement X", "what technique for Y", "explain/compare A vs B", "search the data
+  science skills", "look this up in the DS knowledge base", "ground this in the
+  stackskills corpus", any DS/ML/RL concept lookup.
 status: draft
 last_validated: 2026-07-19
 ---
 
-# data-science-skills
+# data-science-skills — the knowledge-base lookup skill
 
-Ingestion + graph-augmented hybrid retrieval, scoped to one corpus: the 1,467
-enriched markdown files in `skills_master/` produced by the stackskills
-merge-and-enrich pipeline (see that folder's own build history for how the
-corpus itself was assembled — this skill starts from the finished files).
+**What it is:** the front door to a curated data-science / RL knowledge base. When
+you're implementing or reasoning about any DS/ML/RL concept, search here first for
+the corpus's grounded, cross-referenced treatment instead of deriving from scratch.
 
-This is a **specialized variant**, not a replacement, of two more general
-skills already in this library:
-- [[gist-retriever]] — the canonical RRF -> L2 expansion -> ColBERT cascade
-  shape, but built for an atomic-triplet space on SQLite+Chroma. This skill
-  ports that cascade shape onto langchain PGVector with real markdown chunks
-  (not atomic triplets) as the retrieval unit, and swaps the BM25 leg for an
-  entity-graph density signal.
-- [[kg_ontology]] — the reference SPO-extraction skill. This skill **borrows
-  its extraction shape but deliberately DEPARTS from its synset-canonical
-  identity contract**: here the canonical entity id is the normalized surface
-  span (`ridge_regression`, `gradient_descent`), NOT a WordNet synset. Rationale:
-  WordNet mis-resolves ML terms ("ridge regression" -> "mountain ridge"), which
-  would poison the graph; domain-correct entities are the whole point of the
-  retrieval backbone. WordNet synsets/hypernyms are kept only as *enrichment
-  tokens* for plain common words, never as identity. See
-  `references/ingestion.md` for the exact contract.
-
-Read [[litellm-windows-service]] before touching the Windows service
-registration stage — its NSSM procedure and traps (elevation via `-File`,
-UTF-8 env vars, port-hold verification) are reused directly.
-
-## Source of truth
-
-- **What folder is read**: `C:\Users\user\Documents\wiki\data science\stackskills\skills_master\*\*.md`
-  — 11 topic subfolders, each file has `name/description/topic/sources/
-  merged_slugs/enriched` frontmatter plus `## What it is / Key mechanics /
-  Pseudocode / Code / Gotchas or pitfalls / When to use` sections.
-- **Ingestion never writes back to `skills_master/`.** It is read-only input.
-  Re-running ingestion after the corpus changes is how updates propagate —
-  there is no separate "sync" step to remember.
-- **pgvector target**: langchain `PGVector`, connection
-  `postgresql+psycopg://langchain:langchain@localhost:5432/langchain`, collection
-  `data_science_skills`. Chunks are stored as langchain `Document`s; all
-  entity/SPO/synset/hypernym + frontmatter data lives in the `cmetadata` JSONB
-  column. Embeddings via `OllamaEmbeddings(model="nomic-embed-text")`. There is
-  NO custom `data_science_skills` table, `bm25_sparse` column, or `dss_*` table —
-  PGVector owns its own schema. Do not touch other collections in that DB (e.g.
-  the arxiv `paper_sections` / `paper_titles` / `paper_abstracts`).
-- **entity graph target**: dedicated neo4j container `dss-neo4j` (bolt
-  `localhost:7688`, browser `localhost:7475`, auth disabled), compose file
-  `docker/neo4j-compose.yml`, started with
-  `docker compose -f docker/neo4j-compose.yml up -d`. The graph lives here, NOT
-  in postgres. Node model: `(Chunk {id, skill_slug})-[:HAS_ENTITY]->(Entity {id})`,
-  `(Chunk)-[:OF_SKILL]->(Skill {slug, topic, tags})`, `(Entity)-[:IN_SKILL]->(Skill)`,
-  `(Entity)-[:CO_OCCURS {weight}]-(Entity)`.
-
-## Ingestion — quick reference
-
-Full detail: [references/ingestion.md](references/ingestion.md). Script:
-[scripts/ingest_skills.py](scripts/ingest_skills.py).
-
-1. Frontmatter (name/description/topic/sources/merged_slugs) is regex-parsed
-   once per file and stored in `cmetadata`; KG extraction runs on the
-   frontmatter-stripped body so source book names + chunk-ref numbers don't
-   become graph nodes.
-2. Docling `HybridChunker` splits each `skills_master/*.md` body into chunks.
-3. Each chunk is embedded with `nomic-embed-text` via
-   `OllamaEmbeddings(model="nomic-embed-text")` and stored as a langchain
-   `Document` in the `data_science_skills` PGVector collection.
-4. KG extraction is a **single Stage-A LLM call** (S-P-O extraction) via Ollama
-   `/api/chat` with Qwen3 thinking suppression (`/no_think` + top-level
-   `think:false`), per [[ollama-structured]]. Canonical entity id = normalized
-   surface span (ASCII-folded, lowercased, spaces->underscores) — this IS the
-   graph node identity. WordNet synsets/hypernyms are looked up only as
-   `enrich_tokens` for plain single common words, never as identity. There is
-   NO per-triplet synset-selection LLM call (that stage was removed).
-5. spaCy NER runs separately for named-entity types; noise labels
-   (CARDINAL/ORDINAL/DATE/etc.) and numeric/book-name entities are filtered out.
-6. Entity/SPO/synset/enrich data + spaCy entities are stored in the chunk's
-   `cmetadata` JSONB. The entity graph is written to the `dss-neo4j` container
-   (nodes/edges per the model above); `CO_OCCURS.weight` = co-occurrence count,
-   and a chunk's graph-density score = sum of its entities' weighted degree.
-7. Per skill file (and per topic), the most frequent canonical entities become
-   **tags**, stored on the `Skill` node in neo4j.
-
-## Retrieval — quick reference
-
-Full detail: [references/retrieval.md](references/retrieval.md). Service:
-[scripts/mcp_server.py](scripts/mcp_server.py).
-
-There is **NO BM25 leg**. The entity graph IS the parallel-to-cosine signal
-("entities as BM25 surrogates" means the entity/graph metadata plays that role,
-not a literal BM25 column).
+**What it is NOT:** the corpus, and not the retrieval engine. Those are separate:
 
 ```
-query
-  │
+data-science-skills   ── THIS skill: when + how to query (the consumer/usage layer)
+  │  routes a query through
   ▼
-cosine seed (langchain PGVector, nomic dense)  ───┐
-                                                   ├─► RRF (cosine rank ⊕ graph-density rank)
-graph-density signal (neo4j `dss-neo4j`)  ────────┘
-  │
+[query expander]      ── local ollama call: user query + ToC + tags -> rephrased query
+  │  hands the rephrased query to
   ▼
-graph-neighborhood expansion (walk the neo4j co-occurrence graph from the
-RRF-fused top hits, discounted by hop — pull in connected chunks)
-  │
+[[parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever]]
+                      ── the ENGINE: ingested the corpus -> pgvector + neo4j; serves
+                         whole-skill retrieval (RRF -> MMR -> late-interaction / graph-RAG)
+                         over FastMCP (tools: `retrieve`, `browse_toc`)
+  │  which was built from
   ▼
-MMR rerank (diversity)
-  │
-  ▼
-ColBERT v2 late-interaction rerank (final filter)
-  │
-  ▼
-whole-skill return: ranked chunks vote for their skill; top-K skills returned
-WHOLE (all chunks, ordered by chunk_index) with frontmatter + neo4j tags
+skills_master/        ── the CORPUS (downstream data):
+   C:\Users\user\Documents\wiki\data science\stackskills\skills_master\  (1,467 *.md)
 ```
 
-A `GRAPH_MODE` switch controls the graph's role: `parallel` (graph-density as
-the 2nd RRF leg), `cascade` (cosine then graph-expand), `both` (default). The
-eval harness (below) settles which is best empirically.
+## When to use
 
-**Retrieval unit = whole skill.** Ranked chunks vote for their skill; the top-K
-skills are returned whole. Recall/precision are measured at the skill level.
+- About to **implement** a DS/ML/RL technique → pull the corpus's treatment first.
+- Need to **choose between** approaches (e.g. ridge vs lasso, k-fold vs LOO) →
+  retrieve the related cluster and compare.
+- Want to **explain / ground** a concept with the corpus's cross-referenced version.
+- Debugging a method and want the canonical description + adjacent skills.
 
-Config constants in `mcp_server.py`: `GRAPH_MODE`, `COSINE_K=100`,
-`GRAPH_RRF_WEIGHT=0.5`, `RRF_K=60`, `RRF_K_OUT=50`, `EXPANSION_HOPS=1`,
-`EXPANSION_DISCOUNT=0.5`, `EXPANDED_K=80`, `MMR_LAMBDA=0.7`, `MMR_K=30`,
-`TOP_SKILLS=5`.
+Prefer this over reinventing: the corpus already merges 9 textbooks' treatments per
+concept, with pseudo-code and cross-language examples.
 
-This merges two existing designs: `arxiv_rag_manifold_revised.py`'s
-PGVector/MMR/ColBERT wiring is the base (its `mmr_from_scores` and
-`calculate_colbert_scores` patterns are reused), with `gist-retriever`'s
-L2-neighborhood-expansion stage grafted in — the neo4j entity graph
-substituting for its BM25-triplet expansion.
+## How to use (the flow)
 
-## Eval harness — quick reference
+1. **(Optional) Browse the ToC** — call the engine's `browse_toc` MCP tool to get
+   every skill's topic + entity tags. Useful when the query is vague or you want to
+   see the neighborhood before querying.
+2. **Query expansion (local ollama, in between)** — take the user's raw query plus
+   the ToC (topics/folders) and tags, and ask a local ollama model to **rephrase /
+   expand** it into a retrieval-optimized query. Grounding the rephrase in the
+   corpus's own ToC + tag vocabulary steers it toward terms that actually exist in
+   the index → better lexical (BM25), dense, and graph-RAG matching. (Closed 11-topic
+   vocab, so this is cheap: 1 call/query, no per-chunk LLM.)
+3. **Retrieve** — pass the expanded query to the engine's `retrieve` tool. It runs
+   the parallel lanes (dense ‖ tsvector-BM25 ‖ community/graph, RRF-fused) → MMR →
+   late interaction, and returns **whole skills** (each with all chunks + ToC/entity
+   tags). Pick the `RETRIEVAL_MODE` by intent: **`hybrid`** for a specific lookup
+   (default, the measured 2× lever), **community/cascade** for thematic "what
+   approaches to X exist" exploration.
+4. **Implement from the returned skill(s)** — use their content (definitions,
+   pseudo-code, examples, cross-refs) as the grounded basis.
 
-`scripts/eval_retrieval.py` measures skill-level recall@k / precision@k / MRR /
-nDCG@k. Golden queries are LLM-paraphrased (avoid the skill's own wording),
-overlap-filtered (Jaccard < 0.6 vs description) and retention-filtered (target
-must appear in top-K), cached in `eval_golden.sqlite`. `--gen N` generates,
-`--sweep` compares GRAPH_MODE configs (`cosine_only` / `graph_parallel` /
-`graph_cascade` / `both`), `--config X` measures one. Winner chosen by nDCG@10 —
-this is the "best hierarchical fit given our options" answer. Full detail:
-[references/retrieval.md](references/retrieval.md).
+## Query-expander contract
 
-## Windows service registration — quick reference
+- **Zero-shot context (pre-generated, NOT re-derived at query time):**
+  `skills_master\metadata.json` — the corpus ToC augmented with tags, topic-grouped
+  (`{topics: {<topic>: {count, tags[], skills[]}}}`). Generated once at end of
+  ingestion (`build_corpus_metadata.py`); the expander loads it as its zero-shot
+  prompt. This is why expansion is cheap — no per-query ToC/tag derivation.
+- **Input:** `{user_query}` + the loaded `metadata.json` (topics, per-topic tags,
+  skill lists).
+- **Model:** local ollama (default the repo's small tag, e.g. `qwen3.5-oc:4b`),
+  thinking suppressed, 1 call per query.
+- **Output:** a single rephrased query string biased toward corpus vocabulary.
+- **Why:** the raw user query rarely uses the corpus's exact terms; grounding the
+  rephrase in the ToC + tags maps symptom/goal phrasing onto retrievable concepts,
+  lifting BM25 + graph-RAG recall. (Status: `metadata.json` is generated; the ollama
+  expand-step is specified here and wired into the engine's `retrieve` path — see
+  that skill to enable/tune.)
 
-Full detail and traps: [references/ingestion.md](references/ingestion.md#service-registration)
-(the NSSM procedure applies to the MCP server process, not to ingestion — ingestion
-is a one-shot script, not a service). Script:
-[scripts/register-service.ps1](scripts/register-service.ps1).
+## Related
 
-The FastMCP server (`scripts/mcp_server.py`) is registered as an NSSM service
-named `data-science-skills-mcp`, following [[litellm-windows-service]]'s
-pattern exactly: portable `nssm.exe`, `AppEnvironmentExtra PYTHONIOENCODING=
-utf-8 PYTHONUTF8=1` (same cp1252-crash trap applies to any Python service on
-this machine), `Start SERVICE_AUTO_START`, `AppExit Default Restart`, and the
-same "service reports Running before the port actually listens" verification
-loop. Read that skill's Traps section before debugging a service that reports
-Running but doesn't answer requests — the traps are not specific to LiteLLM.
-
-```powershell
-# elevated, one UAC prompt:
-Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass',`
-  '-File','C:\Users\user\.claude\skills\data-science-skills\scripts\register-service.ps1'
-
-# verify:
-Get-Service data-science-skills-mcp
-```
-
-## Scope boundary (v1 vs stretch)
-
-**v1 / must-have**: ingestion script (parse frontmatter -> chunk -> embed ->
-extract KG metadata -> persist to PGVector + neo4j -> compute tags), the
-retrieval cascade as a callable Python function, a FastMCP server exposing
-whole-skill retrieval, the eval harness, NSSM registration.
-
-**v2 / stretch, explicitly out of scope for the first build**:
-- Cross-collection graph merging with other corpora ingested by this same
-  pipeline pattern (e.g. arxiv papers) — this skill is scoped to
-  `skills_master/` only.
-- Incremental re-ingestion (today: re-running ingestion re-processes the
-  whole corpus; a changed-files-only mode is future work).
-
-## GRAPH_MODE — settled empirically, not by guess
-
-The graph's role in retrieval (`parallel` / `cascade` / `both`) is a tunable,
-not a fixed design choice. `scripts/eval_retrieval.py --sweep` compares all
-configs on skill-level nDCG@10 and picks the winner — this is the "best
-hierarchical fit given our options" answer. Default is `both`.
-
-## Verification / status (2026-07-18)
-
-Verified working end-to-end on a **2-skill slice**: both test queries retrieved
-the correct skill as #1. The full **1,467-file ingest is a heavy batch job**
-(one KG LLM call per chunk) — it needs the run-timeout removed and ideally a
-free GPU; under docling GPU contention, 3 files took >9.5 min. Run
-`python scripts/ingest_skills.py --reset` for the full corpus once a GPU is
-free and the timeout lifted.
+- [[parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever]] — the ingestion +
+  retrieval **engine** this skill calls (how the corpus is chunked, embedded,
+  graph-built, fused, and served; the measured evidence for each lane/stage).
+- Corpus source: `wiki\data science\stackskills\skills_master\` (upstream data; not
+  part of either skill).

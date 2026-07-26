@@ -1,3 +1,16 @@
+---
+name: universal-filter
+description: >
+  Set an asymmetric cutoff on a skewed distribution by mapping values into a
+  near-normal space, taking the percentile bound there (e.g. upper 97.5%), then
+  inverting back to the original units. Use when a symmetric threshold would
+  misfit a non-symmetric source distribution — filtering clause or sentence
+  lengths, trimming outliers on heavy-tailed data, or any cutoff where the raw
+  distribution is skewed. Trigger on "asymmetric cutoff", "97.5% bound",
+  "skewed lengths", "transform then invert". Companion to `stat-partitioning`,
+  which covers the broader median/MAD and Box-Cox boundary protocol.
+---
+
 Here is the complete transcription of the code and text from the image:
 
 ```text

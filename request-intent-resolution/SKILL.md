@@ -1,4 +1,4 @@
-﻿---
+---
 name: request-intent-resolution
 description: >
   Build an end-to-end request intent resolution pipeline. Use this skill

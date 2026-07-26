@@ -70,13 +70,35 @@ param(
     [string]$Username,
     [string]$Password,
     [string]$OllamaUrl = "http://localhost:11434",
-    [string]$OllamaModel = "qwen3.5:4b",
+    # Most capable reasoning model on disk (verified 2026-07-26, 7.4 GB). The
+    # previous default qwen3.5:4b is NOT installed, so every run paid a failed
+    # lookup and silently fell back -- the merge judge was never the model the
+    # flag advertised.
+    [string]$OllamaModel = "qwen3.5-reasoning-thinking-256k:9b",
     [Alias('rank')][string]$Priority = '',
     [Alias('y')][switch]$Yes
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+# ── Native-command output encoding ────────────────────────────────────────────
+# PowerShell decodes the stdout of native commands (git, ollama) using
+# [Console]::OutputEncoding. Under -NoProfile that defaults to the system ANSI
+# code page, so `git show` returns UTF-8 bytes decoded as cp1252 -- every
+# multi-byte character inflates into two or three.
+#
+# Measured 2026-07-26 on agentic-harness/SKILL.md: the file's committed base read
+# as 74,902 characters under -NoProfile versus 73,947 on disk, a 955-character
+# phantom delta. Every 3-way comparison against base was therefore wrong, and 60
+# file/mirror pairs classified as "both sides diverged" when nothing had.
+# This predates the BOM and trailing-newline fixes and is the deeper cause.
+#
+# Set it before ANY native call. Wrapped because some hosts refuse the assignment.
+try {
+    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    $OutputEncoding           = [System.Text.UTF8Encoding]::new($false)
+} catch { Write-Warning "Could not force UTF-8 console encoding: $($_.Exception.Message)" }
 
 # ── Configuration ────────────────────────────────────────────────────────────
 $Master  = "C:\Users\user\Documents\dev\skills"
@@ -102,6 +124,52 @@ if ($Username) {
 $RootTracked = @("README.md", "copilot-instructions.md", "MEMORY_SKILLS_PLAN.md", "AGENTS.md")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+function Read-TextUtf8 {
+    <#
+      Every read of file CONTENT must go through here.
+
+      Windows PowerShell 5.1's `Get-Content -Raw` with no -Encoding defaults to
+      the ANSI code page (cp1252), so a UTF-8 em-dash reads back as three
+      mojibake characters. Written out again as UTF-8 it becomes permanent
+      corruption. Measured 2026-07-26: 236 mangled sequences across 10 skills
+      -- every one of them a file this script had round-tripped.
+
+      Require   - $Path may or may not exist.
+      Guarantee - UTF-8 decode regardless of BOM; $null when the file is absent,
+                  so callers can still distinguish absent from empty.
+      Maintain  - pairs with Write-TextNoBom; read and write must agree on
+                  encoding or the round-trip corrupts.
+    #>
+    param([Parameter(Mandatory)][string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) { return $null }
+    return [System.IO.File]::ReadAllText($Path, [System.Text.UTF8Encoding]::new($false))
+}
+
+function Write-TextNoBom {
+    <#
+      Every write of file CONTENT must go through here.
+
+      Windows PowerShell 5.1's `Set-Content -Encoding UTF8` emits a UTF-8 BOM.
+      A BOM ahead of a markdown file's opening `---` makes Claude Code's
+      frontmatter parser miss the block entirely: it falls back to the first body
+      line, which IS `---`, so the skill advertises `---` as its description and
+      can no longer be routed to. Measured 2026-07-26: 13 skills silently
+      degraded this way, six of them in a single sync run.
+
+      Require   - $Path is writable; $Content is a string (never $null).
+      Guarantee - file is UTF-8 with NO BOM.
+      Maintain  - byte-identical to the input apart from an optional trailing
+                  newline, so a no-change write produces no git diff.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [AllowEmptyString()][string]$Content = '',
+        [switch]$AppendNewline
+    )
+    if ($AppendNewline -and -not $Content.EndsWith("`n")) { $Content += "`r`n" }
+    [System.IO.File]::WriteAllText($Path, $Content, [System.Text.UTF8Encoding]::new($false))
+}
+
 function Write-Header($msg) {
     Write-Host "`n$('-' * 60)" -ForegroundColor DarkGray
     Write-Host "  $msg" -ForegroundColor Cyan
@@ -184,8 +252,46 @@ function Show-Diff($masterFile, $mirrorFile) {
 
 # Normalize line endings to LF only to prevent false conflicts on Windows.
 function Normalize-LineEndings([string]$text) {
+    <#
+      Canonical form for ALL content comparison. Every path -- Read-TextUtf8,
+      Get-BaseContent (git show), mirror reads -- must pass through here, or two
+      copies of identical text compare as different.
+
+      Strips a leading BOM as well as normalizing EOLs. The two read paths
+      disagree about BOMs: .NET ReadAllText detects and strips it, while
+      `git show` pipes it through as a literal U+FEFF. Measured 2026-07-26: that
+      asymmetry alone made every BOM-carrying file classify as "both sides
+      diverged", sending 50 file-mirror pairs into the LLM merge that had no
+      real conflict at all. A BOM difference is an encoding artifact, never a
+      content difference.
+    #>
     if ($null -eq $text) { return $null }
+    $text = $text.TrimStart([char]0xFEFF)
     return $text -replace "`r`n", "`n" -replace "`r", "`n"
+}
+
+function Test-ContentEqual($a, $b) {
+    <#
+      Content equality for CLASSIFICATION only. Never use to produce bytes.
+
+      `git show` piped through PowerShell loses the file's trailing newline
+      (`$out -join "`n"` cannot restore it), while every disk read preserves it.
+      So a file identical to its committed base compared as different by exactly
+      one character, and the whole reconciliation read it as "both sides
+      diverged". Measured 2026-07-26 on design-patterns/SKILL.md: mirror 3058
+      chars, base 3057, sole difference the final "`n".
+
+      Trailing newlines are deliberately NOT trimmed inside Normalize-LineEndings:
+      its output is also written back to disk (Write-ToMaster $mirrorContent), and
+      trimming there would strip real trailing newlines from every synced file,
+      producing a permanent one-line diff on every run.
+
+      Require   - $a/$b already line-ending normalized, or $null.
+      Guarantee - $true iff the two are identical ignoring trailing newlines.
+    #>
+    if ($null -eq $a -and $null -eq $b) { return $true }
+    if ($null -eq $a -or  $null -eq $b) { return $false }
+    return ($a.TrimEnd("`n") -eq $b.TrimEnd("`n"))
 }
 
 # Returns the base content of a tracked file at last commit, or $null if not tracked.
@@ -209,13 +315,52 @@ function Test-PathEverTracked($relPath) {
     return -not [string]::IsNullOrWhiteSpace(($history -join '').Trim())
 }
 
+function Test-IsBehindBase($relPath, $mirrorContent, $maxDepth = 12) {
+    <#
+      True when the mirror's content is an EARLIER COMMITTED STATE of this file,
+      i.e. the mirror is BEHIND base rather than diverged from it.
+
+      Why this exists. The 3-way test asks "does the mirror differ from base?"
+      and reads yes as "the mirror has competing edits." A downstream copy that
+      simply has not been re-synced since before the last commit also differs
+      from base -- it is behind, not ahead. Measured 2026-07-26: mirrors last
+      synced 2026-07-02 were classified as diverged against a base committed
+      that morning, routed into Invoke-LlmMerge, and the LLM dutifully restored
+      their stale `name:` frontmatter over master edits made minutes earlier.
+      Six skills were reverted in a single run.
+
+      Content-match against history is authoritative where mtime is not:
+      robocopy preserves source timestamps, so a freshly-pushed mirror file can
+      carry a months-old mtime and look stale when it is current.
+
+      Require   - $relPath repo-relative; $mirrorContent already line-normalized.
+      Guarantee - $true only when that exact content appears in this path's last
+                  $maxDepth commits. Never guesses.
+      Maintain  - at most $maxDepth `git show` calls per file.
+      Assert    - any git failure returns $false, so unreadable history degrades
+                  to the previous behaviour (conflict) rather than silently
+                  discarding a real mirror edit.
+    #>
+    if ([string]::IsNullOrEmpty($mirrorContent) -or [string]::IsNullOrEmpty($relPath)) { return $false }
+    $gitRelPath = $relPath.Replace('\', '/')
+    $revs = git -C $Master rev-list -n $maxDepth HEAD -- $gitRelPath 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $revs) { return $false }
+    foreach ($rev in @($revs)) {
+        if ([string]::IsNullOrWhiteSpace($rev)) { continue }
+        $blob = git -C $Master show "${rev}:$gitRelPath" 2>$null
+        if ($LASTEXITCODE -ne 0) { continue }
+        if (Test-ContentEqual (Normalize-LineEndings ($blob -join "`n")) $mirrorContent) { return $true }
+    }
+    return $false
+}
+
 # Classifies a (master, mirror) pair relative to the committed base.
 # Returns: 'no-op' | 'fast-forward-mirror' | 'fast-forward-master' | 'conflict'
-function Get-SyncCase($masterContent, $mirrorContent, $baseContent, $masterTime = $null, $mirrorTime = $null, $mirrorLabel = $null) {
+function Get-SyncCase($masterContent, $mirrorContent, $baseContent, $masterTime = $null, $mirrorTime = $null, $mirrorLabel = $null, $relPath = $null) {
     if ($null -eq $baseContent) {
         # No committed base (untracked/new file) — a 3-way compare is impossible.
         # Fall back to mtime so a STALE downstream copy never wins over a newer master.
-        if ($masterContent -eq $mirrorContent) { return 'no-op' }
+        if (Test-ContentEqual $masterContent $mirrorContent) { return 'no-op' }
         if ($null -eq $masterContent) { return 'fast-forward-mirror' }   # master absent -> mirror is the only content
         if ($null -ne $masterTime -and $null -ne $mirrorTime) {
             if ($mirrorTime -gt $masterTime) { return 'fast-forward-mirror' }   # mirror newer -> promote
@@ -228,12 +373,20 @@ function Get-SyncCase($masterContent, $mirrorContent, $baseContent, $masterTime 
         if (Test-IsPriority $mirrorLabel) { return 'fast-forward-mirror' }
         return 'conflict'   # equal/unknown mtimes but differing content -> let review/merge decide, never blind-copy
     }
-    $masterChanged = ($masterContent -ne $baseContent)
-    $mirrorChanged = ($mirrorContent -ne $baseContent)
+    $masterChanged = -not (Test-ContentEqual $masterContent $baseContent)
+    $mirrorChanged = -not (Test-ContentEqual $mirrorContent $baseContent)
     if     (-not $masterChanged -and -not $mirrorChanged) { return 'no-op' }
     elseif (-not $masterChanged -and      $mirrorChanged) { return 'fast-forward-mirror' }
     elseif (     $masterChanged -and -not $mirrorChanged) { return 'fast-forward-master' }
-    else                                                   { return 'conflict' }
+    else {
+        # Both differ from base. Before calling this a genuine two-sided edit,
+        # rule out the far more common case: the mirror is simply BEHIND, holding
+        # a pre-commit copy it has not re-synced. That is not a competing edit,
+        # and handing it to the LLM merge lets stale content overwrite fresh
+        # master work -- with -Priority pointing at the mirror, guaranteed to.
+        if (Test-IsBehindBase $relPath $mirrorContent) { return 'fast-forward-master' }
+        return 'conflict'
+    }
 }
 
 # ReAct-style 3-way merge: tries up to 5 strategies in order.
@@ -244,12 +397,12 @@ function Invoke-LlmMerge($relPath, $baseContent, $masterContent, $mirrorContent)
     $tmpBase   = [System.IO.Path]::GetTempFileName()
     $tmpMirror = [System.IO.Path]::GetTempFileName()
     try {
-        Set-Content $tmpBase   $baseContent   -Encoding UTF8 -NoNewline
-        Set-Content $tmpMirror $mirrorContent -Encoding UTF8 -NoNewline
+        Write-TextNoBom $tmpBase $baseContent
+        Write-TextNoBom $tmpMirror $mirrorContent
 
         for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
             $tmpMaster = [System.IO.Path]::GetTempFileName()
-            Set-Content $tmpMaster $masterContent -Encoding UTF8 -NoNewline
+            Write-TextNoBom $tmpMaster $masterContent
 
             Write-Host "  [MERGE] Attempt $attempt/$maxAttempts for $relPath" -ForegroundColor Cyan
 
@@ -265,27 +418,27 @@ function Invoke-LlmMerge($relPath, $baseContent, $masterContent, $mirrorContent)
                 3 {
                     # Prefer mirror (theirs) for all conflict sections
                     git merge-file -q $tmpMaster $tmpBase $tmpMirror 2>&1 | Out-Null
-                    $candidate = Get-Content $tmpMaster -Raw -Encoding UTF8
+                    $candidate = Read-TextUtf8 $tmpMaster
                     $resolved = $candidate -replace '(?ms)<<<<<<< [^\n]*\n.*?=======\n(.*?)>>>>>>> [^\n]*\n', '$1'
-                    Set-Content $tmpMaster $resolved -Encoding UTF8 -NoNewline
+                    Write-TextNoBom $tmpMaster $resolved
                 }
                 4 {
                     # Prefer master (ours) for all conflict sections
                     git merge-file -q $tmpMaster $tmpBase $tmpMirror 2>&1 | Out-Null
-                    $candidate = Get-Content $tmpMaster -Raw -Encoding UTF8
+                    $candidate = Read-TextUtf8 $tmpMaster
                     $resolved = $candidate -replace '(?ms)<<<<<<< [^\n]*\n(.*?)=======\n.*?>>>>>>> [^\n]*\n', '$1'
-                    Set-Content $tmpMaster $resolved -Encoding UTF8 -NoNewline
+                    Write-TextNoBom $tmpMaster $resolved
                 }
                 5 {
                     # Last resort: union then strip all remaining conflict markers
                     git merge-file -q --union $tmpMaster $tmpBase $tmpMirror 2>&1 | Out-Null
-                    $candidate = Get-Content $tmpMaster -Raw -Encoding UTF8
+                    $candidate = Read-TextUtf8 $tmpMaster
                     $resolved = $candidate -replace '(?ms)(<<<<<<< [^\n]*\n|=======\n|>>>>>>> [^\n]*\n)', ''
-                    Set-Content $tmpMaster $resolved -Encoding UTF8 -NoNewline
+                    Write-TextNoBom $tmpMaster $resolved
                 }
             }
 
-            $mergedContent = Get-Content $tmpMaster -Raw -Encoding UTF8
+            $mergedContent = Read-TextUtf8 $tmpMaster
             Remove-Item $tmpMaster -Force -ErrorAction SilentlyContinue
 
             if ($mergedContent -notmatch '<<<<<<< ') {
@@ -303,7 +456,7 @@ function Invoke-LlmMerge($relPath, $baseContent, $masterContent, $mirrorContent)
                    Where-Object { $_ -notmatch '^warning:' } | Out-String
         $conflictFile = (Join-Path $PSScriptRoot $relPath) + '.conflict'
         $conflictContent = "# MANUAL MERGE REQUIRED: $relPath`n# Apply the mirror diff below onto the master copy, then delete this file.`n#`n$diffOut"
-        Set-Content $conflictFile $conflictContent -Encoding UTF8
+        Write-TextNoBom $conflictFile $conflictContent -AppendNewline
         Write-Host "  Conflict diff written to: $conflictFile" -ForegroundColor Red
         return $null
 
@@ -466,7 +619,23 @@ You MUST return exactly one decision object for EACH of these change ids: $(($ch
         options = @{ temperature = 0 }
     } | ConvertTo-Json -Depth 12
     try {
-        $resp = Invoke-RestMethod -Uri "$OllamaUrl/api/generate" -Method Post -Body $body -ContentType 'application/json' -TimeoutSec 300 -ErrorAction Stop
+        # Send UTF-8 BYTES, not a string. Windows PowerShell 5.1's
+        # Invoke-RestMethod encodes a string -Body as Latin-1 when the
+        # Content-Type carries no charset, so every character above U+00FF is
+        # mangled and the request body is no longer valid UTF-8 -- ollama answers
+        # 400 with an empty body, which tells you nothing.
+        #
+        # Measured 2026-07-26 on agentic-harness/SKILL.md, three-way isolation:
+        #   full content (229 chars > U+00FF) -> 400
+        #   same content, those chars stripped -> OK
+        #   same LENGTH of plain filler        -> OK
+        # So it is the character range, not the payload size.
+        #
+        # This surfaced only after the skills were repaired: mojibake is entirely
+        # Latin-1-range, so the corrupted files used to send "fine". Fixing the
+        # encoding of the corpus exposed the latent bug in the transport.
+        $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+        $resp = Invoke-RestMethod -Uri "$OllamaUrl/api/generate" -Method Post -Body $bodyBytes -ContentType 'application/json; charset=utf-8' -TimeoutSec 300 -ErrorAction Stop
         $raw = if ($resp.PSObject.Properties.Name -contains 'response') { $resp.response } else { $null }
         if ([string]::IsNullOrWhiteSpace($raw)) {
             Write-Host "  [OLLAMA ERROR] $rel : empty response from model" -ForegroundColor Red
@@ -481,7 +650,21 @@ You MUST return exactly one decision object for EACH of these change ids: $(($ch
         }
         return @($parsed.decisions)
     } catch {
+        # Invoke-RestMethod surfaces only "(400) Bad Request" and discards the
+        # response body, which is where ollama actually says WHAT was wrong.
+        # Without this the failure is undebuggable from the console alone.
+        $detail = ''
+        try {
+            $stream = $_.Exception.Response.GetResponseStream()
+            if ($stream) {
+                $detail = (New-Object System.IO.StreamReader($stream)).ReadToEnd()
+            }
+        } catch { }
         Write-Host "  [OLLAMA ERROR] $rel : $($_.Exception.Message)" -ForegroundColor Red
+        if ($detail) {
+            Write-Host "                 server said: $($detail.Trim())" -ForegroundColor DarkRed
+        }
+        Write-Host ("                 prompt was {0:N0} chars, model {1}" -f $prompt.Length, $script:ResolvedModel) -ForegroundColor DarkRed
         return $null
     }
 }
@@ -607,7 +790,7 @@ function Write-ConflictArtifact($entry, $result) {
             [void]$sb.AppendLine('')
         }
     }
-    if (-not $DryRun) { Set-Content $conflictFile $sb.ToString() -Encoding UTF8 }
+    if (-not $DryRun) { Write-TextNoBom $conflictFile $sb.ToString() -AppendNewline }
     Write-Host "  Conflict artifact: $conflictFile" -ForegroundColor Red
 }
 
@@ -712,6 +895,9 @@ Write-Header "Checking tracked .md files that differ from master"
 $needsMerge = [System.Collections.Generic.List[hashtable]]::new()
 # Per-rel-path aggregation across ALL mirrors (master = anchor) for the LLM engine.
 $byPath = [ordered]@{}
+# Paths already reported, so the [DIFF] list stays one line per file rather than
+# one per (file x mirror) pair.
+$script:SeenDiffRels = [System.Collections.Generic.HashSet[string]]::new()
 
 if ($skipReconciliation) {
     Write-Host "  [SKIP] Reconciliation disabled in current mode; downstream edits will not be promoted." -ForegroundColor DarkGray
@@ -731,11 +917,17 @@ if ($skipReconciliation) {
 
             # Direction is NOT decided by timestamp here. master is the anchor; any
             # mirror whose content differs contributes proposed changes the LLM judges.
-            $masterContent = if ($masterExists) { Normalize-LineEndings (Get-Content $masterFile -Raw) } else { $null }
-            $mirrorContent = Normalize-LineEndings (Get-Content $mf -Raw)
-            if ($masterContent -ne $mirrorContent) {
+            $masterContent = if ($masterExists) { Normalize-LineEndings (Read-TextUtf8 $masterFile) } else { $null }
+            $mirrorContent = Normalize-LineEndings (Read-TextUtf8 $mf)
+            if (-not (Test-ContentEqual $masterContent $mirrorContent)) {
                 $count++
-                Write-Host ("  [DIFF] {0,-55} {1}" -f $rel, $mfTime.ToString("yyyy-MM-dd HH:mm")) -ForegroundColor Yellow
+                # One line per FILE, not per (file x mirror) pair. Five mirrors made
+                # 13 differing files print as 65 lines, which reads as five times the
+                # actual blast radius.
+                if (-not $script:SeenDiffRels.Contains($rel)) {
+                    [void]$script:SeenDiffRels.Add($rel)
+                    Write-Host ("  [DIFF] {0,-55} {1}" -f $rel, $mfTime.ToString("yyyy-MM-dd HH:mm")) -ForegroundColor Yellow
+                }
                 $needsMerge.Add(@{
                     Mirror      = $mirror
                     MirrorLabel = Get-MirrorLabel $mirror
@@ -831,20 +1023,28 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
                 continue
             }
             $baseContent   = Get-BaseContent $item.Rel
-            $masterContent = if ($item.MasterExists) { Normalize-LineEndings (Get-Content $item.MasterFile -Raw) } else { $null }
-            $mirrorContent = Normalize-LineEndings (Get-Content $item.MirrorFile -Raw)
+            $masterContent = if ($item.MasterExists) { Normalize-LineEndings (Read-TextUtf8 $item.MasterFile) } else { $null }
+            $mirrorContent = Normalize-LineEndings (Read-TextUtf8 $item.MirrorFile)
             $masterTime    = if ($item.MasterExists) { (Get-Item $item.MasterFile).LastWriteTime } else { $null }
-            $case = Get-SyncCase $masterContent $mirrorContent $baseContent $masterTime $item.MirrorTime $item.MirrorLabel
+            $case = Get-SyncCase $masterContent $mirrorContent $baseContent $masterTime $item.MirrorTime $item.MirrorLabel $item.Rel
             $item['SyncCase']    = $case
             $item['BaseContent'] = $baseContent
             if ($case -eq 'conflict') { $conflicts.Add($item) } else { $fastForwards.Add($item) }
         }
 
+        # Split the two fast-forward directions. Reporting them as one number
+        # labelled "mirror additive" reads as "mirrors are about to overwrite
+        # master" even when every item is the opposite case (master is newer and
+        # will be pushed downstream). Same count, opposite meaning.
+        $ffMirror = @($fastForwards | Where-Object { $_.SyncCase -eq 'fast-forward-mirror' }).Count
+        $ffMaster = @($fastForwards | Where-Object { $_.SyncCase -eq 'fast-forward-master' }).Count
         $ffCount  = $fastForwards.Count
         $cfCount  = $conflicts.Count
-        Write-Host "`n$($needsMerge.Count) tracked file(s) differ from master:" -ForegroundColor Yellow
-        Write-Host "  Fast-forward (mirror additive): $ffCount" -ForegroundColor Cyan
-        Write-Host "  Conflict (both sides diverged): $cfCount" -ForegroundColor Magenta
+        $distinctRels = ($needsMerge | ForEach-Object { $_.Rel } | Sort-Object -Unique).Count
+        Write-Host "`n$distinctRels tracked file(s) differ from master ($($needsMerge.Count) file x mirror pair(s)):" -ForegroundColor Yellow
+        Write-Host "  Mirror newer -> promote to master : $ffMirror" -ForegroundColor Cyan
+        Write-Host "  Master newer -> push downstream   : $ffMaster" -ForegroundColor DarkGray
+        Write-Host "  Conflict (both sides diverged)    : $cfCount" -ForegroundColor Magenta
 
         $resp = Read-Choice "How to handle? [y=auto-apply all / n=skip all / d=review each] (default: d)" 'd' 'y'
 
@@ -853,7 +1053,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
             if (-not $DryRun) {
                 $parent = Split-Path $item.MasterFile -Parent
                 if (-not (Test-Path $parent)) { New-Item $parent -ItemType Directory -Force | Out-Null }
-                Set-Content $item.MasterFile $content -Encoding UTF8 -NoNewline
+                Write-TextNoBom $item.MasterFile $content
                 [void]$touchedPaths.Add($item.MasterFile)
             }
         }
@@ -866,7 +1066,28 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
             } else {
                 Write-Host "  Using model: $($script:ResolvedModel)" -ForegroundColor DarkGray
             }
-            foreach ($entry in @($byPath.Values)) {
+            # Skip paths where master is newer than EVERY mirror. Those are already
+            # classified 'fast-forward-master' -- Step 5 pushes master downstream to
+            # refresh them, so there is nothing here to reconcile.
+            #
+            # The summary above counts SyncCase per (file x mirror) pair, but this
+            # engine iterated every path regardless, so a run reporting
+            # "Conflict: 0" still sent all 13 files to the LLM. That is the path
+            # that reverted six repaired skills on 2026-07-26: master-newer files
+            # were handed to a judge with no reason to prefer master.
+            $needsLlm = @($byPath.Values | Where-Object {
+                $rel = $_.Rel
+                $cases = @($needsMerge | Where-Object { $_.Rel -eq $rel } |
+                           ForEach-Object { $_.SyncCase })
+                # No classification recorded -> still reconcile. Fail safe, never
+                # silently skip a file we failed to classify.
+                (-not $cases) -or @($cases | Where-Object { $_ -ne 'fast-forward-master' }).Count -gt 0
+            })
+            $skippedFf = $byPath.Count - $needsLlm.Count
+            if ($skippedFf -gt 0) {
+                Write-Host "  $skippedFf path(s) skipped: master newer than every mirror (Step 5 pushes downstream)." -ForegroundColor DarkGray
+            }
+            foreach ($entry in $needsLlm) {
                 $result = Invoke-MultiMirrorMerge $entry
                 switch ($result.Status) {
                     'added' {
@@ -905,8 +1126,8 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
 
             $syncCase      = $item['SyncCase']
             $baseContent   = $item['BaseContent']
-            $masterContent = if ($item.MasterExists) { Normalize-LineEndings (Get-Content $item.MasterFile -Raw) } else { $null }
-            $mirrorContent = Normalize-LineEndings (Get-Content $item.MirrorFile -Raw)
+            $masterContent = if ($item.MasterExists) { Normalize-LineEndings (Read-TextUtf8 $item.MasterFile) } else { $null }
+            $mirrorContent = Normalize-LineEndings (Read-TextUtf8 $item.MirrorFile)
 
             $caseLabel = switch ($syncCase) {
                 'fast-forward-mirror'  { '[FAST-FWD]' }
@@ -1038,7 +1259,12 @@ $ClaudeVaultRoot = Join-Path $Master 'harness'
 # local-override/secrets lane so it is excluded by contract, not by accident.
 $ClaudeRootFiles = @('CLAUDE.md', 'SOUL.md', 'AGENTS.md', 'settings.json')
 $ClaudeDirs      = @('agents', 'rules', 'docs', 'commands', 'hooks', 'output-styles')
-$ClaudeExcludeRx = '(^|\\)(settings\.local\.json|.*\.log|.*\.lock|.*\.status\.json|history\.jsonl|stats-cache\.json)$'
+# .conflict artifacts and __pycache__ are transient debris this script itself
+# produces, never authored harness config. Capturing a .conflict into the vault
+# makes it permanent: it is then "in vault, missing from ~/.claude" on every
+# subsequent run, prompting to restore merge garbage into the live harness
+# forever. Observed 2026-07-26 with hooks\membank.py.conflict.
+$ClaudeExcludeRx = '(^|\\)(settings\.local\.json|.*\.log|.*\.lock|.*\.status\.json|history\.jsonl|stats-cache\.json|.*\.conflict|__pycache__(\\.*)?|.*\.pyc)$'
 
 # Enumerate allowlisted paths under a root, returned as root-relative paths.
 function Get-HarnessRelPaths($root) {
@@ -1119,8 +1345,8 @@ if ($skipReconciliation) {
             continue
         }
 
-        $liveContent  = Normalize-LineEndings (Get-Content $liveFile  -Raw -ErrorAction SilentlyContinue)
-        $vaultContent = Normalize-LineEndings (Get-Content $vaultFile -Raw -ErrorAction SilentlyContinue)
+        $liveContent  = Normalize-LineEndings (Read-TextUtf8 $liveFile)
+        $vaultContent = Normalize-LineEndings (Read-TextUtf8 $vaultFile)
         if ($liveContent -eq $vaultContent) { $hStats.NoOp++; continue }
 
         # 3-way against the committed vault copy. Live plays the 'mirror' role and
@@ -1130,7 +1356,7 @@ if ($skipReconciliation) {
         $base      = Get-BaseContent $vaultRel
         $liveTime  = (Get-Item $liveFile).LastWriteTime
         $vaultTime = (Get-Item $vaultFile).LastWriteTime
-        $case = Get-SyncCase $vaultContent $liveContent $base $vaultTime $liveTime '.claude'
+        $case = Get-SyncCase $vaultContent $liveContent $base $vaultTime $liveTime '.claude' $vaultRel
 
         switch ($case) {
             'fast-forward-mirror' {
@@ -1152,14 +1378,14 @@ if ($skipReconciliation) {
                         $art = "$vaultFile.conflict"
                         $d = git -c core.autocrlf=false diff --no-index --unified=3 -- $vaultFile $liveFile 2>&1 |
                              Where-Object { $_ -notmatch '^warning:' }
-                        Set-Content $art (@(
+                        Write-TextNoBom $art (@(
                             "# MANUAL MERGE REQUIRED: $rel",
                             "# vault: $vaultFile",
                             "# live : $liveFile",
                             "# Structured (non-markdown) file -- auto-merge disabled by contract.",
                             "# Reconcile by hand, then delete this file.",
                             "#"
-                        ) + $d -join "`n") -Encoding UTF8
+                        ) + $d -join "`n") -AppendNewline
                     }
                     $hStats.Flagged++
                 } else {
@@ -1171,8 +1397,8 @@ if ($skipReconciliation) {
                         if (-not $DryRun) {
                             $parent = Split-Path $vaultFile -Parent
                             if (-not (Test-Path $parent)) { New-Item $parent -ItemType Directory -Force | Out-Null }
-                            Set-Content $vaultFile $merged -Encoding UTF8 -NoNewline
-                            Set-Content $liveFile  $merged -Encoding UTF8 -NoNewline
+                            Write-TextNoBom $vaultFile $merged
+                            Write-TextNoBom $liveFile $merged
                             [void]$touchedPaths.Add($vaultFile)
                         }
                         Write-Host "  [MERGE]     $rel -- both sides diverged; merged into vault AND ~/.claude." -ForegroundColor Green
@@ -1211,10 +1437,10 @@ Write-Header "Syncing master -> local mirrors"
 foreach ($mirror in $Mirrors) {
     Write-Host "  -> $mirror"
     if ($DryRun) {
-        robocopy $Master $mirror /MIR /L /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" "__pycache__" ".pytest_cache" ".react_agent" "ms-playwright" "node_modules" "$ClaudeVaultRoot" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" 2>&1 |
+        robocopy $Master $mirror /MIR /L /NJH /NJS /NDL /NC /NS /XD ".git" ".todo" "__pycache__" ".pytest_cache" ".react_agent" "ms-playwright" "node_modules" "$ClaudeVaultRoot" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" "*.conflict" 2>&1 |
             Where-Object { $_ -match '\S' } | Select-Object -First 20 | ForEach-Object { Write-Host "     $_" -ForegroundColor DarkGray }
     } else {
-        robocopy $Master $mirror /MIR /NJH /NJS /NDL /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" "ms-playwright" "node_modules" "$ClaudeVaultRoot" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" | Out-Null
+        robocopy $Master $mirror /MIR /NJH /NJS /NDL /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" "ms-playwright" "node_modules" "$ClaudeVaultRoot" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" "*.conflict" | Out-Null
         $rc = $LASTEXITCODE
         if ($rc -le 1) {
             Write-Host "     OK (exit $rc)" -ForegroundColor Green
@@ -1363,7 +1589,7 @@ if (-not $DryRun) {
     if ($previewChoice -eq 'y') {
         Write-Header "Remote sync preview (robocopy /L - files that differ from master)"
         Write-Host "  Files listed below would be transferred on next remote sync." -ForegroundColor DarkGray
-        robocopy $Master "$env:TEMP\__sync_preview_dummy__" /MIR /L /NJH /NJS /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" "ms-playwright" "node_modules" "$ClaudeVaultRoot" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" 2>&1 |
+        robocopy $Master "$env:TEMP\__sync_preview_dummy__" /MIR /L /NJH /NJS /NC /NS /XD ".git" ".pytest_cache" ".todo" ".react_agent" "__pycache__" ".copilot" "ms-playwright" "node_modules" "$ClaudeVaultRoot" /XF "*.pyc" "*.db" "*.jsonl" "*.exe" "*.dll" "*.pak" "*.conflict" 2>&1 |
             Where-Object { $_ -match '\S' } | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
     }
 }

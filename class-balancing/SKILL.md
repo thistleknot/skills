@@ -1,5 +1,5 @@
-﻿---
-name: reasoning_curation_sampler
+---
+name: class-balancing
 description: >
   Construct a stratified, token-efficient training distribution for reasoning
   transfer using **conditional stratification**. Use when mixing disparate

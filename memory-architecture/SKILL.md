@@ -375,3 +375,61 @@ Brain's reported figures (+25% correctness, +16% recall, −13% cost on history-
 ## See Also
 [[nearest-neighbor-chain]]  [[codebase-knowledge-graph]]  [[checklist]]
 <!-- consolidation:see-also:end -->
+
+---
+
+## Embedding queue architecture (skills corpus)
+
+The skills corpus is pre-computed with triplet embeddings and BM25 KG columns so
+memory queries never extract features on-the-fly. Ingestion is decoupled from
+consolidation so an infrequent analysis run is not coupled to frequent skill edits.
+
+**Workflow.**
+
+1. *Skill changes* (edit/add/delete). A file watcher or git post-hook emits an
+   embedding task — skill name, timestamp, action — to the fastmcp/fastapi queue.
+2. *Queue server* records pending state in a SQLite checkpoint and returns
+   immediately; it never blocks the caller. A background worker pool extracts
+   triplets, computes premise embeddings, and updates the BM25 KG column, saving
+   to `consolidation/.checkpoint.db` keyed by `(skill_name, content_hash)`.
+3. *Consolidation run* first emits cancel-pending; the server returns the count
+   cancelled and the skills left pending. Consolidation fetches the checkpoint,
+   identifies stale entries (absent, or timestamp older than the last skill edit),
+   resubmits them as one priority batch, then proceeds to the similarity matrix,
+   chain decomposition, and graph analysis.
+
+**Idempotency.** Tasks are keyed by `(skill_name, content_hash)` — resubmitting
+unchanged content is a no-op. Timestamp ordering is what lets consolidation
+identify which skills changed since the last embedding run. Embeddings update
+only when skills actually change, not on every consolidation.
+
+**Schema.** Lives alongside consolidation's run log in `.checkpoint.db`:
+
+```sql
+CREATE TABLE embeddings (
+  skill_name TEXT NOT NULL,
+  content_hash TEXT NOT NULL,
+  premise_embeddings BLOB,   -- numpy array, serialized
+  bm25_kg_column BLOB,       -- BM25 scores for KG triplet matching
+  computed_at TEXT,
+  PRIMARY KEY (skill_name, content_hash)
+);
+
+CREATE TABLE embedding_queue (
+  task_id TEXT PRIMARY KEY,
+  skill_name TEXT NOT NULL,
+  action TEXT,               -- 'update' | 'delete' | 'batch'
+  submitted_at TEXT,
+  completed_at TEXT,
+  status TEXT                -- 'pending' | 'running' | 'done' | 'error'
+);
+```
+
+**Endpoints.** `POST /queue/task` (submit), `POST /queue/cancel-pending`
+(cancel all, return summary), `GET /queue/status` (per-skill state).
+
+**Why this shape.** Lazy ingestion (embeddings compute as skills change, not when
+consolidation runs); no coupling (consolidation stays focused on triplet
+correlation); batch efficiency (flush the pending queue in one shot rather than
+triggering fresh extractions); observable progress; and checkpoint reuse, so
+later runs skip already-computed embeddings.

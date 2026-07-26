@@ -1,7 +1,7 @@
-﻿---
+---
 name: evaluator-optimizer
 description: >
-  Iterative LLM-generates â†’ LLM-critiques â†’ LLM-regenerates loop. Use when
+  Iterative LLM-generates → LLM-critiques → LLM-regenerates loop. Use when
   a single generation pass is insufficient and quality must compound across
   iterations. Covers stopping criteria, prompt threading, MBR selection,
   and the distinction from offline eval pipelines. Subskill of agentic-harness.
@@ -13,7 +13,7 @@ last_validated: 2026-04-28
 
 ## When to Use
 
-Use this pattern â€” not a single generation call â€” when:
+Use this pattern — not a single generation call — when:
 
 - Output quality has a well-defined rubric that an LLM can apply (code correctness, factual accuracy, style, security)
 - Multiple candidate solutions should be compared and the best selected (MBR)
@@ -22,8 +22,8 @@ Use this pattern â€” not a single generation call â€” when:
 
 Do **not** use when:
 - A single pass is already at the quality ceiling (eval returns perfect scores immediately)
-- The evaluation requires execution / runtime feedback â†’ use `self-repair` instead
-- You are judging a static artifact, not iterating on generation â†’ use `checklist` instead
+- The evaluation requires execution / runtime feedback → use `self-repair` instead
+- You are judging a static artifact, not iterating on generation → use `checklist` instead
 
 ---
 
@@ -39,11 +39,11 @@ Do **not** use when:
 â”‚   evaluator  â”‚  LLM-as-judge; produces structured critique + score
 â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜
        â”‚ verdict
-       â”œâ”€â”€â”€ score â‰¥ threshold  â”€â”€â–º  [accept]
+       â”œâ”€â”€â”€ score ≥ threshold  â”€â”€â–º  [accept]
        â””â”€â”€â”€ score < threshold  â”€â”€â–º  optimizer
                                        â”‚
                                â”Œâ”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”
-                               â”‚   optimizer  â”‚  synthesizes critique â†’ new prompt
+                               â”‚   optimizer  â”‚  synthesizes critique → new prompt
                                â””â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
                                        â”‚ refined prompt
                                        â””â”€â”€â–º generator  (next iteration)
@@ -131,14 +131,14 @@ class EvalVerdict(BaseModel):
 class CriterionResult(BaseModel):
     name: str
     passed: bool
-    explanation: str                # â‰¤ 2 sentences; becomes optimizer context
+    explanation: str                # ≤ 2 sentences; becomes optimizer context
 ```
 
 **Anti-patterns:**
-- Evaluator returns prose only â†’ optimizer cannot extract blocking issues reliably
-- Evaluator and generator share the same system prompt â†’ evaluator inherits the generator's
+- Evaluator returns prose only → optimizer cannot extract blocking issues reliably
+- Evaluator and generator share the same system prompt → evaluator inherits the generator's
   perspective and cannot critique it objectively (role contamination)
-- Evaluator score always passes on round 1 â†’ rubric is too loose; tighten criteria or
+- Evaluator score always passes on round 1 → rubric is too loose; tighten criteria or
   calibrate scoring against known-bad examples
 
 ---
@@ -148,7 +148,7 @@ class CriterionResult(BaseModel):
 ### Score floor
 
 `0.0` is reserved for **empty or unparseable output only**. A non-empty, coherent response
-that has flaws must receive a score â‰¥ 0.15 regardless of severity.
+that has flaws must receive a score ≥ 0.15 regardless of severity.
 
 ```python
 # Required guard after every evaluator call
@@ -182,21 +182,21 @@ that cannot be overridden by prompt instructions alone. These biases manifest as
 
 | Model size | Bias class | Symptom |
 |---|---|---|
-| â‰¤ 3B | Narrative voice / POV | Always flags second person; sometimes third-person omniscient as "wrong POV" |
-| â‰¤ 3B | Passive voice | Penalizes all passive constructions regardless of context |
-| â‰¤ 3B | Sentence length | Scores short sentences low as "incomplete"; scores long sentences low as "complex" |
-| â‰¤ 3B | Dialogue tagging | Flags any non-"said" dialogue tag as an error |
+| ≤ 3B | Narrative voice / POV | Always flags second person; sometimes third-person omniscient as "wrong POV" |
+| ≤ 3B | Passive voice | Penalizes all passive constructions regardless of context |
+| ≤ 3B | Sentence length | Scores short sentences low as "incomplete"; scores long sentences low as "complex" |
+| ≤ 3B | Dialogue tagging | Flags any non-"said" dialogue tag as an error |
 
 **The fix is exclusion, not instruction.** Telling a small-model evaluator "do not evaluate X"
-does not suppress the bias â€” the model pattern-matches on the axis regardless of instructions
+does not suppress the bias — the model pattern-matches on the axis regardless of instructions
 and leaks the penalty into the aggregate score.
 
 Correct approach:
 ```
-# BAD â€” small model will still penalize POV regardless
+# BAD — small model will still penalize POV regardless
 "Evaluate the following story on: plot logic, character consistency, narrative voice."
 
-# GOOD â€” exclude the biased axis entirely
+# GOOD — exclude the biased axis entirely
 "Evaluate the following story on: plot logic (do events follow from each other?),
 character consistency (do characters act per their established traits?).
 Do NOT include narrative voice, POV, sentence structure, or style in your evaluation."
@@ -215,14 +215,14 @@ Do NOT include narrative voice, POV, sentence structure, or style in your evalua
 
 A model cannot validate its own sufficiency. If you are testing whether a smaller or
 cheaper model handles a task well enough, the verdict must come from a model that is
-demonstrably stronger â€” not a peer, and never the model under test.
+demonstrably stronger — not a peer, and never the model under test.
 
 ```
 valid:     GPT-4o judges Qwen-3.5-0.8b output            âœ“
 valid:     Claude Sonnet judges Haiku output              âœ“
 invalid:   Qwen-3.5-0.8b judges its own output           âœ—
 invalid:   Haiku judges Haiku output                      âœ—
-invalid:   equal-capability model used as judge           âœ— (marginal â€” avoid)
+invalid:   equal-capability model used as judge           âœ— (marginal — avoid)
 ```
 
 This applies everywhere a model output is being scored for sufficiency:
@@ -232,7 +232,7 @@ This applies everywhere a model output is being scored for sufficiency:
 - Eval pipeline: the judge LLM in the `llm_judge` scorer must outrank the system under eval
 - MBR selection: if using an LLM to pick best-of-N from a cheap generator, the selector
   must be the stronger model
-- `checklist` audit passes: judge model tier â‰¥ generator model tier + 1 capability level
+- `checklist` audit passes: judge model tier ≥ generator model tier + 1 capability level
 
 **Practical implication for model routing:**
 Using `qwen3.5:0.8b` for a task in production means a stronger model (e.g., Sonnet,
@@ -250,7 +250,7 @@ Stop iterating when **any** of:
 | Condition | Rationale |
 |---|---|
 | `score >= ACCEPTANCE_THRESHOLD` | Quality criterion met |
-| `delta_score < MIN_IMPROVEMENT` for N consecutive rounds | Plateau â€” further iterations will not help |
+| `delta_score < MIN_IMPROVEMENT` for N consecutive rounds | Plateau — further iterations will not help |
 | `max_rounds` reached | Budget cap |
 | Evaluator returns identical `blocking_issues` twice in a row | Generator is stuck; changing the optimizer prompt or the model is needed |
 
@@ -264,7 +264,7 @@ runaway token spend in agentic pipelines.
 Before deploying the pattern to production:
 
 1. Run the evaluator on 10 known-good and 10 known-bad examples.
-2. Verify that `score â‰¥ ACCEPTANCE_THRESHOLD` separates them with < 10% error.
+2. Verify that `score ≥ ACCEPTANCE_THRESHOLD` separates them with < 10% error.
 3. If the evaluator fails calibration, rewrite the rubric; do not tune the threshold.
 
 ---
@@ -274,7 +274,7 @@ Before deploying the pattern to production:
 Evaluator-optimizer is a harness **node pair**, not a full pipeline. Wire it as:
 
 ```
-task_node â†’ generator_node â”€â”
+task_node → generator_node â”€â”
                               â”œâ”€â–º evaluator_node â”€â–º optimizer_node â”€â–º generator_node (loop)
                               â””â”€â–º accept_node (on pass)
 ```

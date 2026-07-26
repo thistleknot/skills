@@ -1,8 +1,8 @@
-﻿---
-name: react_agent
+---
+name: react-agent
 description: >
   Use this skill whenever the user gives an instruction that requires multi-step
-  autonomous task execution â€” refactoring, migrations, building features, pipeline
+  autonomous task execution — refactoring, migrations, building features, pipeline
   construction, data processing, infrastructure setup, or any task where the agent
   must plan, act, observe results, and iterate. Trigger on phrases like "automate",
   "build", "migrate", "refactor", "set up", "implement", "fix all", "convert",
@@ -39,7 +39,7 @@ reasoning_client = OpenAI(api_key="dummy-key", base_url="http://127.0.0.1:8069/v
 ```
 
 If copilot-proxy is unavailable, fall back to whatever model is active in the
-current session â€” the skill logic is model-agnostic.
+current session — the skill logic is model-agnostic.
 
 ## Default Agent Settings
 
@@ -71,10 +71,10 @@ See `agentic-harness/SKILL.md Â§ Default Agent Settings` for the full paramete
 Before fixing `retrieval_depth`, apply this conditional model:
 
 ```
-IF task = single-file change or bounded lookup            â†’ retrieval_depth = 3
-IF task = multi-file refactor or moderate investigation   â†’ retrieval_depth = 5 (default)
-IF task = architectural change / unknown codebase         â†’ retrieval_depth = 8+
-ELSE (scope ambiguous from the task statement)            â†’ ask during the Ambiguity Check interview
+IF task = single-file change or bounded lookup            → retrieval_depth = 3
+IF task = multi-file refactor or moderate investigation   → retrieval_depth = 5 (default)
+IF task = architectural change / unknown codebase         → retrieval_depth = 8+
+ELSE (scope ambiguous from the task statement)            → ask during the Ambiguity Check interview
 ```
 
 Contingencies:
@@ -91,11 +91,11 @@ imposing structure on the agent's reasoning loop without constraining its
 problem-solving flexibility.
 
 The architecture draws from five research patterns:
-- **Harness wrapping** â€” validate actions before execution, reject illegal ones
-- **Episodic case memory** â€” store (task, approach, outcome) for retrieval
-- **Persistent progress tracking** â€” log what worked, what failed, what to try next
-- **Progressive disclosure** â€” load context incrementally, not all at once
-- **Planner-executor separation** â€” reason about *what* at plan level, handle *how* at execution level
+- **Harness wrapping** — validate actions before execution, reject illegal ones
+- **Episodic case memory** — store (task, approach, outcome) for retrieval
+- **Persistent progress tracking** — log what worked, what failed, what to try next
+- **Progressive disclosure** — load context incrementally, not all at once
+- **Planner-executor separation** — reason about *what* at plan level, handle *how* at execution level
 
 ## Relation to Agentic Harness
 
@@ -199,17 +199,17 @@ Before writing any code or making any change, execute this sequence:
 
 ### Phase 0: Reframe
 
-**Before anything else** â€” if `.react_agent/corrections.md` exists, read it in full. It records behavioral mistakes from prior sessions (wrong file edited, requirement misunderstood, validation skipped). Apply its rules now; do not wait until you repeat an error. If `.react_agent/autonomy.md` exists, read it immediately after â€” it defines standing permission tiers (Free / Ask first / Never) that apply to every task in this project regardless of per-task scope.
+**Before anything else** — if `.react_agent/corrections.md` exists, read it in full. It records behavioral mistakes from prior sessions (wrong file edited, requirement misunderstood, validation skipped). Apply its rules now; do not wait until you repeat an error. If `.react_agent/autonomy.md` exists, read it immediately after — it defines standing permission tiers (Free / Ask first / Never) that apply to every task in this project regardless of per-task scope.
 
-**Ambiguity check** â€” before self-deriving requirements, assess whether the task is genuinely open-ended: multiple valid interpretations, unclear scope boundary, or phrasing like "something like" or "maybe". If so, interview the user with 3â€“5 targeted questions. Capture answers in `.react_agent/interview.md` and derive `task.md` from that â€” not from inference alone. Skip the interview only when the task can be restated unambiguously in a single sentence.
+**Ambiguity check** — before self-deriving requirements, assess whether the task is genuinely open-ended: multiple valid interpretations, unclear scope boundary, or phrasing like "something like" or "maybe". If so, interview the user with 3–5 targeted questions. Capture answers in `.react_agent/interview.md` and derive `task.md` from that — not from inference alone. Skip the interview only when the task can be restated unambiguously in a single sentence.
 
 1. Restate the user's instruction as abstract requirements (what must be true when done)
-2. Identify the scope boundary â€” what is in scope, what is explicitly out
-3. List preconditions â€” what must exist/be true before you can start
-4. State the acceptance criteria â€” how will you (and the user) know it's done
-5. Identify risks â€” what could go wrong, what's irreversible
+2. Identify the scope boundary — what is in scope, what is explicitly out
+3. List preconditions — what must exist/be true before you can start
+4. State the acceptance criteria — how will you (and the user) know it's done
+5. Identify risks — what could go wrong, what's irreversible
 
-Write this to `.react_agent/task.md` as an **execution contract** â€” include all
+Write this to `.react_agent/task.md` as an **execution contract** — include all
 of the following fields explicitly:
 
 ```markdown
@@ -230,7 +230,7 @@ Before reconnaissance, run one pass of structured thinking over the task. This
 surfaces blind spots and contingencies **before** the first action, not after a
 failed attempt.
 
-**Six Hats sweep** (one sentence each â€” skip hats that don't apply):
+**Six Hats sweep** (one sentence each — skip hats that don't apply):
 
 | Hat | Lens | Ask |
 |---|---|---|
@@ -241,15 +241,15 @@ failed attempt.
 | ðŸŸ¢ Green | Alternatives | Is there a simpler or different approach? |
 | ðŸ”µ Blue | Process & meta | Am I solving the right problem? What order should this happen in? |
 
-**Temporal causal tree** â€” model the task as an if/then/else before acting:
+**Temporal causal tree** — model the task as an if/then/else before acting:
 
 ```
 START
- â”œâ”€ IF precondition A holds â†’ path P1
- â”‚    â”œâ”€ IF sub-condition B â†’ action X
- â”‚    â””â”€ ELSE â†’ action Y; check again
- â”œâ”€ IF precondition A missing â†’ action Z (unblock A first)
- â””â”€ ELSE (ambiguous) â†’ ask before proceeding
+ â”œâ”€ IF precondition A holds → path P1
+ â”‚    â”œâ”€ IF sub-condition B → action X
+ â”‚    â””â”€ ELSE → action Y; check again
+ â”œâ”€ IF precondition A missing → action Z (unblock A first)
+ â””â”€ ELSE (ambiguous) → ask before proceeding
 ```
 
 Identify at minimum:
@@ -259,7 +259,7 @@ Identify at minimum:
 
 Add a `contingencies:` field to the Execution Contract in `task.md`:
 ```markdown
-- contingencies: [branch â†’ fallback for each major if/then/else node]
+- contingencies: [branch → fallback for each major if/then/else node]
 ```
 
 ### Phase 1: Reconnaissance
@@ -268,7 +268,7 @@ Survey before you act. Do not propose solutions yet.
 
 1. Read the relevant parts of the codebase/environment (directory structure, key files, configs)
 2. Identify the entities involved (files, modules, services, data flows)
-3. Map dependencies â€” what depends on what, what order must changes happen in
+3. Map dependencies — what depends on what, what order must changes happen in
 4. Check for existing tests, CI configs, linting rules that constrain your changes
 5. Note anything surprising or contradictory
 
@@ -285,23 +285,23 @@ Decompose the task into ordered subtasks. For each subtask:
 - outputs: [what this subtask produces/changes]
 - output_paths: [exact .react_agent/ or project paths where outputs are written]
 - completion_condition: [single observable check that unambiguously means done]
-- validation: [how to confirm this subtask succeeded â€” command or file check]
+- validation: [how to confirm this subtask succeeded — command or file check]
 - rollback: [how to undo if this subtask fails]
-- risk: [low/medium/high] â€” [why]
+- risk: [low/medium/high] — [why]
 ```
 
-The `completion_condition` must be concrete and path-addressable â€” not "looks good" or
+The `completion_condition` must be concrete and path-addressable — not "looks good" or
 "tests pass" without specifying which tests. It is the input to the Verifier role.
 
 Write plan to `.react_agent/plan.md`.
 
 Order subtasks by dependency. Independent subtasks can be done in any order.
-Dependent subtasks must be done in series. Predecessors first â€” get prior layers
+Dependent subtasks must be done in series. Predecessors first — get prior layers
 working before moving to later ones.
 
-**Parallel dispatch** â€” when two or more subtasks are independent (no shared file writes, no shared state), mark them `spawn: parallel` in the plan and execute them as separate subagents. Each parallel subagent runs its own context window and reports only a summary back to the main session. This keeps the main context lean and reduces wall-clock time. Do NOT parallelize subtasks that write to the same files or depend on each other's outputs.
+**Parallel dispatch** — when two or more subtasks are independent (no shared file writes, no shared state), mark them `spawn: parallel` in the plan and execute them as separate subagents. Each parallel subagent runs its own context window and reports only a summary back to the main session. This keeps the main context lean and reduces wall-clock time. Do NOT parallelize subtasks that write to the same files or depend on each other's outputs.
 
-**Persona dispatch** â€” when spawning any subagent (parallel or serial), prefer loading a **persona file** from `.react_agent/personas/` rather than passing inline role instructions. A persona file carries role definition, constraints, output format, and accumulated timestamped lessons from prior runs. Inline instructions are one-shot; personas improve from experience. See `MEMORY.md` for the persona file format.
+**Persona dispatch** — when spawning any subagent (parallel or serial), prefer loading a **persona file** from `.react_agent/personas/` rather than passing inline role instructions. A persona file carries role definition, constraints, output format, and accumulated timestamped lessons from prior runs. Inline instructions are one-shot; personas improve from experience. See `MEMORY.md` for the persona file format.
 
 ### Recursive Decomposition
 
@@ -309,7 +309,7 @@ If a subtask is itself too complex (ambiguous scope, multiple unknowns, or
 estimated 5+ steps), do not force it into a single node. Recurse:
 
 1. Mark the subtask as a **sub-plan** in `plan.md`
-2. Run Phases 0â€“2 (Reframe, Recon, Plan) scoped to just that subtask
+2. Run Phases 0–2 (Reframe, Recon, Plan) scoped to just that subtask
 3. Write the sub-plan as an indented block under the parent subtask
 4. Execute the sub-plan as its own nested ReAct loop
 5. Collapse it back to a single status entry in `progress.md` when done
@@ -346,7 +346,7 @@ For each subtask, execute the following loop:
 
 ### REASON
 
-Before each action, run a **Society of Thought** pass â€” explicitly instantiate
+Before each action, run a **Society of Thought** pass — explicitly instantiate
 three internal perspectives and let them briefly conflict before committing:
 
 | Perspective | Question |
@@ -357,7 +357,7 @@ three internal perspectives and let them briefly conflict before committing:
 
 The Skeptic's objections either get resolved (strengthening the plan) or escalate
 to blocking the action (send to VALIDATE for a scope or reversibility check).
-Do not skip this pass for non-trivial actions â€” the research basis for it is
+Do not skip this pass for non-trivial actions — the research basis for it is
 robust: multi-perspective internal deliberation causally improves accuracy on hard
 reasoning tasks (Kim et al., arXiv:2601.10825).
 
@@ -368,14 +368,14 @@ well enough to execute it. Research first.
 
 Before executing, verify:
 
-1. **Legal action check** â€” Is this a valid operation? Does the file exist? Is
+1. **Legal action check** — Is this a valid operation? Does the file exist? Is
    the function signature correct? Does the import path resolve?
-2. **Scope check** â€” Does this action stay within the planned subtask scope?
+2. **Scope check** — Does this action stay within the planned subtask scope?
    Am I accidentally touching something outside scope?
-3. **Reversibility check** â€” Can this be undone? If not, flag for user
+3. **Reversibility check** — Can this be undone? If not, flag for user
    confirmation before proceeding.
-4. **Dependency check** â€” Have all predecessor subtasks completed successfully?
-5. **Consistency check** â€” Does this change conflict with changes already made
+4. **Dependency check** — Have all predecessor subtasks completed successfully?
+5. **Consistency check** — Does this change conflict with changes already made
    in this session? (Check `.react_agent/changes.jsonl` for prior edits)
 
 If any check fails, do NOT execute. Fix the issue or escalate to the user.
@@ -387,7 +387,7 @@ Read `HARNESS.md` (in this skill directory) for detailed validation rules.
 Execute the change. Prefer minimal, atomic changes:
 - One function at a time
 - One file at a time where possible
-- Complete implementations only â€” no stubs, no "TODO: implement this"
+- Complete implementations only — no stubs, no "TODO: implement this"
 - If the action is a file edit, provide the complete changed function (not a snippet)
 
 Log every action to `.react_agent/changes.jsonl`:
@@ -399,26 +399,26 @@ Log every action to `.react_agent/changes.jsonl`:
 
 After each action, verify the result:
 
-1. **Read the output** â€” If a command was run, read stdout and stderr completely
-2. **Check the artifact** â€” If a file was edited, read the relevant section back
+1. **Read the output** — If a command was run, read stdout and stderr completely
+2. **Check the artifact** — If a file was edited, read the relevant section back
    to confirm the edit landed correctly
-3. **Run the relevant test** â€” If tests exist for the changed code, run them now.
-   Do not batch test runs â€” test after each change
-4. **Compare expected vs actual** â€” Does the observation match what you predicted
+3. **Run the relevant test** — If tests exist for the changed code, run them now.
+   Do not batch test runs — test after each change
+4. **Compare expected vs actual** — Does the observation match what you predicted
    in the REASON step?
 
 ### REFLECT
 
 After observing:
 
-1. **Success** â€” Log to memory, mark subtask step complete, proceed to next step
-2. **Failure** â€” Diagnose:
+1. **Success** — Log to memory, mark subtask step complete, proceed to next step
+2. **Failure** — Diagnose:
    - Is this the same error type as a previous attempt? Check `.react_agent/memory.jsonl`
    - If yes: you are going in circles. Stop. Reframe the problem. Try a different
      approach. Read TROUBLESHOOTING below.
    - If no: log the failure with diagnosis, attempt a fix, re-enter the loop
-3. **Unexpected result** â€” Something worked but not as predicted. Investigate
-   before proceeding â€” unexpected success can mask latent bugs.
+3. **Unexpected result** — Something worked but not as predicted. Investigate
+   before proceeding — unexpected success can mask latent bugs.
 
 Log reflections to `.react_agent/memory.jsonl`:
 ```json
@@ -453,9 +453,9 @@ conversation turns within a session. Structure:
 â”œâ”€â”€ plan.md          # Ordered subtask plan
 â”œâ”€â”€ changes.jsonl    # Append-only log of every action taken
 â”œâ”€â”€ memory.jsonl     # Curated outcome/lesson log (distilled from daily files)
-â”œâ”€â”€ memory/          # Raw daily session logs (YYYY-MM-DD.md) â€” unfiltered capture
+â”œâ”€â”€ memory/          # Raw daily session logs (YYYY-MM-DD.md) — unfiltered capture
 â”œâ”€â”€ progress.md      # Current status dashboard (overwritten each update)
-â”œâ”€â”€ autonomy.md      # Standing permission tiers â€” read at Phase 0
+â”œâ”€â”€ autonomy.md      # Standing permission tiers — read at Phase 0
 â”œâ”€â”€ personas/        # Role files for spawned subagents (optional)
 â””â”€â”€ cases/           # Archived case files from prior task runs (if any)
     â””â”€â”€ case_001.json
@@ -489,11 +489,11 @@ decision, evidence, dead end, and exact resume point.
 
 The context window is the most constrained resource during long tasks. Manage it actively:
 
-- **Delegate verbose operations to subagents** â€” test runs, log analysis, doc fetching, and any operation that produces large output belong in a subagent. The subagent reports only its summary back, not the raw output.
-- **Prefer CLI tools over MCP servers** â€” CLI tools (git, grep, find, npm) are context-neutral; MCP server tool definitions load on every request. Use CLI where both options exist.
-- **Write before forgetting** â€” if a key finding, decision, or error message appears in context that you will need later, write it to `.react_agent/` immediately. Do not rely on it surviving context truncation.
-- **When context is filling** â€” proactively checkpoint current subtask state to `progress.md` before auto-compaction fires. Fields that must survive any compaction: current subtask number, `task.md` completion conditions, and the last known working state.
-- **Use continuity packets for pivots** â€” when the load-bearing thing to preserve is a decision or rejected approach rather than a file diff, write a `continuity-log` style packet so the next turn does not repeat the same analysis.
+- **Delegate verbose operations to subagents** — test runs, log analysis, doc fetching, and any operation that produces large output belong in a subagent. The subagent reports only its summary back, not the raw output.
+- **Prefer CLI tools over MCP servers** — CLI tools (git, grep, find, npm) are context-neutral; MCP server tool definitions load on every request. Use CLI where both options exist.
+- **Write before forgetting** — if a key finding, decision, or error message appears in context that you will need later, write it to `.react_agent/` immediately. Do not rely on it surviving context truncation.
+- **When context is filling** — proactively checkpoint current subtask state to `progress.md` before auto-compaction fires. Fields that must survive any compaction: current subtask number, `task.md` completion conditions, and the last known working state.
+- **Use continuity packets for pivots** — when the load-bearing thing to preserve is a decision or rejected approach rather than a file diff, write a `continuity-log` style packet so the next turn does not repeat the same analysis.
 - **Protect on compaction**: `task.md` execution contract, `progress.md` status table, current subtask's `plan.md` entry, and any unresolved blockers.
 
 ### Progress Tracking
@@ -550,15 +550,15 @@ If the same approach has failed twice:
 If you have exhausted your approaches:
 - Write a clear summary of what was tried, what failed, and why
 - State what information or decision you need from the user
-- Do not apologize â€” just present the situation and your options
+- Do not apologize — just present the situation and your options
 
 ## Completion Protocol
 
 Before declaring a task complete:
 
-1. **Recheck acceptance criteria** â€” Open `task.md`, verify each `completion_condition`
-   is satisfied. Do not rely on memory of what ran â€” re-run the checks now.
-2. **Evidence gate** â€” Before claiming done, write a standalone evidence artifact at
+1. **Recheck acceptance criteria** — Open `task.md`, verify each `completion_condition`
+   is satisfied. Do not rely on memory of what ran — re-run the checks now.
+2. **Evidence gate** — Before claiming done, write a standalone evidence artifact at
    `.react_agent/evidence.md` covering:
    - Problem statement (link to `task.md`)
    - Root cause or key change (what was wrong and what was done)
@@ -568,18 +568,18 @@ Before declaring a task complete:
    Do not release a completion claim while any `completion_condition` in `task.md`
    is uncited in this file. The evidence artifact is what a verifier or another
    agent would reopen to independently confirm the task is done.
-3. **Acceptance alignment check** â€” Ask: does passing the local checks (tests green,
+3. **Acceptance alignment check** — Ask: does passing the local checks (tests green,
    linter clean) actually satisfy the `completion_conditions` in `task.md`? If
    there is a gap (local checks pass but a stated condition is still unmeasured),
    add a test or check that covers it before proceeding.
-4. **Run full validation** â€” Execute the complete test suite, linter, type checker
+4. **Run full validation** — Execute the complete test suite, linter, type checker
    (whatever validation tools exist in the project).
-5. **Review all changes** â€” Scan `changes.jsonl` for unintended side effects.
+5. **Review all changes** — Scan `changes.jsonl` for unintended side effects.
    Did you touch files outside the planned scope? If so, verify those changes
    are correct and necessary.
-6. **Quality check** â€” Read `QUALITY.md` (in this skill directory) and walk
+6. **Quality check** — Read `QUALITY.md` (in this skill directory) and walk
    through the six-dimension check before marking anything done.
-7. **Generate summary** â€” Write a concise summary of what was done, structured as:
+7. **Generate summary** — Write a concise summary of what was done, structured as:
    - What changed (files, functions, configs)
    - Why (link back to task requirements)
    - How to verify (commands to run, things to check)
@@ -590,30 +590,30 @@ Before declaring a task complete:
 This skill works with other skills. When a subtask falls into another skill's
 domain, delegate:
 
-- File format tasks (docx, xlsx, pdf, pptx) â†’ use the relevant format skill
-- Frontend/UI work â†’ use the frontend-design skill
-- Browser/QA testing â†’ use the gstack skill
+- File format tasks (docx, xlsx, pdf, pptx) → use the relevant format skill
+- Frontend/UI work → use the frontend-design skill
+- Browser/QA testing → use the gstack skill
 - Self-repairing codegen pipelines, dark software factories, and legality / critic loops -> use the `agentic-harness` skill as a specialist sub-skill
 - Between-compaction decision capture and resume notes -> use the `continuity-log` skill
 
-The ReAct loop wraps around delegated skill execution â€” the delegated skill
+The ReAct loop wraps around delegated skill execution — the delegated skill
 handles the *how*, this skill handles the *whether it worked*.
 
 ## Anti-Patterns (Do NOT Do These)
 
-- **Shotgun debugging** â€” Making multiple unrelated changes hoping one fixes
+- **Shotgun debugging** — Making multiple unrelated changes hoping one fixes
   the problem. Change one thing at a time.
-- **Optimistic skipping** â€” Skipping validation because "it should work."
+- **Optimistic skipping** — Skipping validation because "it should work."
   Verify every change.
-- **Scope creep** â€” Fixing things that aren't broken, refactoring code that
+- **Scope creep** — Fixing things that aren't broken, refactoring code that
   isn't in scope, "improving" things the user didn't ask for.
-- **Silent failure** â€” Encountering an error and moving on without logging it.
+- **Silent failure** — Encountering an error and moving on without logging it.
   Every failure teaches something.
-- **Premature completion** â€” Declaring done without running the acceptance
+- **Premature completion** — Declaring done without running the acceptance
   criteria checks. "It compiles" is not "it works."
-- **Context amnesia** â€” Ignoring what's in `memory.jsonl` and repeating a
+- **Context amnesia** — Ignoring what's in `memory.jsonl` and repeating a
   failed approach. Read your own notes.
-- **Tunnel vision** â€” Spending 5+ steps on a single failing approach. After 3
+- **Tunnel vision** — Spending 5+ steps on a single failing approach. After 3
   failures on the same issue, you must change strategy.
 
 ## Reference: State Machine

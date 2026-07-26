@@ -1,3 +1,18 @@
+---
+name: bitter-lesson
+description: >
+  Decide whether a hand-designed signal is a representation prior or a verdict —
+  does it change what the optimal policy IS, or only how fast you find it. Use
+  when adding reward shaping, curiosity bonuses, auxiliary losses, heuristics, or
+  any hand-crafted feature to an RL or learning system, and when deciding what to
+  bake into architecture versus reward. Covers potential-based shaping (Ng/Harada/
+  Russell 1999), architecture-as-prior, UNREAL-style auxiliary tasks on the shared
+  encoder, annealing shaping to zero, successor features and cumulants, and
+  learned intrinsic reward (RND, ICM) over hand-formulated curiosity. Trigger on
+  "should I shape this reward", "add a heuristic", "hand-crafted feature",
+  "reward hacking", or Sutton's bitter lesson.
+---
+
 The RL-specific version of the test: does the hand-designed signal change what the optimal policy is, or does it change how fast you find it.
 
 **Potential-based reward shaping** (Ng, Harada, Russell 1999). Add a shaping term shaped as the difference of a potential function; this is proven to leave the optimal policy unchanged, so it's a coordinate change on the reward landscape, not a verdict. Arbitrary hand-crafted reward bonuses that aren't potential-based can silently redefine the objective — that's the RL version of the evaluation-answer trap.

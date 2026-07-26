@@ -1,3 +1,15 @@
+---
+name: claude
+description: >
+  Cheat sheet for Claude Code project structure and file organization — what
+  belongs in CLAUDE.md (project memory), .claude/ subfolders, agents, commands,
+  hooks, and settings, from core setup through advanced automation. Use when
+  setting up a new Claude Code project, deciding where a config or instruction
+  file should live, or auditing an existing .claude/ layout. Trigger on "where
+  does CLAUDE.md go", "project structure for Claude Code", "what goes in
+  .claude/", or organizing agents, commands, and hooks.
+---
+
 ### Claude Code Project Structure Cheat Sheet
 
 This cheat sheet outlines the optimal folder structure and file organization for Claude Code projects, ranging from core project memory to advanced automation.

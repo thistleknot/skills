@@ -1,4 +1,4 @@
-﻿---
+---
 name: design-patterns
 description: >
   Pattern-selection protocol for code and architecture work. Use when choosing
@@ -23,15 +23,15 @@ This skill sits under code work. Use it when a change stops being a local edit a
 - Introduce a pattern only when it removes repeated creation logic, interface mismatch, cross-cutting behavior, or behavior/state branching.
 
 ## Pattern Families
-- **Creational** â€” Factory Method, Abstract Factory, Builder, Prototype, Singleton
-- **Structural** â€” Adapter, Decorator, Facade, Composite, Proxy
-- **Behavioral** â€” Observer, Strategy, Command, Template Method, State
+- **Creational** — Factory Method, Abstract Factory, Builder, Prototype, Singleton
+- **Structural** — Adapter, Decorator, Facade, Composite, Proxy
+- **Behavioral** — Observer, Strategy, Command, Template Method, State
 
 ## Contracts
-- **Require** â€” caller preconditions
-- **Guarantee** â€” implementation postconditions
-- **Maintain** â€” invariants that stay true
-- **Assert** â€” execution-point checks at boundaries
+- **Require** — caller preconditions
+- **Guarantee** — implementation postconditions
+- **Maintain** — invariants that stay true
+- **Assert** — execution-point checks at boundaries
 
 ## Pragmatic Principles
 - DRY and orthogonality before cleverness
@@ -44,7 +44,7 @@ This skill sits under code work. Use it when a change stops being a local edit a
 
 Use this pattern when an automated agent pipeline must be deterministic and tamper-resistant.
 
-**Problem:** A conversational loop allows the agent to choose its next step, self-report completion, and reinterpret ambiguous directives â€” each decision is a branch in a non-deterministic system.
+**Problem:** A conversational loop allows the agent to choose its next step, self-report completion, and reinterpret ambiguous directives — each decision is a branch in a non-deterministic system.
 
 **Solution:** Replace the loop with a state machine where:
 - State transitions are triggered by external tool validation, not the model's self-assessment
@@ -52,8 +52,8 @@ Use this pattern when an automated agent pipeline must be deterministic and tamp
 - The model is the compiler (transforms inputs to outputs); the harness is the linker (sequences, gates, and certifies)
 
 ```
-[State N] â†’ run_external_validator() â†’ pass: advance to [State N+1]
-                                      â†’ fail: retry or escalate
+[State N] → run_external_validator() → pass: advance to [State N+1]
+                                      → fail: retry or escalate
 ```
 
 Applies **State** pattern (behavioral GoF) plus **Template Method** for the gate sequence.

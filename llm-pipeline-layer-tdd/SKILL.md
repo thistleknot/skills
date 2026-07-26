@@ -1,10 +1,10 @@
-﻿---
+---
 name: llm-pipeline-layer-tdd
 description: >
   Gate-based TDD for layered LLM/ETL pipelines. Test each layer in isolation
   with spoofed inputs. Do not proceed to layer N+1 until layer N passes its
   contract on multiple seeds. When a layer fails, fix that layer's contract
-  (prompts/schema/post-processor) â€” never patch the final output and call it
+  (prompts/schema/post-processor) — never patch the final output and call it
   done. Running the full pipeline and checking the end result is not testing.
 status: active
 last_validated: 2026-05-28
@@ -17,7 +17,7 @@ last_validated: 2026-05-28
 > "Unit test driven development means you get the process correct through
 > proper contracts. You don't proceed to the next scene until you confirm the
 > prior scene was generated properly with various seeds. Else you fix the
-> inputs â€” and to do that you fix the contracts for the prior layer's outputs.
+> inputs — and to do that you fix the contracts for the prior layer's outputs.
 > You're trying to do ETL all at once, then checking at the end. That's clearly
 > not how you test ETL. You do small unit tests."
 
@@ -47,59 +47,59 @@ isolation. LLM pipelines are ETL pipelines where the transforms are prompts.
 Each layer has three parts:
 
 ```
-Input shape    what the layer receives â€” fields, types, required vs optional
-Output shape   what the layer must return â€” fields, types, non-empty constraints
+Input shape    what the layer receives — fields, types, required vs optional
+Output shape   what the layer must return — fields, types, non-empty constraints
 Quality gate   the binary pass/fail criteria that confirm the output is usable
                as input for the next layer
 ```
 
 The contract is not the code. The contract is the **agreement between layers**.
 When a layer fails its gate, the fix is in the contract: the system prompt, the
-schema, the quality threshold, or the post-processor for that layer â€” not in
+schema, the quality threshold, or the post-processor for that layer — not in
 the downstream layer that first made the problem visible.
 
 ---
 
 ## The Protocol
 
-### 1 â€” Write the contract before testing
+### 1 — Write the contract before testing
 
 If you cannot specify all three parts (input shape, output shape, quality gate)
 for the layer you are about to test, the layer does not have a defined contract.
 Fix the contract definition first. Do not test what you cannot specify.
 
-### 2 â€” Fabricate synthetic inputs
+### 2 — Fabricate synthetic inputs
 
 Do **not** use real outputs from the prior layer as test inputs. Real outputs
 carry that layer's failures and entangle root causes.
 
 Fabricate the minimum valid input that satisfies the input contract. Make it
-realistic â€” representative of what a live run would actually send.
+realistic — representative of what a live run would actually send.
 
-### 3 â€” Run the layer in isolation
+### 3 — Run the layer in isolation
 
 Call the layer function directly. Do not run the full pipeline. One function
 call. Inspect what it returns before any downstream processing sees it.
 
-### 4 â€” Apply the quality gate
+### 4 — Apply the quality gate
 
 Check every criterion in the output contract against the result. Record which
-ones pass and which ones fail. A partial pass is a failure â€” the gate is binary.
+ones pass and which ones fail. A partial pass is a failure — the gate is binary.
 
-### 5 â€” If it fails: fix the contract, not the output
+### 5 — If it fails: fix the contract, not the output
 
 Identify which criterion failed. Trace it to the contract component that owns it:
 
 ```
-criterion failed at output  â†’  was the input valid?
-                                  yes â†’ fix this layer's prompt or schema
-                                  no  â†’ fix the prior layer's output contract first
+criterion failed at output  →  was the input valid?
+                                  yes → fix this layer's prompt or schema
+                                  no  → fix the prior layer's output contract first
 ```
 
 Fix only the identified component. Then re-run **all seeds**, not just the one
 that was failing. A fix that passes seed A but breaks seed B is not a fix.
 
-### 6 â€” Gate before proceeding
+### 6 — Gate before proceeding
 
 Only move to the next layer when:
 - every quality gate criterion passes
@@ -116,9 +116,9 @@ Minimum 3 seeds per layer. Each seed must exercise a different failure mode:
 
 | Seed | What it covers |
 |---|---|
-| A â€” standard | Normal input, expected genre, expected POV |
-| B â€” edge | Minimal treatment, no prior context, short content |
-| C â€” stress | Multiple characters, long prior context, complex scene |
+| A — standard | Normal input, expected genre, expected POV |
+| B — edge | Minimal treatment, no prior context, short content |
+| C — stress | Multiple characters, long prior context, complex scene |
 
 One seed that passes is anecdotal. Three diverse seeds that all pass is
 evidence the layer's contract is stable.
@@ -130,10 +130,10 @@ evidence the layer's contract is stable.
 Apply in order. Do not jump ahead:
 
 ```
-1. Input contract violation   â†’ the prior layer produced malformed output; fix that layer first
-2. System prompt ambiguity    â†’ a rule is missing or underspecified; add it explicitly
-3. Post-processor gap         â†’ a deterministic strip or repair step is missing or incomplete
-4. Quality threshold mis-set  â†’ recalibrate against observed failures; do not simply lower the bar
+1. Input contract violation   → the prior layer produced malformed output; fix that layer first
+2. System prompt ambiguity    → a rule is missing or underspecified; add it explicitly
+3. Post-processor gap         → a deterministic strip or repair step is missing or incomplete
+4. Quality threshold mis-set  → recalibrate against observed failures; do not simply lower the bar
 ```
 
 Post-processors that compensate for upstream prompt ambiguity are technical
@@ -156,45 +156,45 @@ debt. They mask the root cause. Fix the prompt first.
 
 ## Storywriter v4 Layer Gates (Reference)
 
-### L1 â€” Arc layer (4b): `generate_premise`
+### L1 — Arc layer (4b): `generate_premise`
 - `title`, `genre`, `world_description`, `core_conflict`, `cost_mechanism` all non-empty
 - `themes` is a non-empty list
 - `cost_mechanism` is a specific sentence, not a generic placeholder
 
-### L2 â€” Characters (4b): `generate_characters`
+### L2 — Characters (4b): `generate_characters`
 - Returns a non-empty list
 - Every character has `name`, `role`, `pronouns`, `arc`, `summary`
 - At least one character has `role == "protagonist"`
 - All `pronouns` fields non-empty
 
-### L3 â€” Plot structure (4b): `generate_plot_structure`
+### L3 — Plot structure (4b): `generate_plot_structure`
 - `acts` is a non-empty list
 - Every act's first scene has `scene_num == 1` (numbering restarts per act)
 - Every scene has non-empty `beat`, `pov`, `location`
 
-### L4 â€” Architecture (4b): `plan_story_architecture`
+### L4 — Architecture (4b): `plan_story_architecture`
 - All of `character_seeds`, `act_bridges`, `scene_commitments` are lists (may be empty)
 - `scene_commitments` reference only valid act numbers
 
-### L5 â€” Backward plan (4b): `generate_backward_plan`
+### L5 — Backward plan (4b): `generate_backward_plan`
 - `climax_spec` has non-empty `protagonist_decision` and `required_presence`
 - `forward_reqs` is a dict keyed by `(act, scene_num)` tuples
 
-### L6 â€” Scene treatments (2b): `generate_scene_treatments`
+### L6 — Scene treatments (2b): `generate_scene_treatments`
 - Keyed by every `(act, scene_num)` pair in the plot structure
 - Every treatment has `characters_present` (non-empty list), `pov_want`, `pov_decision`, `thematic_position`
 - `thematic_position` varies across scenes (not verbatim repeated)
 
-### L7 â€” Prose (0.8b): `generate_scene` â†’ `SceneOutput`
+### L7 — Prose (0.8b): `generate_scene` → `SceneOutput`
 - `prose` non-empty, no scaffold headers (`Act N`, `Scene N`, `###`)
-- Word count â‰¥ `min_scene_words`
+- Word count ≥ `min_scene_words`
 - No first-person narration outside quoted dialogue
 - Repetition ratio < 0.5 (`_check_repetition_ratio`)
 - No Qwen3 think-token artifacts (`<think>`, `No_think`)
 
-### L8 â€” Coherence (2b): `check_coherence`
+### L8 — Coherence (2b): `check_coherence`
 - Returns `(score: float, feedback: str)`
-- Score in `[0, 1]`; well-formed prose â‰¥ 0.70
+- Score in `[0, 1]`; well-formed prose ≥ 0.70
 - Feedback non-empty
 - `she/he` alternation for different named characters is not flagged as POV violation
 

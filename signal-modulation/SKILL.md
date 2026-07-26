@@ -1,5 +1,5 @@
-﻿---
-name: signal-demodulation-rl-band
+---
+name: signal-modulation
 description: >
   Demodulate a noisy, non-stationary signal into a normalized space,
   then apply RL band maintenance to maximize time within an empirically

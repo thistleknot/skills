@@ -78,7 +78,7 @@ MMR_LAMBDA = 0.7
 MMR_K = 30
 TOP_SKILLS = 5               # whole-skill units returned
 
-mcp = FastMCP("data-science-skills")
+mcp = FastMCP("parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever")
 
 _ct = _cm = None
 _embeddings = None
@@ -182,8 +182,11 @@ def topic_branch(store, query: str, topics: list, k: int) -> list:
 # =============================================================================
 
 BM25_K1 = 1.5
-BM25_B = 0.0    # length-norm weight; TRUE-dl CV=0.65 (length varies) — eval whether b>0 helps
-BM25_AVGDL = 72.1  # exact avg content_len (= sum of tf = true dl) over the collection
+BM25_B = 0.0    # MEASURED: b=0 wins the eval even at true-dl CV=0.65. Length norm
+                # HURTS (nDCG@20/MRR fall monotonically as b rises) — chunks vote for
+                # their whole skill, so a longer term-rich chunk = more on-topic evidence,
+                # not a length "cheat". content_len/avgdl exist (banked) but b stays 0.
+BM25_AVGDL = 72.1  # exact avg content_len (= sum of tf = true dl); only used if b>0
 
 
 def build_bm25_idf(conn) -> int:
@@ -237,6 +240,59 @@ def ts_bm25_seed(conn, query: str, k: int, b: float = None, avgdl: float = None)
               # psycopg named+positional can't mix; pass query via named too:
               })
         return [(cid, doc, slug, float(sc)) for cid, doc, slug, sc in cur.fetchall()]
+
+
+# =============================================================================
+# Community lane (thematic) — Leiden community + within-community subgraph-DWPC,
+# gated by density/conductance. Built offline by build_graph_report.py
+# (graph_report.json). See references/retrieval.md § Graph construction.
+# =============================================================================
+
+GATE_CONDUCTANCE = 0.6
+_graph_report = None
+
+
+def _get_graph_report():
+    global _graph_report
+    if _graph_report is None:
+        from pathlib import Path
+        f = Path(__file__).parent / "graph_report.json"
+        _graph_report = (json.loads(f.read_text(encoding="utf-8")) if f.exists()
+                         else {"skill_comm": {}, "dwpc_neighbors": {}, "comm_metrics": {}})
+    return _graph_report
+
+
+def community_seed(store, conn, query: str, k: int) -> list:
+    """Top dense skill -> within-community subgraph-DWPC neighbors, gated by
+    community density/conductance (mushy community -> dense-top fallback). Each
+    returned skill is resolved to one representative chunk (real id+content) so
+    downstream MMR/ColBERT have material to work on."""
+    gr = _get_graph_report()
+    top = []
+    for r in cosine_seed(store, query, 10):
+        if r[2] not in top:
+            top.append(r[2])
+    if not top:
+        return []
+    seed = top[0]
+    cid = str(gr["skill_comm"].get(seed, ""))
+    m = gr["comm_metrics"].get(cid)
+    if not m or m.get("conductance", 1.0) > GATE_CONDUCTANCE:
+        skills = top[:k]                                    # gate: fall back to dense top
+    else:
+        skills = ([seed] + [n for n, _ in gr["dwpc_neighbors"].get(seed, [])])[:k]
+    rows = []
+    with conn.cursor() as cur:
+        for i, s in enumerate(skills):
+            cur.execute("""SELECT e.cmetadata->>'chunk_id', e.document
+                           FROM langchain_pg_embedding e JOIN langchain_pg_collection col
+                           ON col.uuid=e.collection_id
+                           WHERE col.name=%s AND e.cmetadata->>'skill_slug'=%s LIMIT 1""",
+                        (COLLECTION, s))
+            r = cur.fetchone()
+            if r:
+                rows.append((r[0], r[1], s, 1.0 / (i + 1)))
+    return rows
 
 
 # =============================================================================
@@ -464,25 +520,18 @@ def run_retrieval(query: str, k: int = TOP_SKILLS) -> str:
 
 
 def _run_cascade(query, cosine_rows, conn):
-    """Diagnostic-only full cascade (graph expand + MMR + ColBERT). Measured
-    net-negative for both objectives — kept for ablation, not the default path."""
+    """Full superset pipeline (references/retrieval.md): the three lanes
+    (dense ⊕ tsvector-BM25 ⊕ community) RRF-fused, then MMR, then ColBERT late
+    interaction. Kept for ablation / when diversity+entailment reranking is
+    explicitly wanted; MMR/ColBERT measured net-negative for local retrieval."""
+    import experiments as _ex
+    store = _get_store()
     driver = _get_driver()
+    bm25 = ts_bm25_seed(conn, query, COSINE_K)
+    comm = community_seed(store, conn, query, COSINE_K)
+    pool = _ex._rrf(cosine_rows, bm25)
+    pool = _ex._rrf(pool, comm)[:RRF_K_OUT]           # A ⊕ B ⊕ C
     cos_sims = {r[0]: r[3] for r in cosine_rows}
-    densities = graph_density(driver, [r[0] for r in cosine_rows])
-    if GRAPH_MODE in ("parallel", "both"):
-        pool = rrf_fuse(cosine_rows, densities, RRF_K_OUT)
-    else:
-        pool = [(*r, r[3]) for r in cosine_rows][:RRF_K_OUT]
-    if GRAPH_MODE in ("cascade", "both"):
-        pool_ids = {r[0] for r in pool}
-        neighbors = graph_expand(driver, [r[0] for r in pool], EXPANSION_HOPS) - pool_ids
-        if neighbors:
-            fetched = fetch_chunks(conn, list(neighbors))
-            best = max((r[-1] for r in pool), default=0.0)
-            for cid, (content, slug) in fetched.items():
-                pool.append((cid, content, slug, best * EXPANSION_DISCOUNT))
-            pool.sort(key=lambda x: x[-1], reverse=True)
-            pool = pool[:EXPANDED_K]
     exp_dens = graph_density(driver, [r[0] for r in pool])
     mmr_pool = mmr_rerank(pool, cos_sims, exp_dens, k=min(len(pool), MMR_K))
     return colbert_rerank(query, mmr_pool, k=len(mmr_pool))

@@ -1,3 +1,14 @@
+---
+name: ctp2-image-patching
+description: >
+  Patch Call to Power II game images via CSV/schema parsing for units, city
+  improvements, and terrain, followed by observer validation. Use when the task
+  involves CTP2 sprite or image replacement through `patch_ctp2_images.py` and its
+  known CSV lanes — the workflow is strict-order and explicitly forbids
+  re-exploring project structure. Trigger on "CTP2", "Call to Power", "patch game
+  images", "unit sprites", "city improvement art".
+---
+
 # CTP2 Image Patching Workflow
 
 **Load this skill when** the task involves patching CTP2 game images using CSV/schema parsing for units, city improvements, and terrain, followed by observer validation.

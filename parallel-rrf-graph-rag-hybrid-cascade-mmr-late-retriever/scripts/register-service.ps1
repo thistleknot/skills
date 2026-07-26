@@ -16,8 +16,8 @@ $Nssm      = "$HOME\.pi\bin\nssm.exe"
 $Python    = "$HOME\py310\Scripts\python.exe"           # adjust to the venv running fastmcp/psycopg2/torch
 $Server    = "$PSScriptRoot\mcp_server.py"
 $Port      = 8765                                        # FastMCP's own bind port, if it exposes one over HTTP
-$Log       = "$HOME\.pi\tmp\data-science-skills-mcp.log"
-$Svc       = 'data-science-skills-mcp'
+$Log       = "$HOME\.pi\tmp\parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever-mcp.log"
+$Svc       = 'parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever-mcp'
 
 $ErrorActionPreference = 'Continue'
 New-Item -ItemType Directory -Force (Split-Path $Log) | Out-Null

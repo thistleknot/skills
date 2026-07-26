@@ -1,3 +1,13 @@
+---
+name: mergekit
+description: >
+  Merge, interpolate, frankenmerge, or extract LoRA adapters from pretrained LLMs
+  using the `arcee-ai/mergekit` library. Use when producing a merged model or
+  adapter. Trigger on "merge two models", "combine fine-tunes", "model soup",
+  "task arithmetic", "TIES", "DARE", "SLERP", "frankenmerge", "layer stacking",
+  "LoRA extraction from merge", or any request producing merged `.safetensors`.
+---
+
 # mergekit — Skill
 
 **Scope:** Use this skill whenever the task involves merging, interpolating, frankenmerging, or extracting LoRA adapters from pretrained LLMs using the `arcee-ai/mergekit` library. Triggers include: "merge two models," "combine fine-tunes," "model soup," "task arithmetic," "TIES," "DARE," "frankenmerge," "layer stacking," "LoRA extraction from merge," or any request to produce a merged `.safetensors` checkpoint.

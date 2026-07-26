@@ -315,6 +315,43 @@ def existing_ids(conn_raw) -> set:
         return set()
 
 
+def ensure_bm25_lane() -> None:
+    """Build the native tsvector BM25 lane so a fresh ingest reproduces hybrid
+    retrieval (see mcp_server RETRIEVAL_MODE='hybrid'). Idempotent:
+      - content_tsv : generated STORED tsvector (snowball-stemmed) + GIN index
+      - content_len : true dl (sum of tf) per chunk — populated once (b=0 default,
+                      so only needed if length norm is ever enabled)
+      - bm25_idf    : materialized (word, idf) table, IDF via ts_stat ndoc
+    All derived from the already-stored `document` — no re-embed, no re-extract."""
+    conn = psycopg.connect(**PG_RAW)
+    conn.autocommit = True
+    with conn.cursor() as cur:
+        cur.execute("""ALTER TABLE langchain_pg_embedding ADD COLUMN IF NOT EXISTS
+            content_tsv tsvector GENERATED ALWAYS AS (to_tsvector('english', document)) STORED""")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_lpe_content_tsv "
+                    "ON langchain_pg_embedding USING GIN(content_tsv)")
+        cur.execute("ALTER TABLE langchain_pg_embedding ADD COLUMN IF NOT EXISTS content_len int")
+        cur.execute("""UPDATE langchain_pg_embedding e SET content_len = sub.dl
+            FROM (SELECT ctid, (SELECT coalesce(sum(array_length(u.positions,1)),0)
+                                FROM unnest(content_tsv) u) dl
+                  FROM langchain_pg_embedding) sub
+            WHERE e.ctid = sub.ctid AND e.content_len IS DISTINCT FROM sub.dl""")
+        cur.execute("DROP TABLE IF EXISTS bm25_idf")
+        cur.execute("""CREATE TABLE bm25_idf AS
+            WITH n AS (SELECT count(*)::float c FROM langchain_pg_embedding e
+                       JOIN langchain_pg_collection col ON col.uuid=e.collection_id
+                       WHERE col.name=%s)
+            SELECT s.word, ln((n.c - s.ndoc + 0.5)/(s.ndoc + 0.5) + 1) AS idf
+            FROM n, ts_stat('SELECT content_tsv FROM langchain_pg_embedding e
+                             JOIN langchain_pg_collection col ON col.uuid=e.collection_id
+                             WHERE col.name = ''data_science_skills''') s""", (COLLECTION,))
+        cur.execute("ALTER TABLE bm25_idf ADD PRIMARY KEY (word)")
+        cur.execute("SELECT count(*) FROM bm25_idf")
+        n = cur.fetchone()[0]
+    conn.close()
+    print(f"BM25 lane ready: content_tsv + GIN + content_len + bm25_idf ({n} lexemes)")
+
+
 def ingest(reset: bool = False, resume: bool = False, no_kg: bool = False) -> int:
     if HybridChunker is None:
         raise RuntimeError("docling not installed")
@@ -416,6 +453,12 @@ def ingest(reset: bool = False, resume: bool = False, no_kg: bool = False) -> in
     if not no_kg:
         neo4j_skill_tags(driver)
     driver.close()
+    ensure_bm25_lane()   # native tsvector BM25 lane (dense ⊕ BM25 hybrid retrieval)
+    try:                 # corpus ToC+tags for the query expander (non-critical)
+        import build_corpus_metadata as _meta
+        print(f"corpus metadata: {_meta.build_standalone()}")
+    except Exception as e:  # noqa: BLE001
+        print(f"WARNING corpus metadata generation failed (query expander degrades): {e}")
     mode = " (cosine-only, no KG/graph)" if no_kg else ""
     print(f"ingested {n_ingested} chunks from {len(md_files)} files{mode}")
     return n_ingested

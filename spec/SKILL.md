@@ -630,3 +630,44 @@ implementation reqs, each method into a functional-spec bullet with its
 - Verification is by the acceptance tests the spec produces, not by a
   semantics-preservation proof — reproducible under pinned local inference
   is not the same claim as correct.
+---
+
+## Hard gate: when spec-first is mandatory
+
+Before proposing or writing code, state in one line which spec layer governs the
+work and why: **Requirements** (flat observable behavior), **Structural**
+(classes, functions, methods, constants, configs, roles), **Behavioral**
+(ordered/stateful logic, loops, transactions, pipelines), **Rendered** (the
+durable module spec artifact), or **Catalog** (registering or mapping specs to
+files).
+
+Block coding and produce or repair a spec first when the change affects any of:
+
+- externally observable behavior
+- control flow or sequencing
+- persistence or state lifetime
+- public interfaces
+- class or function boundaries
+- constants-vs-config decisions
+- file-to-spec ownership
+- acceptance criteria
+
+If the spec is missing, stale, ambiguous, or contradicted by the request, the
+next step is to draft, validate, or repair it — not to code.
+
+**Order of operations.** Draft or repair the spec, validate it against this
+skill, implement, then reconcile the spec against what actually shipped. No code
+change is complete unless its governing spec is current. Where code and spec
+disagree, that mismatch is a defect to resolve explicitly, not to paper over.
+Never write implementation-first and backfill the spec later.
+
+**Allowed exception.** Truly mechanical edits with no change to behavior,
+structure, contracts, or configuration semantics — typo fixes in comments or
+docs, formatting-only changes, semantically neutral renames. When taking this
+exception, say explicitly why the change is mechanical and why no spec update is
+required.
+
+**Completion criteria.** For any spec-governed task, done means: the spec is
+drafted or updated, the spec is validated, the code matches the spec, acceptance
+tests trace back to the spec, and any rendered or cataloged artifact the workflow
+requires is reconciled.

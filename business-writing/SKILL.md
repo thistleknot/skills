@@ -1,5 +1,5 @@
 ---
-name: professional-docs
+name: business-writing
 description: >
   Use this skill whenever the user asks to write, rewrite, or improve a resume,
   CV, cover letter, or professional portfolio content. Triggers include: "update

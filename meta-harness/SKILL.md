@@ -1,3 +1,16 @@
+---
+name: meta-harness
+description: >
+  Requester-facing master control-plane orchestrator sitting one level above
+  `agentic-harness`. Owns objective framing, scope partitioning, session topology,
+  and handoff policy, while `agentic-harness` owns execution mechanics for one
+  scoped issue at a time. Use when a request spans multiple issues or sessions and
+  needs partitioning before any execution starts, when enforcing upstream-first
+  repair, a repeat-back handshake, or anti-recursion contracts across OpenCode
+  sessions. Trigger on "break this into sessions", "who owns what", "scope this
+  work", or multi-session orchestration.
+---
+
 # Meta-Harness Skill
 
 ## Purpose

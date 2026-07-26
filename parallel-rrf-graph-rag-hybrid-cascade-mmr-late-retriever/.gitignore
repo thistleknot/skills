@@ -1,0 +1,8 @@
+# Generated index/runtime state — produced by the build scripts against
+# skills_master, NEVER part of the skill. This is a retrieval-PROCESS skill.
+scripts/graph_report.json
+scripts/*.db
+scripts/*.pkl
+scripts/experiments_*.json
+scripts/*_judge.sqlite
+__pycache__/
