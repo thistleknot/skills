@@ -1,4 +1,4 @@
----
+﻿---
 name: signal-demodulation-rl-band
 description: >
   Demodulate a noisy, non-stationary signal into a normalized space,
@@ -25,24 +25,24 @@ validation_method: >
 
 Use this skill when:
 
-- The raw signal is **non-stationary** — mean, variance, or distribution
+- The raw signal is **non-stationary** â€” mean, variance, or distribution
   shape change across regimes or time
-- The objective is **band maintenance**, not peak optimization — you want
+- The objective is **band maintenance**, not peak optimization â€” you want
   the signal to stay between a floor and a ceiling
-- The signal has **momentum** — it drifts gradually, enabling predictive
+- The signal has **momentum** â€” it drifts gradually, enabling predictive
   intervention via MACD before threshold breach
-- **Empirical calibration data exists** — you have labeled observations
+- **Empirical calibration data exists** â€” you have labeled observations
   of floor state, ceiling breach, and recovery
-- The control levers are **discrete or bounded** — position sizes, action
+- The control levers are **discrete or bounded** â€” position sizes, action
   amounts, configuration options
 
 Do **not** use this skill when:
 
-- The signal is already stationary and Gaussian — skip demodulation,
+- The signal is already stationary and Gaussian â€” skip demodulation,
   go directly to `agentic-hyperparm-macd`
-- No empirical calibration is possible — explore first, then calibrate
-- The system is fully deterministic — use `parm-tuning-as-lp` directly
-- Optimization target is a single peak — use Optuna, Bayesian opt,
+- No empirical calibration is possible â€” explore first, then calibrate
+- The system is fully deterministic â€” use `parm-tuning-as-lp` directly
+- Optimization target is a single peak â€” use Optuna, Bayesian opt,
   or gradient methods
 
 ---
@@ -78,7 +78,7 @@ The demodulation pipeline strips distributional artifacts from the raw
 signal. Apply transforms in this order, stopping when the signal passes
 a stationarity check.
 
-### Step 1a — Log transform (if signal is multiplicative)
+### Step 1a â€” Log transform (if signal is multiplicative)
 
 Use when: the signal is a ratio, rate, or multiplicative process.
 Financial returns, system dynamic concentrations, and throughput
@@ -93,7 +93,7 @@ x_log = np.log(x)                      # log level if already ratio-like
 Do not use when: the signal can be negative (e.g., net P&L, signed
 residuals). Use Yeo-Johnson directly in that case.
 
-### Step 1b — Robust centering and scaling (median / MAD)
+### Step 1b â€” Robust centering and scaling (median / MAD)
 
 Use after log transform. Removes location and scale without sensitivity
 to outliers. Critical when the signal has fat tails (financial returns,
@@ -114,7 +114,7 @@ scale estimate, which is the correct direction for risk management.
 Do not use mean/std here. Under fat tails, mean and std are dominated
 by outliers and give unstable normalization across regimes.
 
-### Step 1c — Yeo-Johnson transform (Gaussianize)
+### Step 1c â€” Yeo-Johnson transform (Gaussianize)
 
 Use after median/MAD normalization. Finds the optimal power transform
 to make the distribution as Gaussian as possible. Handles negative
@@ -128,9 +128,9 @@ x_normal = pt.fit_transform(x_robust.reshape(-1, 1)).flatten()
 ```
 
 Save the fitted transformer. At inference time, apply the same fitted
-transform — do not refit on the inference window.
+transform â€” do not refit on the inference window.
 
-### Step 1d — Stationarity check
+### Step 1d â€” Stationarity check
 
 After demodulation, verify the signal is stationary before proceeding.
 
@@ -257,7 +257,7 @@ them is the core architectural decision in this skill.
 
 ### Why MACD alone is insufficient
 
-MACD fires when momentum crosses zero — it tells you a transition is
+MACD fires when momentum crosses zero â€” it tells you a transition is
 happening. It does not tell you:
 
 - How large an action to take
@@ -272,7 +272,7 @@ RL agent reads, not the policy itself.
 
 ```
 MACD role in rule-based system     MACD role in RL system
-────────────────────────────────   ────────────────────────────────
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Trigger: fire action on crossover  Feature: histogram value in state
 Action: fixed response             Action: learned, context-dependent
 Urgency: ignored                   Urgency: encoded in histogram magnitude
@@ -333,7 +333,7 @@ def reward(x_normal, histogram, band_floor, band_ceiling):
 ```
 
 The momentum penalty teaches the agent to take pre-emptive action when
-the MACD histogram is large and the signal is near a boundary — exactly
+the MACD histogram is large and the signal is near a boundary â€” exactly
 what human experts do when reading MACD charts.
 
 ### From reactive MACD to predictive RL
@@ -412,7 +412,7 @@ def reward(x_normal, band_floor, band_ceiling, rate, rate_limit):
     return 1.0 + 0.2 * center_bonus                     # full reward + centering bonus
 ```
 
-The centering bonus discourages riding the boundaries — prefer the
+The centering bonus discourages riding the boundaries â€” prefer the
 center of the band for resilience against disturbance.
 
 ### Training protocol
@@ -442,7 +442,7 @@ for window_start in range(0, len(data) - calibration_window - forecast_window, s
 ```
 
 **Critical:** apply the calibration-window transformer to the test window.
-Never refit the transformer on the test window — that is data leakage.
+Never refit the transformer on the test window â€” that is data leakage.
 
 ---
 
@@ -522,7 +522,7 @@ mean/std are dominated by outliers and give unstable normalization.
 The signal appears stationary when it isn't. Use median/MAD.
 
 **Optimizing to a point instead of a band:**
-Maximizing expected return at a point is fragile — a single regime
+Maximizing expected return at a point is fragile â€” a single regime
 change collapses it. Band maintenance is robust because you have a
 floor that enforces minimum quality and a ceiling that prevents
 overexposure. The band is the resilience mechanism.

@@ -1,11 +1,17 @@
----
+﻿---
 name: reasoning_curation_sampler
 description: >
   Construct a stratified, token-efficient training distribution for reasoning
-  transfer using **conditional stratification**. Used when mixing disparate 
-  linguistic classes (jokes, prose, definitions) into a single regimen. 
-  Enforces strict length filtering per class and token-budget equality 
-  to stabilize gradients and maximize structural transfer between classes.
+  transfer using **conditional stratification**. Use when mixing disparate
+  linguistic classes (jokes, prose, definitions) into a single training regimen
+  and per-class length or token skew would destabilize gradients. Trigger on
+  "balance my training mix", "sample across classes", "my classes have different
+  lengths", or building a curriculum from heterogeneous text sources. Enforces
+  strict length filtering per class and token-budget equality to maximize
+  structural transfer between classes. NOT for classifier class weights or
+  imbalanced-label resampling â€” this skill contains no class_weight, oversampling,
+  or minority-class material; see `stratified-quota-sampling` or
+  `median-bifurcation` for those.
 metadata:
   status: active
   last_validated: 2026-05-09
@@ -55,7 +61,7 @@ It does **not** own:
 - **Conditional Stratification:** Do not force all data into global bins. Instead, sample the *class first*, then apply the length filter within that class. This preserves the natural `P(length | class)` distribution.
 - **Token Budget Equality:** Weights must scale by the inverse of the *expected length within your filter threshold*. This ensures that dense short formats (jokes) and sparse long formats (prose) contribute equally to the total token budget.
 - **Isomorphic Anchoring:** Transfer "reasoning capability" by pairing structurally identical but semantically distinct formats (e.g., an irony-laden quote next to an ironic pun) rather than mixing them randomly.
-- **Temperature Scheduling:** Use Softmax temperature as a curriculum dial—starting high for "exploration" (rare/long formats) and lowering it for "convergence" (grounded formats).
+- **Temperature Scheduling:** Use Softmax temperature as a curriculum dialâ€”starting high for "exploration" (rare/long formats) and lowering it for "convergence" (grounded formats).
 
 ---
 
@@ -63,14 +69,14 @@ It does **not** own:
 
 1.  **Define Class-Length Profiles.**
     *   For each data class (Joke, Quote, Prose, etc.), calculate the conditional statistics:
-        *   `μ_i`: Average token count for records *within your filter threshold*.
-        *   `σ_i`: Variance within the threshold (to define the bins).
+        *   `Î¼_i`: Average token count for records *within your filter threshold*.
+        *   `Ïƒ_i`: Variance within the threshold (to define the bins).
     *   *Note:* This step prevents "genre-length collision" where a short prose passage would be binned with long jokes in a global sort.
 
 2.  **Calculate Class-Equalized Weights.**
-    *   Calculate weights based on the inverse of the expected token cost: `W_class = 1 / μ_i`.
+    *   Calculate weights based on the inverse of the expected token cost: `W_class = 1 / Î¼_i`.
     *   Apply Softmax Balancing with Temperature `T` to get `P_class`:
-        *   `P_class_i = exp((log(W_class_i)) / T) / Σ exp((log(W_class_j)) / T)`
+        *   `P_class_i = exp((log(W_class_i)) / T) / Î£ exp((log(W_class_j)) / T)`
     *   *Effect:* This ensures every *token* has equal probability of being sampled, regardless of whether it came from a short joke or a long quote.
 
 3.  **Iterative Sampling Loop (The "Outer Filter").**
@@ -115,15 +121,15 @@ A smaller model is being trained on a mix of "Laffy Taffy" puns and Brown Corpus
 
 1.  **Class-First Sampling:** The sampler draws a class. Let's say it draws "Joke" with probability `0.4` and "Prose" with probability `0.6`.
 2.  **Conditional Filtering:**
-    *   For the **Joke** draw: The system applies the "Joke Length Filter" (e.g., 10–50 tokens). It rejects a 60-token joke but accepts a 30-token pun.
-    *   For the **Prose** draw: The system applies the "Prose Length Filter" (e.g., 200–600 tokens). It rejects a 50-token definition.
-3.  **Token Equalization:** Because Jokes are short (μ_joke = 20) and Prose is long (μ_prose = 400), the sampler up-weights the Jokes by a factor of 20.
+    *   For the **Joke** draw: The system applies the "Joke Length Filter" (e.g., 10â€“50 tokens). It rejects a 60-token joke but accepts a 30-token pun.
+    *   For the **Prose** draw: The system applies the "Prose Length Filter" (e.g., 200â€“600 tokens). It rejects a 50-token definition.
+3.  **Token Equalization:** Because Jokes are short (Î¼_joke = 20) and Prose is long (Î¼_prose = 400), the sampler up-weights the Jokes by a factor of 20.
 4.  **Pairing:** The sampler finds a specific Joke about a "Doctor" and pairs it with a Prose passage about a "Doctor" (e.g., a medical metaphor).
 5.  **Result:** The model is forced to process high-entropy tokens (jokes) and low-entropy tokens (prose) in equal quantities, learning the *abductive structure* rather than just the vocabulary.
 
 ---
 
-## Dead Ends — Do Not Use
+## Dead Ends â€” Do Not Use
 
 ### Global Length Binning
 Forcing all classes into a single set of quartiles (e.g., Q1 = 10-50 tokens) creates semantic mismatches. A 40-token joke and a 40-token definition belong to different reasoning classes and should not be binned together if your goal is class-balanced transfer.

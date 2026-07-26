@@ -1,4 +1,4 @@
----
+﻿---
 name: multigran-sparse-retrieval
 description: >
   Build a multi-granularity sparse retrieval system over a text corpus. Use
@@ -19,8 +19,8 @@ validation_method: design review
 
 ## Core Insight
 
-Text has at least two natural granularities — character surface form and
-tokenizer-derived units — that are collinear but not identical. The gap between
+Text has at least two natural granularities â€” character surface form and
+tokenizer-derived units â€” that are collinear but not identical. The gap between
 their sparse representations is structured signal, not noise. A retrieval system
 that operates over both simultaneously, and learns their joint latent structure
 via a sparse autoencoder, approximates what a dense embedding captures at a
@@ -34,46 +34,46 @@ fraction of the compute cost and with full invertibility at the input layer.
 OFFLINE (index time)
 
   corpus paragraphs
-      → [Stage 1] balanced 2k sample
-            token-length stats → 95% PI prune → bins
+      â†’ [Stage 1] balanced 2k sample
+            token-length stats â†’ 95% PI prune â†’ bins
             topic counts
-            joint projection → stratified sample
+            joint projection â†’ stratified sample
 
-      → [Stage 2] dual-hash sparse representation
-            character n-gram hash  → sparse vector C
-            wordpiece BM25 hash    → sparse vector W
-            concat [C ‖ W]         → input matrix X
+      â†’ [Stage 2] dual-hash sparse representation
+            character n-gram hash  â†’ sparse vector C
+            wordpiece BM25 hash    â†’ sparse vector W
+            concat [C â€– W]         â†’ input matrix X
 
-      → [Stage 3] sparse autoencoder
-            encoder: X → bottleneck Z (L1-penalized)
-            decoder: Z → X̂ (reconstruction = inversion)
+      â†’ [Stage 3] sparse autoencoder
+            encoder: X â†’ bottleneck Z (L1-penalized)
+            decoder: Z â†’ XÌ‚ (reconstruction = inversion)
             train offline, freeze for retrieval
 
-      → [Stage 4] correlation graph
-            BM25 score matrix (paragraph × paragraph)
-            → Pearson/Spearman correlation
-            → threshold significant correlations → edges
-            → Louvain community detection (soft assignment)
-            → WCC (hard connected components)
-            → DWPC path similarity (down-weights high-degree hubs)
+      â†’ [Stage 4] correlation graph
+            BM25 score matrix (paragraph Ã— paragraph)
+            â†’ Pearson/Spearman correlation
+            â†’ threshold significant correlations â†’ edges
+            â†’ Louvain community detection (soft assignment)
+            â†’ WCC (hard connected components)
+            â†’ DWPC path similarity (down-weights high-degree hubs)
 
-      → [Stage 5] composite retrieval index
+      â†’ [Stage 5] composite retrieval index
             per paragraph: (Z, community_id, avg_bm25_score)
             stored in SQLite with inverted index for hash lookup
 
 ONLINE (query time)
 
   query text
-      → dual-hash → [C ‖ W]
-      → encode → Z_q
-      → ANN search over Z (bottleneck distance)
-      → filter/rerank by community overlap + avg BM25 prior
-      → return top-k paragraphs with inversion path
+      â†’ dual-hash â†’ [C â€– W]
+      â†’ encode â†’ Z_q
+      â†’ ANN search over Z (bottleneck distance)
+      â†’ filter/rerank by community overlap + avg BM25 prior
+      â†’ return top-k paragraphs with inversion path
 ```
 
 ---
 
-## Stage 1 — Balanced Sampling
+## Stage 1 â€” Balanced Sampling
 
 **Goal:** produce a 2k paragraph sample representative across length and topic.
 
@@ -81,25 +81,25 @@ ONLINE (query time)
 - Compute token length per paragraph (wordpiece tokenizer)
 - Fit distribution, derive 95% prediction interval
 - Drop paragraphs outside the interval (outliers distort bin boundaries)
-- Bin survivors: use median + 1.4826·MAD as scale; derive bin edges from
-  center ± n·scale. Prefer 5–8 bins. Label each paragraph with its bin.
+- Bin survivors: use median + 1.4826Â·MAD as scale; derive bin edges from
+  center Â± nÂ·scale. Prefer 5â€“8 bins. Label each paragraph with its bin.
 
 **Topic counts:**
-- Run LDA or NMF over the corpus (k=10–20 topics)
+- Run LDA or NMF over the corpus (k=10â€“20 topics)
 - Assign dominant topic per paragraph
-- Cross-tabulate: bin × topic → stratum grid
+- Cross-tabulate: bin Ã— topic â†’ stratum grid
 
 **Sampling:**
 - Target 2k total; allocate proportionally to stratum size
 - If any stratum has < 5 paragraphs, merge with nearest neighbor stratum
 - Output: 2k paragraphs with (bin, topic, token_len) metadata
 
-**Validation gate:** stratum coverage ≥ 80% of non-empty cells. No stratum
+**Validation gate:** stratum coverage â‰¥ 80% of non-empty cells. No stratum
 contributes > 20% of the 2k sample.
 
 ---
 
-## Stage 2 — Dual-Hash Sparse Representation
+## Stage 2 â€” Dual-Hash Sparse Representation
 
 **Goal:** represent each paragraph as two sparse vectors in the same format,
 both invertible via lookup over a closed vocabulary.
@@ -107,30 +107,30 @@ both invertible via lookup over a closed vocabulary.
 ### Character n-gram hash
 
 ```
-Require: paragraph text p, n-gram size n ∈ {2,3,4}, vocabulary V_c (prebuilt)
-Guarantee: sparse vector C ∈ R^|V_c|, no collisions within V_c
-Maintain: V_c is closed over the corpus — built offline, not extended at query time
+Require: paragraph text p, n-gram size n âˆˆ {2,3,4}, vocabulary V_c (prebuilt)
+Guarantee: sparse vector C âˆˆ R^|V_c|, no collisions within V_c
+Maintain: V_c is closed over the corpus â€” built offline, not extended at query time
 ```
 
 - Extract all character n-grams from p
 - Index each n-gram into V_c (perfect hash over known corpus n-gram set)
 - Weight: TF of each n-gram within p
-- Inversion: n-gram_id → n-gram string via static reverse table V_c^{-1}
+- Inversion: n-gram_id â†’ n-gram string via static reverse table V_c^{-1}
 - Paragraph reconstruction: candidate set = paragraphs sharing n-gram ids
-  (inverted index lookup, not exact decode — that's correct behavior)
+  (inverted index lookup, not exact decode â€” that's correct behavior)
 
 ### Wordpiece BM25 hash
 
 ```
 Require: paragraph text p, wordpiece tokenizer T, BM25 corpus stats
-Guarantee: sparse vector W ∈ R^|V_w|, entries = BM25 weight per token
+Guarantee: sparse vector W âˆˆ R^|V_w|, entries = BM25 weight per token
 Maintain: V_w = tokenizer vocabulary (closed, fixed)
 ```
 
-- Tokenize p with T → token ids
+- Tokenize p with T â†’ token ids
 - Compute BM25 weight per token id against corpus
 - Store as sparse dict {token_id: bm25_weight}
-- Inversion: token_id → token string via tokenizer decode (trivial, O(1))
+- Inversion: token_id â†’ token string via tokenizer decode (trivial, O(1))
 
 ### Concatenation
 
@@ -139,14 +139,14 @@ X = scipy.sparse.hstack([C, W])  # shape: (n_paragraphs, |V_c| + |V_w|)
 ```
 
 Same format, same dtype (float32), different index ranges. No ambiguity between
-the two halves — split point is |V_c|.
+the two halves â€” split point is |V_c|.
 
 **Validation gate:** zero hash collisions within each vocabulary. Verify by
 asserting len(set(hash(ng) for ng in V_c)) == len(V_c) offline.
 
 ---
 
-## Stage 3 — Sparse Autoencoder
+## Stage 3 â€” Sparse Autoencoder
 
 **Goal:** learn joint latent Z that captures collinear structure between C and W.
 Bottleneck Z is the unified retrieval coordinate. Decoder provides principled
@@ -154,13 +154,13 @@ inversion at the latent level.
 
 ```
 Architecture:
-  Encoder: X (sparse) → dense hidden → Z (bottleneck, L1 penalty)
-  Decoder: Z → dense hidden → X̂ (reconstruction)
+  Encoder: X (sparse) â†’ dense hidden â†’ Z (bottleneck, L1 penalty)
+  Decoder: Z â†’ dense hidden â†’ XÌ‚ (reconstruction)
 
-Loss: MSE(X, X̂) + λ · ‖Z‖₁
+Loss: MSE(X, XÌ‚) + Î» Â· â€–Zâ€–â‚
 
-λ controls sparsity of Z. Start at 1e-3, tune by inspecting
-mean active dimensions in Z (target: 5–15% of bottleneck dim).
+Î» controls sparsity of Z. Start at 1e-3, tune by inspecting
+mean active dimensions in Z (target: 5â€“15% of bottleneck dim).
 ```
 
 ```python
@@ -176,7 +176,7 @@ class SparseAutoencoder(nn.Module):
     Guarantee: bottleneck Z has L1-penalized activations; decoder
                reconstructs both C and W halves
     Maintain: split_idx marks boundary between C and W in X
-    Failure modes: if lambda_l1 too high, Z collapses to zero —
+    Failure modes: if lambda_l1 too high, Z collapses to zero â€”
                    monitor mean active dims per batch
     """
 
@@ -215,22 +215,22 @@ class SparseAutoencoder(nn.Module):
 - Batch over the 2k sample (full corpus for production)
 - Input: dense slice from sparse X via `.toarray()` per batch
 - Normalize rows before input (max-norm)
-- Adam, lr=1e-3, 50–100 epochs
+- Adam, lr=1e-3, 50â€“100 epochs
 - Checkpoint to SQLite after each epoch; load-if-exists
 
 **Validation gate:** reconstruction MSE on held-out 10% < 0.1 (normalized).
-Mean active bottleneck dims per sample: 5–15% of bottleneck_dim.
+Mean active bottleneck dims per sample: 5â€“15% of bottleneck_dim.
 
 ---
 
-## Stage 4 — Correlation Graph
+## Stage 4 â€” Correlation Graph
 
 **Goal:** build a paragraph-level graph where edges encode BM25 score
 correlation, then detect communities as retrieval regions.
 
 ```
-Require: BM25 score matrix M ∈ R^(n × n), significance threshold τ
-Guarantee: graph G with edges only where |corr(i,j)| ≥ τ
+Require: BM25 score matrix M âˆˆ R^(n Ã— n), significance threshold Ï„
+Guarantee: graph G with edges only where |corr(i,j)| â‰¥ Ï„
 Maintain: diagonal excluded; undirected graph
 ```
 
@@ -249,10 +249,10 @@ def build_correlation_graph(
     Build paragraph correlation graph from BM25 score matrix.
 
     Require: bm25_matrix shape (n, n), symmetric, diagonal = self-scores
-    Guarantee: returns undirected graph; edges only where Pearson r ≥ tau
+    Guarantee: returns undirected graph; edges only where Pearson r â‰¥ tau
                AND p-value < p_threshold
     Maintain: no self-loops
-    Failure modes: dense graph if tau too low — monitor edge count,
+    Failure modes: dense graph if tau too low â€” monitor edge count,
                    target < 5% of possible edges for n > 500
     """
     n = bm25_matrix.shape[0]
@@ -281,7 +281,7 @@ def detect_communities(G: nx.Graph) -> dict:
 
 **DWPC** (degree-weighted path coefficient): for inter-community distance,
 down-weight paths through high-degree nodes. Use on sampled node pairs only
-(full DWPC is O(n²·|E|)).
+(full DWPC is O(nÂ²Â·|E|)).
 
 ```python
 def dwpc(G: nx.Graph, source: int, target: int, damping: float = 0.4) -> float:
@@ -290,7 +290,7 @@ def dwpc(G: nx.Graph, source: int, target: int, damping: float = 0.4) -> float:
     Paths through high-degree nodes are penalized by degree^(-damping).
 
     Require: source and target are nodes in G
-    Guarantee: scalar similarity score ≥ 0
+    Guarantee: scalar similarity score â‰¥ 0
     Failure modes: disconnected source/target returns 0.0
     """
     try:
@@ -311,7 +311,7 @@ of nodes (if larger, raise tau). Edge density < 5% for n > 500.
 
 ---
 
-## Stage 5 — Composite Retrieval Index
+## Stage 5 â€” Composite Retrieval Index
 
 **Goal:** store per-paragraph (Z, community_id, avg_bm25) in SQLite for fast
 retrieval with composite distance scoring.
@@ -335,7 +335,7 @@ def build_index(
 
     Require: Z shape (n, bottleneck_dim), normalized rows
     Guarantee: each paragraph has one row; inverted indexes stored as JSON
-    Maintain: char_inverted and wp_inverted keyed by hash_id → [para_ids]
+    Maintain: char_inverted and wp_inverted keyed by hash_id â†’ [para_ids]
     """
     con = sqlite3.connect(db_path)
     con.execute("""
@@ -380,15 +380,15 @@ def build_index(
 **Composite retrieval distance** at query time:
 
 ```
-d(q, p) = α · ‖Z_q − Z_p‖₂
-         + β · (1 − community_overlap(q, p))
-         + γ · (1 / avg_bm25_p)
+d(q, p) = Î± Â· â€–Z_q âˆ’ Z_pâ€–â‚‚
+         + Î² Â· (1 âˆ’ community_overlap(q, p))
+         + Î³ Â· (1 / avg_bm25_p)
 
-Default: α=0.6, β=0.3, γ=0.1
+Default: Î±=0.6, Î²=0.3, Î³=0.1
 community_overlap = 1 if same Louvain community, else 0
 ```
 
-Tune α, β, γ via RAGAS: macro-mean of context precision, context recall,
+Tune Î±, Î², Î³ via RAGAS: macro-mean of context precision, context recall,
 answer relevancy, faithfulness over a held-out QA eval set.
 
 ---
@@ -399,16 +399,16 @@ When the corpus spans multiple eras (e.g. archetype tracking across historical
 texts), weight paragraph embeddings by attestation recency using phi-decay EMA.
 
 ```
-α_R = 1/φ ≈ 0.618  (recency-dominant)
-α_T = 1 − 1/φ ≈ 0.382  (tradition-dominant)
+Î±_R = 1/Ï† â‰ˆ 0.618  (recency-dominant)
+Î±_T = 1 âˆ’ 1/Ï† â‰ˆ 0.382  (tradition-dominant)
 
 n = days since first attestation, rounded to nearest 90-day quarter.
 If residual = 45 exactly (equidistant), snap to 182 (mid-year).
 
-EMA_t = α · Z_t + (1 − α) · EMA_{t−1}
+EMA_t = Î± Â· Z_t + (1 âˆ’ Î±) Â· EMA_{tâˆ’1}
 
-Run both streams. Gap ‖EMA_R − EMA_T‖₂ measures cultural renegotiation rate.
-Wide gap → archetype in active drift. Narrow gap → costume changed, signal stable.
+Run both streams. Gap â€–EMA_R âˆ’ EMA_Tâ€–â‚‚ measures cultural renegotiation rate.
+Wide gap â†’ archetype in active drift. Narrow gap â†’ costume changed, signal stable.
 ```
 
 ---
@@ -421,7 +421,7 @@ Wide gap → archetype in active drift. Narrow gap → costume changed, signal s
 | Tokenizer | HuggingFace tokenizers (wordpiece) |
 | BM25 | rank_bm25 |
 | Autoencoder | PyTorch |
-| ANN search | faiss (IndexFlatL2 for bottleneck dim ≤ 256) |
+| ANN search | faiss (IndexFlatL2 for bottleneck dim â‰¤ 256) |
 | Graph | networkx + python-louvain |
 | Storage | SQLite |
 | Topic modeling | sklearn NMF or gensim LDA |
@@ -452,9 +452,9 @@ Do not proceed to stage N+1 until stage N passes its validation gate.
 
 | Stage | Gate |
 |---|---|
-| Sampler | ≥80% stratum coverage; no stratum > 20% of sample |
+| Sampler | â‰¥80% stratum coverage; no stratum > 20% of sample |
 | Dual hash | Zero collisions in V_c and V_w |
-| Autoencoder | Recon MSE < 0.1; active bottleneck dims 5–15% |
+| Autoencoder | Recon MSE < 0.1; active bottleneck dims 5â€“15% |
 | Correlation graph | Louvain Q > 0.3; largest WCC < 60% nodes; edge density < 5% |
 | Retriever | RAGAS macro-mean > 0.65 on held-out QA set |
 
@@ -472,10 +472,10 @@ Deliberately collapses dimensions to reduce size. Breaks invertibility. Use
 perfect hashing over a closed vocabulary instead.
 
 ### Computing DWPC over all node pairs
-O(n²·|E|) — intractable for n > 200. Sample inter-community pairs only, or
+O(nÂ²Â·|E|) â€” intractable for n > 200. Sample inter-community pairs only, or
 restrict to pairs within DWPC cutoff=4.
 
-### Tuning α, β, γ by hand
+### Tuning Î±, Î², Î³ by hand
 Always tune via RAGAS on a held-out eval set generated by LLM extraction from
 the corpus. Gut feel on retrieval weights is not validation.
 
@@ -487,19 +487,19 @@ the corpus. Gut feel on retrieval weights is not validation.
 - corpus is bounded and vocabulary is closed (fixed wordpiece tokenizer)
 - paragraphs have meaningful length variation worth stratifying on
 - corpus spans identifiable topics (LDA/NMF produces coherent topics)
-- retrieval needs interpretability — sparse signals are auditable, bottleneck
+- retrieval needs interpretability â€” sparse signals are auditable, bottleneck
   activations are inspectable
 
 **Fails or degrades when:**
-- corpus is too small (< 500 paragraphs) — correlation graph becomes trivial
-- vocabulary is open-ended and grows at query time — breaks invertibility
-- bottleneck dim is too large — Z becomes dense, loses retrieval speed advantage
-- tau set too low — graph becomes nearly complete, community structure
+- corpus is too small (< 500 paragraphs) â€” correlation graph becomes trivial
+- vocabulary is open-ended and grows at query time â€” breaks invertibility
+- bottleneck dim is too large â€” Z becomes dense, loses retrieval speed advantage
+- tau set too low â€” graph becomes nearly complete, community structure
   meaningless
 
 ---
 
-## Linear Bottleneck (TruncatedSVD) — No-Training Alternative
+## Linear Bottleneck (TruncatedSVD) â€” No-Training Alternative
 
 Before training a PyTorch AE, try the **linear bottleneck** first. It requires no gradient descent, is deterministic, and is often sufficient when corpus structure is approximately linear.
 
@@ -514,15 +514,15 @@ import numpy as np
 
 class MultiViewProjector:
     """
-    Linear multi-view bottleneck: TF-IDF + token count + char bitvec → TruncatedSVD → z.
+    Linear multi-view bottleneck: TF-IDF + token count + char bitvec â†’ TruncatedSVD â†’ z.
 
     Views (concatenated before SVD):
-        1. TF-IDF (max_tfidf_features) — term importance
-        2. Token CountVectorizer (closed vocab, min_df=2) — bag-of-words multiset
-        3. Char n-gram bitvec (analyzer="char", n=char_n) — morphological surface
+        1. TF-IDF (max_tfidf_features) â€” term importance
+        2. Token CountVectorizer (closed vocab, min_df=2) â€” bag-of-words multiset
+        3. Char n-gram bitvec (analyzer="char", n=char_n) â€” morphological surface
 
     Require: len(docs) > ae_dim
-    Guarantee: transform() returns L2-normalised z ∈ R^{n × ae_dim}
+    Guarantee: transform() returns L2-normalised z âˆˆ R^{n Ã— ae_dim}
     Failure modes: corpus < ae_dim docs causes TruncatedSVD to fail
     """
 
@@ -552,12 +552,12 @@ class MultiViewProjector:
         return normalize(self.svd.transform(self._build_matrix(docs)), norm="l2")
 ```
 
-**When to upgrade to PyTorch AE:** if `explained_variance_` < 0.30 after fitting on the proxy corpus, the linear bottleneck is leaving > 70% of variance on the floor — switch to the nonlinear SparseAutoencoder in Stage 3.
+**When to upgrade to PyTorch AE:** if `explained_variance_` < 0.30 after fitting on the proxy corpus, the linear bottleneck is leaving > 70% of variance on the floor â€” switch to the nonlinear SparseAutoencoder in Stage 3.
 
 Typical explained variance:
-- Brown corpus (general text): 0.35–0.42
-- Technical corpora (narrow domain): 0.55–0.70 (TF-IDF dominates, views are collinear)
-- Mixed-domain corpora: 0.25–0.35 (high residual → consider nonlinear)
+- Brown corpus (general text): 0.35â€“0.42
+- Technical corpora (narrow domain): 0.55â€“0.70 (TF-IDF dominates, views are collinear)
+- Mixed-domain corpora: 0.25â€“0.35 (high residual â†’ consider nonlinear)
 
 ---
 
@@ -575,7 +575,7 @@ def view_collinearity(z1: np.ndarray, z2: np.ndarray, n_components: int = 10) ->
     Returns mean canonical correlation across n_components pairs.
     1.0 = views fully collinear, 0.0 = orthogonal.
 
-    Require: z1, z2 ∈ R^{n × d}, n > n_components
+    Require: z1, z2 âˆˆ R^{n Ã— d}, n > n_components
     """
     cca = CCA(n_components=n_components, max_iter=1000)
     z1_c, z2_c = cca.fit_transform(z1, z2)
@@ -583,32 +583,32 @@ def view_collinearity(z1: np.ndarray, z2: np.ndarray, n_components: int = 10) ->
 ```
 
 **Decision tree:**
-- `collinearity(sparse_z, dense_z) > 0.70` → dense redundant; skip embedding call
-- `collinearity < 0.40` → dense orthogonal; add as 4th view or fuse graphs with RRF
-- `0.40–0.70` → borderline; run community NMI (normalized mutual information) to decide:
-  - if `NMI(sparse_communities, dense_communities) > 0.80` → same partition, skip dense
-  - else → dense changes community structure, worth adding
+- `collinearity(sparse_z, dense_z) > 0.70` â†’ dense redundant; skip embedding call
+- `collinearity < 0.40` â†’ dense orthogonal; add as 4th view or fuse graphs with RRF
+- `0.40â€“0.70` â†’ borderline; run community NMI (normalized mutual information) to decide:
+  - if `NMI(sparse_communities, dense_communities) > 0.80` â†’ same partition, skip dense
+  - else â†’ dense changes community structure, worth adding
 
 **Per-view collinearity:** also compare views against each other before concatenating.
-If `collinearity(tfidf_z, token_z) > 0.85` → token count vector is redundant given TF-IDF.
+If `collinearity(tfidf_z, token_z) > 0.85` â†’ token count vector is redundant given TF-IDF.
 In practice, char bitvec adds morphological signal not in TF-IDF (handles OOV stems and spelling variants).
 
 ---
 
 ## Connection to Music Embedding Matrix Pattern
 
-The `music/` repo builds an embedding matrix: items (tracks) × features (MFCC, chroma, …) → sparse matrix → SVD → z per track. This is the same architecture applied to text:
+The `music/` repo builds an embedding matrix: items (tracks) Ã— features (MFCC, chroma, â€¦) â†’ sparse matrix â†’ SVD â†’ z per track. This is the same architecture applied to text:
 
 | `music/` pattern | `bm25-autoencoder` |
 |---|---|
 | items = tracks | items = paragraphs |
 | features = audio feature axes | features = TF-IDF terms + token IDs + char n-grams |
-| sparse matrix = track × feature presence | sparse matrix = doc × term weight / count |
-| TruncatedSVD(k) → z per track | TruncatedSVD(k) → z per doc |
-| cosine sim on z → track similarity graph | cosine sim on z → retrieval community graph |
-| walk back: feature_id → audio feature name | walk back: token_id → vocab[id] (bag-of-words recovery) |
+| sparse matrix = track Ã— feature presence | sparse matrix = doc Ã— term weight / count |
+| TruncatedSVD(k) â†’ z per track | TruncatedSVD(k) â†’ z per doc |
+| cosine sim on z â†’ track similarity graph | cosine sim on z â†’ retrieval community graph |
+| walk back: feature_id â†’ audio feature name | walk back: token_id â†’ vocab[id] (bag-of-words recovery) |
 
-The BM25 wordpiece sparse matrix is the "starting schema." Each wordpiece token is a feature axis; each document is an item. The dual-hash gives invertibility: you can reconstruct the token set (bag-of-words) from the compressed z path — same as recovering which audio features place a track in its z-space position.
+The BM25 wordpiece sparse matrix is the "starting schema." Each wordpiece token is a feature axis; each document is an item. The dual-hash gives invertibility: you can reconstruct the token set (bag-of-words) from the compressed z path â€” same as recovering which audio features place a track in its z-space position.
 
 ---
 
