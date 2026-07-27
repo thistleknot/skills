@@ -1,4 +1,4 @@
-﻿# Project Brief
+# Project Brief
 
 ## Purpose
 This memory bank covers Jos Hua's personal technical work outside of Boeing:
@@ -10,7 +10,7 @@ Not Boeing work. Not subject to Boeing IP constraints.
 - All price data via stooq through pandas_datareader. Never yfinance.
 - Fundamentals via FMP free tier or SEC EDGAR XBRL API
 - Local AI inference preferred over cloud where latency allows
-- Code must be complete — no snippets, no placeholders
+- Code must be complete â€” no snippets, no placeholders
 
 ## Out of Scope
 - Boeing proprietary systems
