@@ -232,12 +232,28 @@ function Test-IsPriority($label) {
 }
 
 function Show-Diff($masterFile, $mirrorFile) {
+    # New-file case: master has no copy yet (the mirror introduced this path, or the
+    # parent skill folder was never copied down). git diff --no-index CANNOT take a
+    # nonexistent path -- it emits "error: Could not access '<path>'", which under
+    # $ErrorActionPreference='Stop' becomes a fatal NativeCommandError and aborts the
+    # whole reconciliation. Render the whole mirror file as an addition instead.
+    if (-not (Test-Path -LiteralPath $masterFile)) {
+        Write-Host "  (entire file is new; showing mirror content)" -ForegroundColor DarkGray
+        $lines = @(Get-Content -LiteralPath $mirrorFile -ErrorAction SilentlyContinue)
+        $lines | Select-Object -First 80 | ForEach-Object { Write-Host "+$_" -ForegroundColor DarkYellow }
+        if ($lines.Count -gt 80) {
+            Write-Host "  ... ($($lines.Count - 80) more lines)" -ForegroundColor DarkGray
+        }
+        return
+    }
+
     # git diff --no-index gives a unified diff without needing a repo.
     # -c core.autocrlf=false suppresses git's "LF will be replaced by CRLF" stderr
     # warning, which under $ErrorActionPreference='Stop' would otherwise surface as
-    # a fatal NativeCommandError and abort the whole reconciliation.
+    # a fatal NativeCommandError and abort the whole reconciliation. 'error:'/'fatal:'
+    # are filtered for the same reason -- diff output is advisory, never load-bearing.
     $diff = git -c core.autocrlf=false diff --no-index --unified=3 -- $masterFile $mirrorFile 2>&1 |
-            Where-Object { $_ -notmatch '^warning:' }
+            Where-Object { $_ -notmatch '^(warning|error|fatal):' }
     if ($diff) {
         # Show at most 80 lines to avoid flooding
         $diff | Select-Object -First 80 | Write-Host -ForegroundColor DarkYellow

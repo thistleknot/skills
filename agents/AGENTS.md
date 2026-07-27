@@ -8,19 +8,19 @@ Every agent call MUST include these fields or it will throw `SchemaError`:
 ## Agent Roster
 This project uses a multi-agent harness. Default entrypoint is @orchestrator.
 
-- @orchestrator â€” primary router, gemma orchestrator lane, cheapest sufficient delegation
-- @planner â€” high-effort planning lane (oracle / planner)
-- @fixer â€” multi-file implementation packetizer (fixer / coder)
-- @aider â€” leaf executor, one bounded edit packet per call (subtask=deny)
-- @pi â€” inner harness loop / smoke-test runner
-- @patcher â€” exact hotfix / known-file mutation agent
-- @handyman â€” mechanical file operations
-- @debugger â€” validation and error tracing
-- @scout â€” disciplined first-pass codebase search and mapping
-- @researcher â€” 3-hop web/docs/files evidence gathering (absorbs librarian)
-- @summarizer â€” SPO triplet extraction / context compression
-- @observer â€” visual inspection and audit
-- @thinker â€” first-principles fallback when stuck
+- @orchestrator — primary router, gemma orchestrator lane, cheapest sufficient delegation
+- @planner — high-effort planning lane (oracle / planner)
+- @fixer — multi-file implementation packetizer (fixer / coder)
+- @aider — leaf executor, one bounded edit packet per call (subtask=deny)
+- @pi — inner harness loop / smoke-test runner
+- @patcher — exact hotfix / known-file mutation agent
+- @handyman — mechanical file operations
+- @debugger — validation and error tracing
+- @scout — disciplined first-pass codebase search and mapping
+- @researcher — 3-hop web/docs/files evidence gathering (absorbs librarian)
+- @summarizer — SPO triplet extraction / context compression
+- @observer — visual inspection and audit
+- @thinker — first-principles fallback when stuck
 
 Legacy docs still exist for `@designer`, `@explorer`, and `@librarian`, but the
 active OMO-Slim hierarchy shown in `hierarchy.mmd` / `hierarchy.svg` routes through
@@ -41,20 +41,20 @@ legacy explorer lane remains disabled.
   sessions in JSON mode, detects unavailable-tool `read`, Unix `cat` in
   PowerShell, and empty `write` payloads, then retries with an explicit runtime
   tool contract instead of waiting for a generic stall timeout.
-- @orchestrator â€” primary router, cheapest sufficient delegation
-- @planner â€” architecture and decomposition
-- @designer â€” signatures and stubs before implementation
-- @coder â€” spec-packager + @aider dispatcher (no direct file edits)
-- @aider â€” leaf executor, one bounded edit packet per call (subtask=deny)
-- @pi â€” pure command runner, no decisions
-- @handyman â€” mechanical file operations
-- @debugger â€” validation and error tracing
-- @scout â€” codebase search and mapping (disciplined, 50-line output cap; disabled in the current Gemma orchestration path)
-- @explorer â€” codebase search built-in (undisciplined fallback; prefer @scout)
-- @librarian â€” external research and docs
-- @summarizer â€” context compression, triplet extraction
-- @observer â€” visual and document interpretation
-- @thinker â€” deep reasoning, first-principles re-approach when stuck
+- @orchestrator — primary router, cheapest sufficient delegation
+- @planner — architecture and decomposition
+- @designer — signatures and stubs before implementation
+- @coder — spec-packager + @aider dispatcher (no direct file edits)
+- @aider — leaf executor, one bounded edit packet per call (subtask=deny)
+- @pi — pure command runner, no decisions
+- @handyman — mechanical file operations
+- @debugger — validation and error tracing
+- @scout — codebase search and mapping (disciplined, 50-line output cap; disabled in the current Gemma orchestration path)
+- @explorer — codebase search built-in (undisciplined fallback; prefer @scout)
+- @librarian — external research and docs
+- @summarizer — context compression, triplet extraction
+- @observer — visual and document interpretation
+- @thinker — deep reasoning, first-principles re-approach when stuck
 
 When in doubt, start with @orchestrator.
 
@@ -86,7 +86,7 @@ When in doubt, start with @orchestrator.
 | @researcher | @summarizer | task() | Raw evidence in, compact triplets/evidence pack out. |
 | @summarizer | @thinker | task() | Compressed evidence pack in, first-principles reframe out. |
 | @orchestrator | @debugger | task() | Pass logs/error + task_id. Debugger returns diagnosis + fix recommendation. |
-| @orchestrator | @aider | INVALID | Must go via @coder. Direct orchâ†’@aider is a routing violation. |
+| @orchestrator | @aider | INVALID | Must go via @coder. Direct orch→@aider is a routing violation. |
 | @coder | @aider | task() | One bounded edit packet per call. Files + acceptance criteria + exact change. |
 | any | any | prompt prefix | Always include `[task_id=<id>,workspace_root=<path>]` at start of prompt. |
 
@@ -100,5 +100,5 @@ Every agent prompt begins with `[task_id=<id>,workspace_root=<path>] <task>`.
 
 Orchestrator additionally calls `task-graph_record_heartbeat` as its **first action every turn**.
 The watchdog (`heartbeat.ps1`) exits when root task status = `done`. It now treats either **no heartbeat for 300s** or **4x consecutive verbatim stdout repeats** as a stall, then rotates sampler + seed before resuming the same root task.
-The watchdog (heartbeat.ps1) exits when root task status = `done`. No heartbeat for 300s = stall â†’ rotate sampler.
+The watchdog (heartbeat.ps1) exits when root task status = `done`. No heartbeat for 300s = stall → rotate sampler.
 For Gemma orchestrator sessions, the watchdog also treats deterministic contract failures as repairable stalls: unavailable `read`, PowerShell shell-dialect mismatches like multi-file `cat`, and empty `write` payloads trigger a corrected retry with an explicit runtime tool contract.

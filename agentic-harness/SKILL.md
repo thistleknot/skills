@@ -343,7 +343,7 @@ opencode run --agent meta-harness "implement feature X"
   The outer profile is just a gated doorbell.
 - `--fork` before continuing protects the session tree from mid-run branching.
 - This pattern is a direct instantiation of the **Harness-as-policy** rung on the
-  Harness Progression Ladder (see Â§Harness Progression Ladder → 3. Harness-as-policy).
+  Harness Progression Ladder (see §Harness Progression Ladder → 3. Harness-as-policy).
 
 ### Invariant
 
@@ -1036,7 +1036,7 @@ produces degraded or diverging output.
 - **Root cause**: the audit/fix prompt asks the LLM to enumerate all violations with no count limit.  The response overflows the token cap, the JSON is malformed, and the parser either silently drops data (salvage) or raises — either way the next round starts with corrupted input.
 - **Fix — bound at the prompt, not the parser**:
   - Add `LIMIT: Report at most 10 violations.` to the audit prompt.
-  - 10 violations Ã— ~100 tokens each â‰ˆ 1000 tokens — comfortably within the 4096 cap.
+  - 10 violations × ~100 tokens each ≈ 1000 tokens — comfortably within the 4096 cap.
   - In the parser, call `json.loads` directly and let it raise on malformed JSON.  A hard failure surfaces the problem immediately rather than hiding it behind partial data.
 - **Do not use a salvage parser** (`rfind("}")` + slice).  Salvage masks token-cap overflows, silently drops violations, and causes the audit loop to believe it is making progress when it is not.
 - Always validate completeness with an EOF sentinel (`# END OF FILE`) for generated code files, but for structured JSON responses prefer prompt-side bounds over post-hoc repair.
@@ -1086,7 +1086,7 @@ tail -f /tmp/run.log
 # GOOD:  "generate_tests: N files"                                         — N > 0
 # GOOD:  "gate install_deps: exit=0"
 # BAD:   "reconcile_audit round N: M violation(s) (0 from import check)"  — M growing
-# BAD:   "ReadTimeout on attempt N" Ã— 3+                                  — server overloaded
+# BAD:   "ReadTimeout on attempt N" × 3+                                  — server overloaded
 # BAD:   "Test for X truncated at turn 5" / SyntaxError                   — test discard
 # BAD:   "gate install_deps: exit=-1"                                      — gate timeout bug
 ```
@@ -1182,7 +1182,7 @@ These apply to the `dark_factory` harness at `/home/user/harness`:
 | `MAX_RETRIES` | `llm.py:308` | 4 | LLM HTTP retries before raising |
 | `DEFAULT_TIMEOUT` | `llm.py:49` | 300 s | Per-attempt HTTP timeout |
 
-**Pipeline flow**: PM → implement → reconcile (audit/fix loop) → generate_tests → install_deps gate → verify → [retry Ã—3]
+**Pipeline flow**: PM → implement → reconcile (audit/fix loop) → generate_tests → install_deps gate → verify → [retry ×3]
 
 **LLM tiers**:
 - `heavy` → `local-qwen` (Qwen3.6-35B-A3B, 127.0.0.1:8081, ~15-20 tok/s, 4096 max out)
@@ -1378,22 +1378,22 @@ This is the harness equivalent of asking hard questions before committing to a p
 
 | Hat | Lens | Ask |
 |---|---|---|
-| â¬œ White | Facts & data | What inputs, artifacts, and environment state are confirmed? |
-| ðŸ”´ Red | Intuition | What feels underspecified or risky in the task spec? |
-| â¬› Black | Failure modes | What are the harness-breaking failure classes for this task? |
-| ðŸŸ¡ Yellow | Success | What does a clean artifact + passing gate look like? |
-| ðŸŸ¢ Green | Alternatives | Is there a simpler decomposition or a reusable sub-harness? |
-| ðŸ”µ Blue | Process | What is the correct topological order? Where are the real blockers? |
+| ⬜ White | Facts & data | What inputs, artifacts, and environment state are confirmed? |
+| 🔴 Red | Intuition | What feels underspecified or risky in the task spec? |
+| ⬛ Black | Failure modes | What are the harness-breaking failure classes for this task? |
+| 🟡 Yellow | Success | What does a clean artifact + passing gate look like? |
+| 🟢 Green | Alternatives | Is there a simpler decomposition or a reusable sub-harness? |
+| 🔵 Blue | Process | What is the correct topological order? Where are the real blockers? |
 
 **Temporal causal tree** — before issuing story cards, map the task as if/then/else:
 
 ```
 TASK_ROOT
- â”œâ”€ IF dependency_A satisfied → proceed to Level 1
- â”‚    â”œâ”€ IF artifact_B exists → skip generation, use existing
- â”‚    â””â”€ ELSE → generate_B; gate on quality check
- â”œâ”€ IF dependency_A missing → unblock_A first (new root sub-task)
- â””â”€ IF ambiguous spec → surface to user before any code runs
+ ├─ IF dependency_A satisfied → proceed to Level 1
+ │    ├─ IF artifact_B exists → skip generation, use existing
+ │    └─ ELSE → generate_B; gate on quality check
+ ├─ IF dependency_A missing → unblock_A first (new root sub-task)
+ └─ IF ambiguous spec → surface to user before any code runs
 ```
 
 Contingencies that **must** be recorded in the HTP graph before dispatch:
@@ -1520,11 +1520,11 @@ The same waterfall → agile pipeline used to manage software projects applies t
 
 ```
 topics      rough ideas, observations, pain points, things that keep coming up
-    â†“
+    ↓
 plans       structured approach: what the skill covers, what it doesn't, key decisions
-    â†“
+    ↓
 specs       precise behavioral contracts: trigger rules, scope boundaries, interfaces
-    â†“
+    ↓
 tasks       executable changes: which files, what sections, what wording
 ```
 
@@ -1643,30 +1643,30 @@ any phase. The system must recover gracefully.
 
 ```
 START
-  â”‚
-  â–¼
-office-hours        â† product/scope clarification
-  â”‚
-  â–¼
-autoplan            â† CEO + design + eng + DX review, auto-decisions, single approval gate
-  â”‚
-  â–¼
-BUILD               â† /checkpoint auto-save before each phase
-  â”‚
-  â–¼
-health-gate         â† composite code quality score ≥ 7.0 (tsc, biome, lint, tests)
-  â”‚ fail → back to BUILD
-  â–¼
-review              â† 7 parallel specialist subagents (see Review Army)
-  â”‚ ASK items → back to BUILD
-  â–¼
-QA                  â† behavior testing; bugs found → back to BUILD
-  â”‚
-  â–¼
-ship                â† WIP squash → PR → merge → deploy
-  â”‚
-  â–¼
-checkpoint archive  â† preserve, don't destroy; recovery state for debugging failed runs
+  │
+  ▼
+office-hours        ← product/scope clarification
+  │
+  ▼
+autoplan            ← CEO + design + eng + DX review, auto-decisions, single approval gate
+  │
+  ▼
+BUILD               ← /checkpoint auto-save before each phase
+  │
+  ▼
+health-gate         ← composite code quality score ≥ 7.0 (tsc, biome, lint, tests)
+  │ fail → back to BUILD
+  ▼
+review              ← 7 parallel specialist subagents (see Review Army)
+  │ ASK items → back to BUILD
+  ▼
+QA                  ← behavior testing; bugs found → back to BUILD
+  │
+  ▼
+ship                ← WIP squash → PR → merge → deploy
+  │
+  ▼
+checkpoint archive  ← preserve, don't destroy; recovery state for debugging failed runs
 ```
 
 Each phase writes to `timeline.jsonl`. Checkpoints auto-save before each phase.  
@@ -1738,24 +1738,24 @@ the agent's context window.
 
 ```
 Tool output received
-    â”‚
-    â–¼
+    │
+    ▼
 Deterministic rules (regex/JSON, per-tool, <50ms budget each)
-    â”‚ reduction >50% AND exitâ‰ 0 (failure compaction risk)
-    â–¼
+    │ reduction >50% AND exit≠0 (failure compaction risk)
+    ▼
 Claude Haiku verifier (did we strip critical stack frame?)
-    â”‚ over-compaction detected → restore original
-    â–¼
+    │ over-compaction detected → restore original
+    ▼
 Reduced output sent to agent context
 ```
 
 **Built-in tool output bloat patterns to trim:**
 - `npm install` / `pip install` — installed N packages lines → keep only errors
 - `pytest` / `jest` output — pass lines → keep only failures + summary
-- `git diff` — context lines → keep Â±3 around changes, not full file
+- `git diff` — context lines → keep ±3 around changes, not full file
 - `tsc` / `biome` — info/warn → keep only errors
 
-**Failure compaction guard:** if exit code â‰  0 AND reduction > 50%, run Haiku
+**Failure compaction guard:** if exit code ≠ 0 AND reduction > 50%, run Haiku
 verifier to confirm no critical stack frame was stripped. Default ON — this is the
 highest-risk case.
 

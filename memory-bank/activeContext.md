@@ -22,7 +22,7 @@ Windows environment (py310 conda env).
 ## Patterns and Preferences
 - One degree less technical verbosity than default
 - Plain speech, direct answers, no preamble
-- Complete files always â€” never snippets
+- Complete files always — never snippets
 - Bold original phrasing when expanding ideas
 
 ## Learnings

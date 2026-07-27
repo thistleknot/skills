@@ -42,15 +42,15 @@ OFFLINE (index time)
       → [Stage 2] dual-hash sparse representation
             character n-gram hash  → sparse vector C
             wordpiece BM25 hash    → sparse vector W
-            concat [C â€– W]         → input matrix X
+            concat [C ‖ W]         → input matrix X
 
       → [Stage 3] sparse autoencoder
             encoder: X → bottleneck Z (L1-penalized)
-            decoder: Z → XÌ‚ (reconstruction = inversion)
+            decoder: Z → X̂ (reconstruction = inversion)
             train offline, freeze for retrieval
 
       → [Stage 4] correlation graph
-            BM25 score matrix (paragraph Ã— paragraph)
+            BM25 score matrix (paragraph × paragraph)
             → Pearson/Spearman correlation
             → threshold significant correlations → edges
             → Louvain community detection (soft assignment)
@@ -64,7 +64,7 @@ OFFLINE (index time)
 ONLINE (query time)
 
   query text
-      → dual-hash → [C â€– W]
+      → dual-hash → [C ‖ W]
       → encode → Z_q
       → ANN search over Z (bottleneck distance)
       → filter/rerank by community overlap + avg BM25 prior
@@ -81,13 +81,13 @@ ONLINE (query time)
 - Compute token length per paragraph (wordpiece tokenizer)
 - Fit distribution, derive 95% prediction interval
 - Drop paragraphs outside the interval (outliers distort bin boundaries)
-- Bin survivors: use median + 1.4826Â·MAD as scale; derive bin edges from
-  center Â± nÂ·scale. Prefer 5–8 bins. Label each paragraph with its bin.
+- Bin survivors: use median + 1.4826·MAD as scale; derive bin edges from
+  center ± n·scale. Prefer 5–8 bins. Label each paragraph with its bin.
 
 **Topic counts:**
 - Run LDA or NMF over the corpus (k=10–20 topics)
 - Assign dominant topic per paragraph
-- Cross-tabulate: bin Ã— topic → stratum grid
+- Cross-tabulate: bin × topic → stratum grid
 
 **Sampling:**
 - Target 2k total; allocate proportionally to stratum size
@@ -107,8 +107,8 @@ both invertible via lookup over a closed vocabulary.
 ### Character n-gram hash
 
 ```
-Require: paragraph text p, n-gram size n âˆˆ {2,3,4}, vocabulary V_c (prebuilt)
-Guarantee: sparse vector C âˆˆ R^|V_c|, no collisions within V_c
+Require: paragraph text p, n-gram size n ∈ {2,3,4}, vocabulary V_c (prebuilt)
+Guarantee: sparse vector C ∈ R^|V_c|, no collisions within V_c
 Maintain: V_c is closed over the corpus — built offline, not extended at query time
 ```
 
@@ -123,7 +123,7 @@ Maintain: V_c is closed over the corpus — built offline, not extended at query
 
 ```
 Require: paragraph text p, wordpiece tokenizer T, BM25 corpus stats
-Guarantee: sparse vector W âˆˆ R^|V_w|, entries = BM25 weight per token
+Guarantee: sparse vector W ∈ R^|V_w|, entries = BM25 weight per token
 Maintain: V_w = tokenizer vocabulary (closed, fixed)
 ```
 
@@ -155,11 +155,11 @@ inversion at the latent level.
 ```
 Architecture:
   Encoder: X (sparse) → dense hidden → Z (bottleneck, L1 penalty)
-  Decoder: Z → dense hidden → XÌ‚ (reconstruction)
+  Decoder: Z → dense hidden → X̂ (reconstruction)
 
-Loss: MSE(X, XÌ‚) + Î» Â· â€–Zâ€–â‚
+Loss: MSE(X, X̂) + λ · ‖Z‖₁
 
-Î» controls sparsity of Z. Start at 1e-3, tune by inspecting
+λ controls sparsity of Z. Start at 1e-3, tune by inspecting
 mean active dimensions in Z (target: 5–15% of bottleneck dim).
 ```
 
@@ -229,8 +229,8 @@ Mean active bottleneck dims per sample: 5–15% of bottleneck_dim.
 correlation, then detect communities as retrieval regions.
 
 ```
-Require: BM25 score matrix M âˆˆ R^(n Ã— n), significance threshold Ï„
-Guarantee: graph G with edges only where |corr(i,j)| ≥ Ï„
+Require: BM25 score matrix M ∈ R^(n × n), significance threshold τ
+Guarantee: graph G with edges only where |corr(i,j)| ≥ τ
 Maintain: diagonal excluded; undirected graph
 ```
 
@@ -281,7 +281,7 @@ def detect_communities(G: nx.Graph) -> dict:
 
 **DWPC** (degree-weighted path coefficient): for inter-community distance,
 down-weight paths through high-degree nodes. Use on sampled node pairs only
-(full DWPC is O(nÂ²Â·|E|)).
+(full DWPC is O(n²·|E|)).
 
 ```python
 def dwpc(G: nx.Graph, source: int, target: int, damping: float = 0.4) -> float:
@@ -380,15 +380,15 @@ def build_index(
 **Composite retrieval distance** at query time:
 
 ```
-d(q, p) = Î± Â· â€–Z_q âˆ’ Z_pâ€–â‚‚
-         + Î² Â· (1 âˆ’ community_overlap(q, p))
-         + Î³ Â· (1 / avg_bm25_p)
+d(q, p) = α · ‖Z_q − Z_p‖₂
+         + β · (1 − community_overlap(q, p))
+         + γ · (1 / avg_bm25_p)
 
-Default: Î±=0.6, Î²=0.3, Î³=0.1
+Default: α=0.6, β=0.3, γ=0.1
 community_overlap = 1 if same Louvain community, else 0
 ```
 
-Tune Î±, Î², Î³ via RAGAS: macro-mean of context precision, context recall,
+Tune α, β, γ via RAGAS: macro-mean of context precision, context recall,
 answer relevancy, faithfulness over a held-out QA eval set.
 
 ---
@@ -399,15 +399,15 @@ When the corpus spans multiple eras (e.g. archetype tracking across historical
 texts), weight paragraph embeddings by attestation recency using phi-decay EMA.
 
 ```
-Î±_R = 1/Ï† â‰ˆ 0.618  (recency-dominant)
-Î±_T = 1 âˆ’ 1/Ï† â‰ˆ 0.382  (tradition-dominant)
+α_R = 1/φ ≈ 0.618  (recency-dominant)
+α_T = 1 − 1/φ ≈ 0.382  (tradition-dominant)
 
 n = days since first attestation, rounded to nearest 90-day quarter.
 If residual = 45 exactly (equidistant), snap to 182 (mid-year).
 
-EMA_t = Î± Â· Z_t + (1 âˆ’ Î±) Â· EMA_{tâˆ’1}
+EMA_t = α · Z_t + (1 − α) · EMA_{t−1}
 
-Run both streams. Gap â€–EMA_R âˆ’ EMA_Tâ€–â‚‚ measures cultural renegotiation rate.
+Run both streams. Gap ‖EMA_R − EMA_T‖₂ measures cultural renegotiation rate.
 Wide gap → archetype in active drift. Narrow gap → costume changed, signal stable.
 ```
 
@@ -472,10 +472,10 @@ Deliberately collapses dimensions to reduce size. Breaks invertibility. Use
 perfect hashing over a closed vocabulary instead.
 
 ### Computing DWPC over all node pairs
-O(nÂ²Â·|E|) — intractable for n > 200. Sample inter-community pairs only, or
+O(n²·|E|) — intractable for n > 200. Sample inter-community pairs only, or
 restrict to pairs within DWPC cutoff=4.
 
-### Tuning Î±, Î², Î³ by hand
+### Tuning α, β, γ by hand
 Always tune via RAGAS on a held-out eval set generated by LLM extraction from
 the corpus. Gut feel on retrieval weights is not validation.
 
@@ -522,7 +522,7 @@ class MultiViewProjector:
         3. Char n-gram bitvec (analyzer="char", n=char_n) — morphological surface
 
     Require: len(docs) > ae_dim
-    Guarantee: transform() returns L2-normalised z âˆˆ R^{n Ã— ae_dim}
+    Guarantee: transform() returns L2-normalised z ∈ R^{n × ae_dim}
     Failure modes: corpus < ae_dim docs causes TruncatedSVD to fail
     """
 
@@ -575,7 +575,7 @@ def view_collinearity(z1: np.ndarray, z2: np.ndarray, n_components: int = 10) ->
     Returns mean canonical correlation across n_components pairs.
     1.0 = views fully collinear, 0.0 = orthogonal.
 
-    Require: z1, z2 âˆˆ R^{n Ã— d}, n > n_components
+    Require: z1, z2 ∈ R^{n × d}, n > n_components
     """
     cca = CCA(n_components=n_components, max_iter=1000)
     z1_c, z2_c = cca.fit_transform(z1, z2)
@@ -597,13 +597,13 @@ In practice, char bitvec adds morphological signal not in TF-IDF (handles OOV st
 
 ## Connection to Music Embedding Matrix Pattern
 
-The `music/` repo builds an embedding matrix: items (tracks) Ã— features (MFCC, chroma, â€¦) → sparse matrix → SVD → z per track. This is the same architecture applied to text:
+The `music/` repo builds an embedding matrix: items (tracks) × features (MFCC, chroma, …) → sparse matrix → SVD → z per track. This is the same architecture applied to text:
 
 | `music/` pattern | `bm25-autoencoder` |
 |---|---|
 | items = tracks | items = paragraphs |
 | features = audio feature axes | features = TF-IDF terms + token IDs + char n-grams |
-| sparse matrix = track Ã— feature presence | sparse matrix = doc Ã— term weight / count |
+| sparse matrix = track × feature presence | sparse matrix = doc × term weight / count |
 | TruncatedSVD(k) → z per track | TruncatedSVD(k) → z per doc |
 | cosine sim on z → track similarity graph | cosine sim on z → retrieval community graph |
 | walk back: feature_id → audio feature name | walk back: token_id → vocab[id] (bag-of-words recovery) |

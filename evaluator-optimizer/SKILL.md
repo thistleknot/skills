@@ -30,23 +30,23 @@ Do **not** use when:
 ## Architecture
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚   generator  â”‚  produces initial candidate(s)
-â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜
-       â”‚ candidates
-       â–¼
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚   evaluator  â”‚  LLM-as-judge; produces structured critique + score
-â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜
-       â”‚ verdict
-       â”œâ”€â”€â”€ score ≥ threshold  â”€â”€â–º  [accept]
-       â””â”€â”€â”€ score < threshold  â”€â”€â–º  optimizer
-                                       â”‚
-                               â”Œâ”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”
-                               â”‚   optimizer  â”‚  synthesizes critique → new prompt
-                               â””â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
-                                       â”‚ refined prompt
-                                       â””â”€â”€â–º generator  (next iteration)
+┌──────────────┐
+│   generator  │  produces initial candidate(s)
+└──────┬───────┘
+       │ candidates
+       ▼
+┌──────────────┐
+│   evaluator  │  LLM-as-judge; produces structured critique + score
+└──────┬───────┘
+       │ verdict
+       ├─── score ≥ threshold  ──►  [accept]
+       └─── score < threshold  ──►  optimizer
+                                       │
+                               ┌───────▼──────┐
+                               │   optimizer  │  synthesizes critique → new prompt
+                               └───────┬──────┘
+                                       │ refined prompt
+                                       └──► generator  (next iteration)
 ```
 
 The **generator**, **evaluator**, and **optimizer** can be the same model with different
@@ -58,12 +58,12 @@ contract; the physical routing is an implementation detail.
 When latency permits parallel generation:
 
 ```
-generator Ã— N  (parallel)
-      â”‚
-      â–¼
+generator × N  (parallel)
+      │
+      ▼
 evaluator scores all N candidates
-      â”‚
-      â–¼
+      │
+      ▼
 MBR selector: argmax(score) or consensus vote
 ```
 
@@ -218,11 +218,11 @@ cheaper model handles a task well enough, the verdict must come from a model tha
 demonstrably stronger — not a peer, and never the model under test.
 
 ```
-valid:     GPT-4o judges Qwen-3.5-0.8b output            âœ“
-valid:     Claude Sonnet judges Haiku output              âœ“
-invalid:   Qwen-3.5-0.8b judges its own output           âœ—
-invalid:   Haiku judges Haiku output                      âœ—
-invalid:   equal-capability model used as judge           âœ— (marginal — avoid)
+valid:     GPT-4o judges Qwen-3.5-0.8b output            ✓
+valid:     Claude Sonnet judges Haiku output              ✓
+invalid:   Qwen-3.5-0.8b judges its own output           ✗
+invalid:   Haiku judges Haiku output                      ✗
+invalid:   equal-capability model used as judge           ✗ (marginal — avoid)
 ```
 
 This applies everywhere a model output is being scored for sufficiency:
@@ -274,9 +274,9 @@ Before deploying the pattern to production:
 Evaluator-optimizer is a harness **node pair**, not a full pipeline. Wire it as:
 
 ```
-task_node → generator_node â”€â”
-                              â”œâ”€â–º evaluator_node â”€â–º optimizer_node â”€â–º generator_node (loop)
-                              â””â”€â–º accept_node (on pass)
+task_node → generator_node ─┐
+                              ├─► evaluator_node ─► optimizer_node ─► generator_node (loop)
+                              └─► accept_node (on pass)
 ```
 
 Use `agentic-harness` routing state to track `round_count`, `best_score`, and

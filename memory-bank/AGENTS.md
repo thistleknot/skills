@@ -19,7 +19,7 @@ Not Boeing work. Not subject to Boeing IP constraints.
 - All price data via stooq through pandas_datareader. Never yfinance.
 - Fundamentals via FMP free tier or SEC EDGAR XBRL API
 - Local AI inference preferred over cloud where latency allows
-- Code must be complete â€” no snippets, no placeholders
+- Code must be complete — no snippets, no placeholders
 
 ## Out of Scope
 - Boeing proprietary systems
@@ -79,7 +79,7 @@ Homelab AI stack supports both the quant work and general LLM experimentation.
 ## Technical Constraints
 - Price data: stooq only via pandas_datareader. Yahoo Finance/yfinance banned.
 - Fundamentals: FMP free tier or SEC EDGAR XBRL only
-- IBKR execution in Roth IRA â€” real money, no runaway automation
+- IBKR execution in Roth IRA — real money, no runaway automation
 - Windows paths use backslash; Python code must use pathlib or raw strings
 
 ## Dependencies
@@ -173,7 +173,7 @@ Windows environment (py310 conda env).
 ## Patterns and Preferences
 - One degree less technical verbosity than default
 - Plain speech, direct answers, no preamble
-- Complete files always â€” never snippets
+- Complete files always — never snippets
 - Bold original phrasing when expanding ideas
 
 ## Learnings

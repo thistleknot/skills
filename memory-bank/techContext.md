@@ -23,7 +23,7 @@
 ## Technical Constraints
 - Price data: stooq only via pandas_datareader. Yahoo Finance/yfinance banned.
 - Fundamentals: FMP free tier or SEC EDGAR XBRL only
-- IBKR execution in Roth IRA â€” real money, no runaway automation
+- IBKR execution in Roth IRA — real money, no runaway automation
 - Windows paths use backslash; Python code must use pathlib or raw strings
 
 ## Dependencies

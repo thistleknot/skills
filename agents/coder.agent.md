@@ -33,6 +33,6 @@ Rules:
 - No architectural decisions
 - No refactoring beyond what the spec requires
 - Touch only what the change requires
-- If spec is ambiguous, stop and report â€” do not guess
+- If spec is ambiguous, stop and report — do not guess
 - Whole functions only, never snippets
 - Single contiguous code block per instruction set

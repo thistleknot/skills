@@ -64,7 +64,7 @@ settings = get_agent_settings()
 ```
 
 Override only what diverges from the contract.
-See `agentic-harness/SKILL.md Â§ Default Agent Settings` for the full parameter reference.
+See `agentic-harness/SKILL.md § Default Agent Settings` for the full parameter reference.
 
 ### Choosing `retrieval_depth`
 
@@ -234,22 +234,22 @@ failed attempt.
 
 | Hat | Lens | Ask |
 |---|---|---|
-| â¬œ White | Facts & data | What do I know for certain? What am I missing? |
-| ðŸ”´ Red | Intuition & risk feel | What feels wrong or risky here? |
-| â¬› Black | Caution & failure modes | What could break this? What's the irreversible action? |
-| ðŸŸ¡ Yellow | Benefits & best case | What does success look like concretely? |
-| ðŸŸ¢ Green | Alternatives | Is there a simpler or different approach? |
-| ðŸ”µ Blue | Process & meta | Am I solving the right problem? What order should this happen in? |
+| ⬜ White | Facts & data | What do I know for certain? What am I missing? |
+| 🔴 Red | Intuition & risk feel | What feels wrong or risky here? |
+| ⬛ Black | Caution & failure modes | What could break this? What's the irreversible action? |
+| 🟡 Yellow | Benefits & best case | What does success look like concretely? |
+| 🟢 Green | Alternatives | Is there a simpler or different approach? |
+| 🔵 Blue | Process & meta | Am I solving the right problem? What order should this happen in? |
 
 **Temporal causal tree** — model the task as an if/then/else before acting:
 
 ```
 START
- â”œâ”€ IF precondition A holds → path P1
- â”‚    â”œâ”€ IF sub-condition B → action X
- â”‚    â””â”€ ELSE → action Y; check again
- â”œâ”€ IF precondition A missing → action Z (unblock A first)
- â””â”€ ELSE (ambiguous) → ask before proceeding
+ ├─ IF precondition A holds → path P1
+ │    ├─ IF sub-condition B → action X
+ │    └─ ELSE → action Y; check again
+ ├─ IF precondition A missing → action Z (unblock A first)
+ └─ ELSE (ambiguous) → ask before proceeding
 ```
 
 Identify at minimum:
@@ -325,23 +325,23 @@ user has indicated they want fully autonomous execution.
 For each subtask, execute the following loop:
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  REASON  â”‚  Why this action? What do I  â”‚
-â”‚          â”‚  expect to happen?           â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚  VALIDATEâ”‚  Is this action legal? Does  â”‚
-â”‚          â”‚  it match the plan? Will it  â”‚
-â”‚          â”‚  break anything?             â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚  ACT     â”‚  Execute the change.         â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚  OBSERVE â”‚  What actually happened?     â”‚
-â”‚          â”‚  Read output, check files,   â”‚
-â”‚          â”‚  run tests.                  â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚  REFLECT â”‚  Did it work? If not, why?   â”‚
-â”‚          â”‚  Update memory. Decide next. â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────┐
+│  REASON  │  Why this action? What do I  │
+│          │  expect to happen?           │
+├──────────┼──────────────────────────────┤
+│  VALIDATE│  Is this action legal? Does  │
+│          │  it match the plan? Will it  │
+│          │  break anything?             │
+├──────────┼──────────────────────────────┤
+│  ACT     │  Execute the change.         │
+├──────────┼──────────────────────────────┤
+│  OBSERVE │  What actually happened?     │
+│          │  Read output, check files,   │
+│          │  run tests.                  │
+├──────────┼──────────────────────────────┤
+│  REFLECT │  Did it work? If not, why?   │
+│          │  Update memory. Decide next. │
+└─────────────────────────────────────────┘
 ```
 
 ### REASON
@@ -448,17 +448,17 @@ conversation turns within a session. Structure:
 
 ```
 .react_agent/
-â”œâ”€â”€ task.md          # Reframed requirements and acceptance criteria
-â”œâ”€â”€ recon.md         # Reconnaissance findings
-â”œâ”€â”€ plan.md          # Ordered subtask plan
-â”œâ”€â”€ changes.jsonl    # Append-only log of every action taken
-â”œâ”€â”€ memory.jsonl     # Curated outcome/lesson log (distilled from daily files)
-â”œâ”€â”€ memory/          # Raw daily session logs (YYYY-MM-DD.md) — unfiltered capture
-â”œâ”€â”€ progress.md      # Current status dashboard (overwritten each update)
-â”œâ”€â”€ autonomy.md      # Standing permission tiers — read at Phase 0
-â”œâ”€â”€ personas/        # Role files for spawned subagents (optional)
-â””â”€â”€ cases/           # Archived case files from prior task runs (if any)
-    â””â”€â”€ case_001.json
+├── task.md          # Reframed requirements and acceptance criteria
+├── recon.md         # Reconnaissance findings
+├── plan.md          # Ordered subtask plan
+├── changes.jsonl    # Append-only log of every action taken
+├── memory.jsonl     # Curated outcome/lesson log (distilled from daily files)
+├── memory/          # Raw daily session logs (YYYY-MM-DD.md) — unfiltered capture
+├── progress.md      # Current status dashboard (overwritten each update)
+├── autonomy.md      # Standing permission tiers — read at Phase 0
+├── personas/        # Role files for spawned subagents (optional)
+└── cases/           # Archived case files from prior task runs (if any)
+    └── case_001.json
 ```
 
 Read `MEMORY.md` (in this skill directory) for case memory format and retrieval patterns.
@@ -508,10 +508,10 @@ After each subtask completes (or fails), update `.react_agent/progress.md`:
 
 | # | Subtask | Status | Notes |
 |---|---------|--------|-------|
-| 1 | Extract shared types | âœ… done | Created types.py |
-| 2 | Migrate auth module | âœ… done | 3 functions updated |
-| 3 | Update test suite | ðŸ”„ in progress | 2/5 test files done |
-| 4 | CI config update | â³ pending | Blocked on #3 |
+| 1 | Extract shared types | ✅ done | Created types.py |
+| 2 | Migrate auth module | ✅ done | 3 functions updated |
+| 3 | Update test suite | 🔄 in progress | 2/5 test files done |
+| 4 | CI config update | ⏳ pending | Blocked on #3 |
 
 ## Lessons Learned
 - [Accumulated insights from memory.jsonl]
@@ -620,35 +620,35 @@ handles the *how*, this skill handles the *whether it worked*.
 
 ```
 START
-  â”‚
-  â”œâ”€â–º Phase 0: Reframe â”€â”€â–º task.md          [gpt-4o]
-  â”‚
-  â”œâ”€â–º Phase 1: Recon â”€â”€â”€â”€â–º recon.md         [gpt-4o]
-  â”‚
-  â”œâ”€â–º Phase 2: Plan â”€â”€â”€â”€â”€â–º plan.md          [gpt-4o]
-  â”‚         â””â”€â–º [user confirms]
-  â”‚
-  â””â”€â–º Phase 3: Execute (per subtask)
-        â”‚
-        â”œâ”€â–º REASON â”€â”€â–º state intent         [gpt-4o]
-        â”œâ”€â–º VALIDATE â”€â–º harness checks      [gpt-4o]
-        â”œâ”€â–º ACT â”€â”€â”€â”€â”€â”€â–º code/file edits     [gpt-4.1]
-        â”œâ”€â–º OBSERVE â”€â”€â–º read results        [gpt-4o]
-        â””â”€â–º REFLECT â”€â”€â–º log memory          [gpt-4o]
-              â”‚
-              â”œâ”€ success â”€â”€â–º next step
-              â”œâ”€ failure â”€â”€â–º diagnose, retry (max 3), pivot
-              â””â”€ unexpected â–º investigate
+  │
+  ├─► Phase 0: Reframe ──► task.md          [gpt-4o]
+  │
+  ├─► Phase 1: Recon ────► recon.md         [gpt-4o]
+  │
+  ├─► Phase 2: Plan ─────► plan.md          [gpt-4o]
+  │         └─► [user confirms]
+  │
+  └─► Phase 3: Execute (per subtask)
+        │
+        ├─► REASON ──► state intent         [gpt-4o]
+        ├─► VALIDATE ─► harness checks      [gpt-4o]
+        ├─► ACT ──────► code/file edits     [gpt-4.1]
+        ├─► OBSERVE ──► read results        [gpt-4o]
+        └─► REFLECT ──► log memory          [gpt-4o]
+              │
+              ├─ success ──► next step
+              ├─ failure ──► diagnose, retry (max 3), pivot
+              └─ unexpected ► investigate
 
-  â”œâ”€â–º Phase 4: Completion checks
-  â”‚     â”œâ”€â–º Recheck completion_conditions (re-run)
-  â”‚     â”œâ”€â–º Write evidence.md (evidence gate)
-  â”‚     â”œâ”€â–º Acceptance alignment check
-  â”‚     â”œâ”€â–º Run full validation
-  â”‚     â”œâ”€â–º QUALITY.md six-dimension check
-  â”‚     â””â”€â–º Generate summary
-  â”‚
-  â””â”€â–º DONE
+  ├─► Phase 4: Completion checks
+  │     ├─► Recheck completion_conditions (re-run)
+  │     ├─► Write evidence.md (evidence gate)
+  │     ├─► Acceptance alignment check
+  │     ├─► Run full validation
+  │     ├─► QUALITY.md six-dimension check
+  │     └─► Generate summary
+  │
+  └─► DONE
 ```
 <!-- consolidation:see-also:start -->
 ## See Also

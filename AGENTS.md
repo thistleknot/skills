@@ -108,7 +108,7 @@ For project/local repo, also read the repo/local memory-bank files in the same o
 4. `~/memory-bank/projects/skills/systemPatterns.md`
 5. `~/memory-bank/projects/skills/techContext.md`
 6. `~/memory-bank/projects/skills/progress.md`
-7. `~/memory-bank/projects/skills/last_session.md` â€” short-term per-repo conversation continuity (â‰¤50 lines); read to orient on where the prior session left off
+7. `~/memory-bank/projects/skills/last_session.md` — short-term per-repo conversation continuity (≤50 lines); read to orient on where the prior session left off
 
 Legacy compatibility: `~/.codex/memory-bank/` and `~/.codex/memory-library/` are legacy import sources, not canonical state.
 
@@ -221,7 +221,7 @@ frequent skill updates.
    - Receives embedding tasks; records pending state with timestamp in SQLite checkpoint
    - Does NOT block on execution; returns immediately to caller
    - Processes queue asynchronously (in-process worker pool or background thread)
-   - Per-skill tasks: extract triplets â†’ compute premise embeddings â†’ update BM25 KG column
+   - Per-skill tasks: extract triplets → compute premise embeddings → update BM25 KG column
    - Checkpoint: save computed embeddings to `consolidation/.checkpoint.db` keyed by (skill_name, content_hash)
 
 3. **Consolidation run** (`python consolidate.py ...`):
@@ -234,13 +234,13 @@ frequent skill updates.
 
 ### Idempotency
 
-- Embedding tasks are keyed by `(skill_name, content_hash)` â€” resubmitting the same skill with unchanged content is a no-op
+- Embedding tasks are keyed by `(skill_name, content_hash)` — resubmitting the same skill with unchanged content is a no-op
 - Timestamp ordering ensures consolidation can identify which skills have been updated since last embedding run
 - No churn: embedding updates only when skills actually change, not every time consolidation runs
 
 ### Implementation Notes
 
-- Queue checkpoint lives at `consolidation/.checkpoint.db` â€” same as consolidation's run log, can coexist in one schema
+- Queue checkpoint lives at `consolidation/.checkpoint.db` — same as consolidation's run log, can coexist in one schema
 - Add `embeddings` and `embedding_metadata` tables:
   ```sql
   CREATE TABLE embeddings (
@@ -263,9 +263,9 @@ frequent skill updates.
   ```
 
 - Queue server exposes two endpoints (fastmcp-style or fastapi):
-  - `POST /queue/task` â€” submit embedding task(s)
-  - `POST /queue/cancel-pending` â€” cancel all pending tasks, return summary
-  - `GET /queue/status` â€” query embedding status for a skill
+  - `POST /queue/task` — submit embedding task(s)
+  - `POST /queue/cancel-pending` — cancel all pending tasks, return summary
+  - `GET /queue/status` — query embedding status for a skill
 
 - Post-edit hook (git or file watcher):
   ```bash

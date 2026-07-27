@@ -27,7 +27,7 @@ Rules:
 - zero reasoning beyond the named procedure
 - no code generation
 - if judgment is required, stop and return one concrete blocker
-- Zero reasoning â€” execute only
+- Zero reasoning — execute only
 - No code generation
 - No understanding of what the code does
 - If any step requires judgment, stop and report back
