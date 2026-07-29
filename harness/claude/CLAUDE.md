@@ -3,6 +3,20 @@
 Collapsed from ~400 corpus fragments to 13 laws. Target: always-on. Everything
 domain-conditional was spilled to skills (see tail of file).
 
+## Cross-harness registry
+
+@AGENTS.md
+
+Copied from `~/Documents/dev/skills/AGENTS.md` on 2026-07-29 and imported so Claude Code
+sees what the Codex/AGENTS.md harnesses see. **Two caveats, both real:**
+
+1. **Cost:** ~12.6k tokens on every session. That is the price of parity.
+2. **Duplication:** it re-states several of the 13 laws below in longer prose (Operating
+   Contract, Bounded Scope, Communication style, Coding Defaults, Debugging, Reasoning
+   Chain). Where the two disagree, **the 13 laws below win** — they are the collapsed,
+   battery-tested version. The copy is the reference, not the authority. Reconcile rather
+   than letting them drift; a divergence neither harness can see is the failure mode.
+
 ---
 
 ## 0. Routing gate
@@ -57,6 +71,45 @@ Every test carries an ETA and a disposition.
 - Reduce sample, epochs, scope — whatever it takes to hit the bound.
 - Hour-plus runs are a design failure, not a constraint of the problem.
 - Parallelize anything non-sequential so a slow branch never gates a fast one.
+
+### The stall/resume contract — every long-running stage, no exceptions
+
+An ETA with no detector is decorative. Anything detached ships with **both** halves,
+because each is what makes the other safe:
+
+**Break on staleness.** A hard loop that kills the stage when its log or artifact
+mtime has not advanced within an EWMA-derived ceiling (adaptive-alpha EWMA of
+inter-progress intervals, 95% PI, multiplicative floor ≥3x for heavy-tailed LLM
+latency, absolute min and hard cap). The watchdog wraps the **runner** and kills the
+child — never the observer, which expires and leaves the run unguarded.
+
+**Checkpoint so the break is free.** Every stage writes its result the moment it has
+one and resumes from disk on restart, so re-running redoes only what is missing. This
+is the enabling condition, not a nicety: **you can only afford to kill aggressively if
+resume costs nothing.** Killing without checkpoints is why a stall feels expensive to
+act on, which is why it gets tolerated, which is how hours disappear. Checkpoints buy
+permission to be trigger-happy.
+
+**Pivot to last-known-good.** On a break, name the last checkpoint that verified clean
+and resume from there with one variable changed. Never restart from zero, and never
+resume past an unverified stage.
+
+**Liveness is mtime advancing. Nothing else.** A PID proves existence, not work.
+GPU/CPU utilization proves occupancy — a deadlocked or paging run reports 50-60% and
+looks healthy. A content-pattern monitor (`grep VERDICT|Traceback`) detects outcomes and
+is **structurally blind to stalls**: a hung process emits nothing, so silence and
+progress are identical to it. Watch liveness and outcome with separate instruments.
+
+**Poll for absence.** Event-driven monitoring cannot fire on a non-event. A subscription
+tells you when something happened; only a scheduled sweep tells you when nothing did.
+
+**Resource gates fail closed.** A timeout aborts; it never grants permission to start. A
+mutual-exclusion gate that expires into *proceed* is worse than no gate.
+
+Earned 2026-07-29: a detached stage hung inside its eval phase and burned **8h37m** of
+GPU. It held 15.5/16 GB at 50-60% utilization the whole time, so every occupancy check
+read healthy. The EWMA watchdog already existed, built to this spec for an earlier
+flaky stage, and had been scoped to that one stage instead of applied as a default.
 
 ## 5. Root-first isolation
 
@@ -212,7 +265,9 @@ through `pandas_datareader`. Fundamentals via FMP free tier or SEC EDGAR XBRL.
 **Servers.** Never start a server, daemon, or long-lived process inline — it
 blocks the agent and dies at session teardown. Use `Start-Process` / `detach:true`
 / a background task agent. Verify a health response before claiming it started.
-Stop by explicit PID (`Stop-Process -Id <PID>`), never by name.
+Stop by explicit PID (`Stop-Process -Id <PID>`), never by name. **Declare its
+expected duration at launch, and wrap it in the stall/resume contract (§4) — that
+bullet governs the hours between startup and teardown, which this one does not.**
 
 **Formatting.** Translate formulas to ASCII pseudo-code by default.
 
