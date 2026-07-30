@@ -21,6 +21,50 @@
           {
             "type": "command",
             "command": "python C:/Users/user/.claude/hooks/membank.py"
+          },
+          {
+            "type": "command",
+            "command": "python C:/Users/user/.claude/hooks/log_event.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:/Users/user/.claude/hooks/log_event.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:/Users/user/.claude/hooks/log_event.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:/Users/user/.claude/hooks/log_event.py"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:/Users/user/.claude/hooks/log_event.py"
           }
         ]
       }
@@ -31,6 +75,10 @@
           {
             "type": "command",
             "command": "python C:/Users/user/.claude/hooks/verify_gate.py"
+          },
+          {
+            "type": "command",
+            "command": "python C:/Users/user/.claude/hooks/log_event.py"
           }
         ]
       }

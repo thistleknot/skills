@@ -269,6 +269,11 @@ Stop by explicit PID (`Stop-Process -Id <PID>`), never by name. **Declare its
 expected duration at launch, and wrap it in the stall/resume contract (§4) — that
 bullet governs the hours between startup and teardown, which this one does not.**
 
+**GPU runs.** Cap the torch allocator so overflow RAISES instead of paging, derive
+the cap from VRAM that is actually FREE (not card capacity), and derive
+`max_length` from measured token lengths before ever accepting `batch_size=1`.
+On trip: downscale one knob, resume from checkpoint, repeat. Skill: `vram-downscale`.
+
 **Formatting.** Translate formulas to ASCII pseudo-code by default.
 
 ---
@@ -330,6 +335,7 @@ Conditional, not always-on — they fire on domain trigger and cost nothing idle
 | maw/spawn architecture, pheromone signaling, bandit-vs-MDP framing | `deep-q-rl`, `active-inference`, `signal-modulation` |
 | Schema induction from mod files, control-plane CSV round-trip, base-vs-mod diff | `schema-induction`, `ctp2-image-patching` |
 | Median cuts as contrastive signal; corpus composition sampling | `median-bifurcation`, `stratified-quota-sampling` |
+| OOM, batch size, max_length, gradient checkpointing, "fits in 16GB", a GPU run that got slow instead of failing, system RAM ballooning | `vram-downscale` |
 
 A law belongs in this core only if removing it changes behavior on a task that
 never mentions its domain. Battery run and passed 2026-07-26; method and results
