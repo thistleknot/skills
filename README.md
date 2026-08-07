@@ -178,6 +178,13 @@ skills/
 
 44. `skill-sync` is the **LLM-assisted merge protocol for diverged skill copies** across master and local/remote mirrors. Distinct from `skill-wiki` (governance: intake/staging/lifecycle) — `skill-sync` is operational: when both master and a mirror have independently changed since the last commit, it classifies the case (no-op / fast-forward / conflict), applies deterministic fast-forwards automatically, and routes true conflicts to an LLM merge that incorporates both sets of changes without dropping content from either side. Mechanically executed by `sync_skills.ps1`. MERGE-CONFLICT markers flag unresolved sections for human review before commit.
 
+    ```powershell
+    # Rank the ~\.claude\skills mirror 1st (tie-breaks resolve toward it)
+    .\sync_skills.ps1 -Priority .claude
+    ```
+
+    `-Priority` (alias `-rank`) takes a mirror label — `.claude`, `.copilot`, `opencode`, `.hermes`, `.pi` — matched case- and dot-insensitively, so `-rank claude` is equivalent. It is a **tie-breaker only**: it never promotes a demonstrably stale copy over a newer master.
+
 45. `consolidation` is the **triplet-based document consolidation pipeline** for living knowledge bases and skill libraries. Extracts subject-predicate-object triplets from each document, computes a pairwise Jaccard similarity matrix (or NLI-based soft Jaccard for semantic matching), runs **greedy nearest-neighbor chain decomposition** (single-linkage chaining) to group related documents, and emits a sorted report with prescriptions: MERGE (≥0.8), migrate (0.5–0.8), xref (0.3–0.5). Groups are sorted by chain length descending — largest clusters first. Sits above `gist_correlation_matrix` (matrix builder) and feeds prescriptions into `skill-wiki` (governance) and `skill-sync` (mechanical merge). Use when the library has grown by ≥5 new entries, semantic search returns contradictory results, or a scheduled consolidation run is due.
 
 45. `nearest-neighbor-chain` is the **greedy path-cover chain decomposition sub-skill** shared by `consolidation` and any other consumer that needs to partition a similarity matrix into semantic groups. It walks pairs sorted by descending score, extends only chain endpoints (no branching), and emits variable-length chains sorted by length descending. Singletons are docs with no above-τ neighbours. The "chaining effect" of single-linkage is intentional: each chain is a semantic thread; a chain break is a topic boundary. `gist_correlation_matrix` produces the matrix; `nearest-neighbor-chain` decomposes it; `consolidation` adds triplet extraction and MERGE/migrate/xref prescriptions on top.

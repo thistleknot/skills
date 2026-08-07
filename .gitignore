@@ -4,6 +4,9 @@ integrate/
 # .react_agent/ is ephemeral session workspace state, not versioned
 .react_agent/
 
+# .reference/ holds read-only upstream clones kept as design reference, never imported
+.reference/
+
 # Pattern store / vector store artifacts
 *.db
 *.sqlite

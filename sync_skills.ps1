@@ -236,14 +236,13 @@ function Show-Diff($masterFile, $mirrorFile) {
     # parent skill folder was never copied down). git diff --no-index CANNOT take a
     # nonexistent path -- it emits "error: Could not access '<path>'", which under
     # $ErrorActionPreference='Stop' becomes a fatal NativeCommandError and aborts the
-    # whole reconciliation. Render the whole mirror file as an addition instead.
+    # whole reconciliation. There is nothing to *compare* for a new file, so summarize
+    # it in one line rather than dumping its content -- an 80-line spew per new file
+    # buries the prompt and tells the reviewer nothing a size/line count doesn't.
     if (-not (Test-Path -LiteralPath $masterFile)) {
-        Write-Host "  (entire file is new; showing mirror content)" -ForegroundColor DarkGray
-        $lines = @(Get-Content -LiteralPath $mirrorFile -ErrorAction SilentlyContinue)
-        $lines | Select-Object -First 80 | ForEach-Object { Write-Host "+$_" -ForegroundColor DarkYellow }
-        if ($lines.Count -gt 80) {
-            Write-Host "  ... ($($lines.Count - 80) more lines)" -ForegroundColor DarkGray
-        }
+        $lineCount = @(Get-Content -LiteralPath $mirrorFile -ErrorAction SilentlyContinue).Count
+        $kb        = [math]::Round((Get-Item -LiteralPath $mirrorFile).Length / 1KB, 1)
+        Write-Host "  (new file: $lineCount lines, $kb KB -- nothing in master to diff against)" -ForegroundColor DarkGray
         return
     }
 
@@ -264,6 +263,27 @@ function Show-Diff($masterFile, $mirrorFile) {
     } else {
         Write-Host "  (no diff output)" -ForegroundColor DarkGray
     }
+}
+
+function Show-DiffStat($masterFile, $mirrorFile) {
+    <#
+      One line instead of a diff. Dumping 80 diff lines before every copy prompt
+      buries the prompt itself -- on a large file the reviewer scrolls past a wall of
+      context to find the question, which is worse than no context at all. The
+      added/removed counts are what actually drive a y/n; the body is available on
+      demand via the 'd' choice.
+    #>
+    if (-not (Test-Path -LiteralPath $masterFile)) {
+        $lineCount = @(Get-Content -LiteralPath $mirrorFile -ErrorAction SilentlyContinue).Count
+        $kb        = [math]::Round((Get-Item -LiteralPath $mirrorFile).Length / 1KB, 1)
+        Write-Host "  new file: $lineCount lines, $kb KB" -ForegroundColor DarkGray
+        return
+    }
+    $diff = git -c core.autocrlf=false diff --no-index --unified=0 -- $masterFile $mirrorFile 2>&1 |
+            Where-Object { $_ -notmatch '^(warning|error|fatal):' }
+    $added   = @($diff | Where-Object { $_ -match '^\+' -and $_ -notmatch '^\+\+\+' }).Count
+    $removed = @($diff | Where-Object { $_ -match '^-'  -and $_ -notmatch '^---'   }).Count
+    Write-Host "  diff: +$added / -$removed lines" -ForegroundColor DarkGray
 }
 
 # Normalize line endings to LF only to prevent false conflicts on Windows.
@@ -1163,7 +1183,7 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
 
             if ($syncCase -eq 'conflict') {
                 Write-Host "  Both master and mirror have changed since last commit." -ForegroundColor Magenta
-                Show-Diff $item.MasterFile $item.MirrorFile
+                Show-DiffStat $item.MasterFile $item.MirrorFile
                 $choice = Read-Choice "  Action? [y=copy mirror / m=llm-merge / n=skip / d=show full diff] (default: m)" 'm' 'm'
                 if ($choice -eq 'd') {
                     Show-Diff $item.MasterFile $item.MirrorFile
@@ -1189,9 +1209,21 @@ if (($needsMerge.Count -gt 0 -or $newFolders.Count -gt 0 -or $staleFolders.Count
                 # Skip — Step 5 pushes master downstream to refresh the stale mirror.
                 Write-Host "  Master is newer than this mirror; keeping master (it will push downstream). Skipped." -ForegroundColor DarkGray
             } else {
-                # Fast-forward (mirror newer/additive): simple copy prompt
-                Show-Diff $item.MasterFile $item.MirrorFile
-                $choice = Read-Choice "  Copy to master? [y/n]" '' 'y'
+                # Fast-forward (mirror newer/additive): simple copy prompt.
+                # A file master has never seen has no diff to review and no content at
+                # risk -- copying it is purely additive. Prompting there is noise, so
+                # take it automatically and only ask when master has a copy to overwrite.
+                if (-not (Test-Path -LiteralPath $item.MasterFile)) {
+                    Write-ToMaster $item $mirrorContent
+                    Write-Host "  Copied (new file, auto): $($item.Rel)" -ForegroundColor Green
+                    continue
+                }
+                Show-DiffStat $item.MasterFile $item.MirrorFile
+                $choice = Read-Choice "  Copy to master? [y/n/d=show diff]" '' 'y'
+                if ($choice -eq 'd') {
+                    Show-Diff $item.MasterFile $item.MirrorFile
+                    $choice = Read-Choice "  Copy to master? [y/n]" '' 'y'
+                }
                 if ($choice -eq 'y') {
                     Write-ToMaster $item $mirrorContent
                     Write-Host "  Copied : $($item.Rel)" -ForegroundColor Green
@@ -1316,6 +1348,34 @@ if ($skipReconciliation) {
     Write-Host "  [SKIP] $ClaudeHome does not exist." -ForegroundColor DarkGray
 } else {
     Write-Header "Reconciling harness config: ~/.claude <-> harness\claude"
+
+    # SEED master-root -> live. Gap closed 2026-07-29.
+    #
+    # A name can appear in BOTH $RootTracked and $ClaudeRootFiles -- AGENTS.md does --
+    # but reconciliation only ever compares ~/.claude against the vault. A harness file
+    # authored at the MASTER ROOT therefore lands in neither set and sits tracked,
+    # committed, and undeployed indefinitely, with nothing reporting it. Observed:
+    # AGENTS.md was authored at the master root 2026-07-27 and was still absent from
+    # ~/.claude on 2026-07-29, so Claude Code never loaded ~12.6k tokens of registry
+    # that the Codex harnesses read as authoritative. Two constitutions, silently
+    # divergent, and neither side could see the drift.
+    #
+    # Seeding runs BEFORE the rel enumeration below on purpose: the copy makes the file
+    # "new in live", so the existing [CAPTURE] branch files it into the vault on this
+    # same pass and no new merge path is introduced. Additive only -- guarded on absence
+    # from BOTH sides, so it can never overwrite live config or resurrect a file the
+    # operator deliberately deleted (that case is the vault's [ABSENT] prompt, which
+    # defaults to 'n' even under -Yes).
+    foreach ($name in $ClaudeRootFiles) {
+        $seedSrc   = Join-Path $Master      $name
+        $seedLive  = Join-Path $ClaudeHome  $name
+        $seedVault = Join-Path $ClaudeVault $name
+        if ((Test-Path $seedSrc) -and -not (Test-Path $seedLive) -and -not (Test-Path $seedVault)) {
+            Copy-HarnessFile $seedSrc $seedLive $true
+            Write-Host "  [SEED]      $name -- authored at master root, deployed to ~/.claude." `
+                -ForegroundColor Cyan
+        }
+    }
 
     $liveRels  = Get-HarnessRelPaths $ClaudeHome
     $vaultRels = Get-HarnessRelPaths $ClaudeVault

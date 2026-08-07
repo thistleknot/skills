@@ -589,6 +589,16 @@ def main(argv: list[str] | None = None) -> None:
     an.add_argument("--ttl-days", type=float, default=ANNEAL_TTL_DAYS)
     an.add_argument("--dry-run", action="store_true")
 
+    sd = sub.add_parser("dream", help="distil captured session events into memories")
+    sd.add_argument("--since", default=None, help="only sessions with events since 24h / 7d / 30m")
+    sd.add_argument("--session", default=None, help="one session id, ignoring its watermark")
+    sd.add_argument("--dry-run", action="store_true", help="print, write nothing")
+
+    sr = sub.add_parser("review", help="approve or reject candidate memories")
+    sr.add_argument("--approve", default=None, help="memory name to approve")
+    sr.add_argument("--reject", default=None, help="memory name to delete")
+    sr.add_argument("--all", action="store_true", help="with --approve: approve every candidate")
+
     sub.add_parser("stats", help="index stats")
 
     args = ap.parse_args(argv)
@@ -609,6 +619,14 @@ def main(argv: list[str] | None = None) -> None:
         cmd_log(mem_dir, text, args.mtype, args.scope, args.repo, args.name, args.description)
     elif args.cmd == "anneal":
         cmd_anneal(mem_dir, args.ttl_days, args.dry_run)
+    elif args.cmd == "dream":
+        # Imported lazily: `dream` pulls in the events store and spawns the
+        # Claude CLI, neither of which the retrieval commands should need.
+        import dream
+        dream.cmd_dream(mem_dir, args.since, args.session, args.dry_run)
+    elif args.cmd == "review":
+        import review
+        review.cmd_review(mem_dir, args.approve, args.reject, args.all)
     elif args.cmd == "stats":
         cmd_stats(mem_dir)
 

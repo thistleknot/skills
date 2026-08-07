@@ -1,4 +1,4 @@
-﻿---
+---
 name: coder
 description: Fixer / coder lane. Multi-file packetizer that turns explicit specs into aider-sized edit packets.
 model: Qwen 3.5 9B (OpenRouter)
@@ -33,6 +33,6 @@ Rules:
 - No architectural decisions
 - No refactoring beyond what the spec requires
 - Touch only what the change requires
-- If spec is ambiguous, stop and report — do not guess
+- If spec is ambiguous, stop and report â€” do not guess
 - Whole functions only, never snippets
 - Single contiguous code block per instruction set
