@@ -16,15 +16,17 @@ Turn a problem into an evidence-based plan, then carry it through to completion.
 
 For a simple one-step request, act directly unless the user asks for these tracking files. Use [task-breakdown](../task-breakdown/SKILL.md) when the task is already designed and only needs implementation tasks.
 
-## Establish the evidence
+## Required reasoning sequence
 
-1. Restate the observed problem and the intended outcome.
-2. Inspect the relevant artifacts and gather evidence that can support or falsify likely explanations.
-3. Separate observed facts from assumptions. Explain the problem in those terms.
-4. Critique the proposed approach, explanations, and assumptions. Compare viable alternatives; use TRIZ and Six Thinking Hats when they reveal materially different options.
-5. Choose a fix that satisfies the surviving evidence and constraints. Record why rejected options fail.
+Keep these steps visible in the work; do not collapse them into a generic plan:
 
-Do not turn a weak premise into a requirement. If evidence changes the problem statement, update the plan before proceeding.
+1. **Research the problem.** Inspect the user's artifacts and the surrounding domain. For data problems, examine both datasets and their relationship before proposing a fix. Retrieve evidence that can distinguish competing explanations.
+2. **Explain the problem.** Describe what is happening, for whom, and why it matters. Separate observed facts from inferred causes and state the user's intended outcome.
+3. **Critique the approach, explanations, and assumptions.** Identify weak premises, missing evidence, tradeoffs, and evidence that would falsify each live explanation.
+4. **Analyze the options.** Compare genuinely different approaches. Use the TRIZ utility belt to reshape the problem and Bono's Six Thinking Hats to inspect facts, concerns, risks, benefits, alternatives, and process. Include an option that challenges the obvious answer when one is plausible.
+5. **Suggest a solution.** Choose an approach that addresses every surviving premise and satisfies the user's goal. Explain why it follows from the evidence and why rejected options do not.
+
+Do not turn a weak premise into a requirement. If research changes the problem statement, repeat the affected reasoning steps and update the plan before proceeding.
 
 ## Track the work
 
