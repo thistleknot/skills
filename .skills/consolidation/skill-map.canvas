@@ -1,0 +1,3331 @@
+{
+  "nodes": [
+    {
+      "id": "group-0",
+      "type": "group",
+      "x": -40,
+      "y": 1090,
+      "width": 2090,
+      "height": 940,
+      "label": "agent-identity / agentic-design-patterns / agentic-harness ..."
+    },
+    {
+      "id": "agent-identity",
+      "type": "text",
+      "x": 0,
+      "y": 1150,
+      "width": 350,
+      "height": 175,
+      "text": "## agent-identity\n[[.skills/agent-identity/SKILL.md|Open skill]]\n\n3 reviewed connections\nDefine a fixed identity layer above memory and skills, then isolate specialized agent profiles so role, tone, constraints, and execution substrate do not smear "
+    },
+    {
+      "id": "agentic-design-patterns",
+      "type": "text",
+      "x": 410,
+      "y": 1150,
+      "width": 350,
+      "height": 175,
+      "text": "## agentic-design-patterns\n[[.skills/agentic-design-patterns/SKILL.md|Open skill]]\n\n5 reviewed connections\nApply selected agent patterns as inspectable LangGraph workflows with explicit state, node contracts, Pi and Aider roles, and safe parallel lanes. Use after age"
+    },
+    {
+      "id": "agentic-harness",
+      "type": "text",
+      "x": 820,
+      "y": 1150,
+      "width": 350,
+      "height": 175,
+      "text": "## agentic-harness\n[[.skills/agentic-harness/SKILL.md|Open skill]]\n\n4 reviewed connections\nProtocol for synthesizing, debugging, iterating on, and verifying automated LLM pipeline harnesses (dark software factories, code-generation wrappers, multi-sta"
+    },
+    {
+      "id": "agentic-orchestration",
+      "type": "text",
+      "x": 1230,
+      "y": 1150,
+      "width": 350,
+      "height": 175,
+      "text": "## agentic-orchestration\n[[.skills/agentic-orchestration/SKILL.md|Open skill]]\n\n3 reviewed connections\nUnified orchestration protocol combining the MLM 5-question decision tree, Anthropic's agent pattern taxonomy, the live agent roster with role contracts, and Ai"
+    },
+    {
+      "id": "agentic_kg_memory",
+      "type": "text",
+      "x": 1640,
+      "y": 1150,
+      "width": 350,
+      "height": 175,
+      "text": "## agentic_kg_memory\n[[.skills/agentic_kg_memory/SKILL.md|Open skill]]\n\n1 reviewed connections\nGraph-backed semantic memory and reasoning protocol. Use when extracting premises into a knowledge graph, retrieving evidence with BM25/NLI, updating memory ent"
+    },
+    {
+      "id": "auto-research",
+      "type": "text",
+      "x": 0,
+      "y": 1360,
+      "width": 350,
+      "height": 175,
+      "text": "## auto-research\n[[.skills/auto-research/SKILL.md|Open skill]]\n\n2 reviewed connections\nDigest of the autoresearch and harness-evolution literature: the shared mechanism, the acceptance gate, matched-budget counter-evidence, and skill-library gover"
+    },
+    {
+      "id": "cognitive-taxonomy",
+      "type": "text",
+      "x": 410,
+      "y": 1360,
+      "width": 350,
+      "height": 175,
+      "text": "## cognitive-taxonomy\n[[.skills/cognitive-taxonomy/SKILL.md|Open skill]]\n\n2 reviewed connections\nReference skill encoding the unified memory taxonomy from four papers on agentic memory: implicit/explicit/agentic paradigms (2601.09113), forms/functions/dynam"
+    },
+    {
+      "id": "context-engineering",
+      "type": "text",
+      "x": 820,
+      "y": 1360,
+      "width": 350,
+      "height": 175,
+      "text": "## context-engineering\n[[.skills/context-engineering/SKILL.md|Open skill]]\n\n2 reviewed connections\nOptimizes agent context setup. Use when starting a new session, when agent output quality degrades, when switching between tasks, or when you need to configure "
+    },
+    {
+      "id": "cua-desktop-agent",
+      "type": "text",
+      "x": 1230,
+      "y": 1360,
+      "width": 350,
+      "height": 175,
+      "text": "## cua-desktop-agent\n[[.skills/cua-desktop-agent/SKILL.md|Open skill]]\n\n1 reviewed connections\nAutonomous desktop automation via vision-language model (VLM) perception loop. Use when a task requires visual verification of desktop state, autonomous retry u"
+    },
+    {
+      "id": "memory-architecture",
+      "type": "text",
+      "x": 1640,
+      "y": 1360,
+      "width": 350,
+      "height": 175,
+      "text": "## memory-architecture\n[[.skills/memory-architecture/SKILL.md|Open skill]]\n\n3 reviewed connections\nUnified memory architecture reference synthesized from four papers on agentic memory. Defines the canonical layered architecture (implicit/explicit/agentic), pr"
+    },
+    {
+      "id": "memory-bank",
+      "type": "text",
+      "x": 0,
+      "y": 1570,
+      "width": 350,
+      "height": 175,
+      "text": "## memory-bank\n[[.skills/memory-bank/SKILL.md|Open skill]]\n\n3 reviewed connections\nOperational project memory for long-running work, and the authority on the memory-tier model: global markdown (~\\memory-bank, cross-project system patterns), lo"
+    },
+    {
+      "id": "meta-harness",
+      "type": "text",
+      "x": 410,
+      "y": 1570,
+      "width": 350,
+      "height": 175,
+      "text": "## meta-harness\n[[.skills/meta-harness/SKILL.md|Open skill]]\n\n3 reviewed connections\nRequester-facing master control-plane orchestrator sitting one level above `agentic-harness`. Owns objective framing, scope partitioning, session topology, and "
+    },
+    {
+      "id": "pi",
+      "type": "text",
+      "x": 820,
+      "y": 1570,
+      "width": 350,
+      "height": 175,
+      "text": "## pi\n[[.skills/pi/SKILL.md|Open skill]]\n\n1 reviewed connections\nLightweight external harness substrate. Use when an outer orchestrator such as opencode or agentic-harness should delegate a bounded subproblem to a second harn"
+    },
+    {
+      "id": "react-agent",
+      "type": "text",
+      "x": 1230,
+      "y": 1570,
+      "width": 350,
+      "height": 175,
+      "text": "## react-agent\n[[.skills/react-agent/SKILL.md|Open skill]]\n\n4 reviewed connections\nUse this skill whenever the user gives an instruction that requires multi-step autonomous task execution — refactoring, migrations, building features, pipeline "
+    },
+    {
+      "id": "recursive-harness-self-improvement",
+      "type": "text",
+      "x": 1640,
+      "y": 1570,
+      "width": 350,
+      "height": 175,
+      "text": "## recursive-harness-self-improvement\n[[.skills/recursive-harness-self-improvement/SKILL.md|Open skill]]\n\n3 reviewed connections\nProcedure for evolving an agent harness (hooks, skills, middleware, control flow around a frozen model) from its own failure traces, with a noise-band and held-"
+    },
+    {
+      "id": "retro",
+      "type": "text",
+      "x": 0,
+      "y": 1780,
+      "width": 350,
+      "height": 175,
+      "text": "## retro\n[[.skills/retro/SKILL.md|Open skill]]\n\n1 reviewed connections\nConduct a retrospective on a coding session."
+    },
+    {
+      "id": "substrate-selection",
+      "type": "text",
+      "x": 410,
+      "y": 1780,
+      "width": 350,
+      "height": 175,
+      "text": "## substrate-selection\n[[.skills/substrate-selection/SKILL.md|Open skill]]\n\n1 reviewed connections\nRuntime substrate selection protocol. Use when deciding which external coding runtime should sit behind the harness. Keep orchestrators separate from leaf execu"
+    },
+    {
+      "id": "writing-for-agents",
+      "type": "text",
+      "x": 820,
+      "y": 1780,
+      "width": 350,
+      "height": 175,
+      "text": "## writing-for-agents\n[[.skills/writing-for-agents/SKILL.md|Open skill]]\n\n2 reviewed connections\nWriting documents for agents. Use when creating or editing skills, or modifying AGENTS.md or CLAUDE.md."
+    },
+    {
+      "id": "group-1",
+      "type": "group",
+      "x": -40,
+      "y": 2160,
+      "width": 2090,
+      "height": 940,
+      "label": "ai-prompting / code-review-and-quality / codebase-knowledge-graph ..."
+    },
+    {
+      "id": "ai-prompting",
+      "type": "text",
+      "x": 0,
+      "y": 2220,
+      "width": 350,
+      "height": 175,
+      "text": "## ai-prompting\n[[.skills/ai-prompting/SKILL.md|Open skill]]\n\n1 reviewed connections\nEffective communication strategies for AI-assisted development. Learn context-first prompting, phased interactions, iterative refinement, and validation techniq"
+    },
+    {
+      "id": "code-review-and-quality",
+      "type": "text",
+      "x": 410,
+      "y": 2220,
+      "width": 350,
+      "height": 175,
+      "text": "## code-review-and-quality\n[[.skills/code-review-and-quality/SKILL.md|Open skill]]\n\n1 reviewed connections\nConducts multi-axis code review. Use before merging any change. Use when reviewing code written by yourself, another agent, or a human. Use when you need to ass"
+    },
+    {
+      "id": "codebase-knowledge-graph",
+      "type": "text",
+      "x": 820,
+      "y": 2220,
+      "width": 350,
+      "height": 175,
+      "text": "## codebase-knowledge-graph\n[[.skills/codebase-knowledge-graph/SKILL.md|Open skill]]\n\n2 reviewed connections\nCodebase-oriented whole-system reasoning protocol. Use when an agent must understand an existing repository as an interconnected graph before editing, so it can"
+    },
+    {
+      "id": "evidence-first-exploration",
+      "type": "text",
+      "x": 1230,
+      "y": 2220,
+      "width": 350,
+      "height": 175,
+      "text": "## evidence-first-exploration\n[[.skills/evidence-first-exploration/SKILL.md|Open skill]]\n\n1 reviewed connections\nDiscover how an opaque system actually works by forming falsifiable theses from measured evidence, instead of asserting mechanisms that sound right. Use this wh"
+    },
+    {
+      "id": "gstack",
+      "type": "text",
+      "x": 1640,
+      "y": 2220,
+      "width": 350,
+      "height": 175,
+      "text": "## gstack\n[[.skills/gstack/SKILL.md|Open skill]]\n\n1 reviewed connections\nFast headless browser for QA testing and site dogfooding. Navigate any URL, interact with\nelements, verify page state, diff before/after actions, take annotated"
+    },
+    {
+      "id": "incremental-implementation",
+      "type": "text",
+      "x": 0,
+      "y": 2430,
+      "width": 350,
+      "height": 175,
+      "text": "## incremental-implementation\n[[.skills/incremental-implementation/SKILL.md|Open skill]]\n\n4 reviewed connections\nDelivers changes incrementally. Use when implementing any feature or change that touches more than one file. Use when you're about to write a large amount of co"
+    },
+    {
+      "id": "openspec-workflow",
+      "type": "text",
+      "x": 410,
+      "y": 2430,
+      "width": 350,
+      "height": 175,
+      "text": "## openspec-workflow\n[[.skills/openspec-workflow/SKILL.md|Open skill]]\n\n1 reviewed connections\nAll OpenSpec operations in one skill. Covers: explore mode (thinking partner, no implementation), propose (create change + all artifacts in one step), apply (im"
+    },
+    {
+      "id": "quality-assurance",
+      "type": "text",
+      "x": 820,
+      "y": 2430,
+      "width": 350,
+      "height": 175,
+      "text": "## quality-assurance\n[[.skills/quality-assurance/SKILL.md|Open skill]]\n\n4 reviewed connections\nComprehensive testing and validation strategies for spec-driven development. Learn phase-specific validation techniques, quality gates, and testing approaches t"
+    },
+    {
+      "id": "spec-approve",
+      "type": "text",
+      "x": 1230,
+      "y": 2430,
+      "width": 350,
+      "height": 175,
+      "text": "## spec-approve\n[[.skills/spec-approve/SKILL.md|Open skill]]\n\n1 reviewed connections\nOperator approval of the active spec's current phase. This is the human gate that lets the workflow move forward."
+    },
+    {
+      "id": "spec-driven-development",
+      "type": "text",
+      "x": 1640,
+      "y": 2430,
+      "width": 350,
+      "height": 175,
+      "text": "## spec-driven-development\n[[.skills/spec-driven-development/SKILL.md|Open skill]]\n\n6 reviewed connections\nSystematic three-phase approach to feature development using Requirements, Design, and Tasks phases. Transforms vague feature ideas into well-defined, implement"
+    },
+    {
+      "id": "spec-init",
+      "type": "text",
+      "x": 0,
+      "y": 2640,
+      "width": 350,
+      "height": 175,
+      "text": "## spec-init\n[[.skills/spec-init/SKILL.md|Open skill]]\n\n1 reviewed connections\nArm the current repository for spec-driven development by creating the .spec/ tree and its steering docs. Run once per repo."
+    },
+    {
+      "id": "spec-new",
+      "type": "text",
+      "x": 410,
+      "y": 2640,
+      "width": 350,
+      "height": 175,
+      "text": "## spec-new\n[[.skills/spec-new/SKILL.md|Open skill]]\n\n2 reviewed connections\nOpen a new feature or bugfix spec and draft its first artifact (requirements.md in EARS, or bugfix.md). Sets it as the active spec."
+    },
+    {
+      "id": "spec-next",
+      "type": "text",
+      "x": 820,
+      "y": 2640,
+      "width": 350,
+      "height": 175,
+      "text": "## spec-next\n[[.skills/spec-next/SKILL.md|Open skill]]\n\n5 reviewed connections\nAdvance the active spec to its next phase and draft that artifact — design.md, then tasks.md. Refuses if the current phase is unapproved."
+    },
+    {
+      "id": "spec-status",
+      "type": "text",
+      "x": 1230,
+      "y": 2640,
+      "width": 350,
+      "height": 175,
+      "text": "## spec-status\n[[.skills/spec-status/SKILL.md|Open skill]]\n\n2 reviewed connections\nShow the spec-driven state of this repo — active spec, phase, approvals, declared scope, remaining tasks, and whether the gate is bypassed."
+    },
+    {
+      "id": "task-breakdown",
+      "type": "text",
+      "x": 1640,
+      "y": 2640,
+      "width": 350,
+      "height": 175,
+      "text": "## task-breakdown\n[[.skills/task-breakdown/SKILL.md|Open skill]]\n\n4 reviewed connections\nConvert technical designs into actionable, sequenced implementation tasks. Create clear coding tasks that enable incremental progress, respect dependencies, and"
+    },
+    {
+      "id": "tdd-agent",
+      "type": "text",
+      "x": 0,
+      "y": 2850,
+      "width": 350,
+      "height": 175,
+      "text": "## tdd-agent\n[[.skills/tdd-agent/SKILL.md|Open skill]]\n\n1 reviewed connections\nTest-driven development as distinct agentic phases: Red (write failing tests), Green (implement until tests pass), Refactor (improve without breaking tests). Us"
+    },
+    {
+      "id": "troubleshooting",
+      "type": "text",
+      "x": 410,
+      "y": 2850,
+      "width": 350,
+      "height": 175,
+      "text": "## troubleshooting\n[[.skills/troubleshooting/SKILL.md|Open skill]]\n\n5 reviewed connections\nDiagnose and resolve common issues during spec-driven development and implementation. Learn strategies for handling spec-reality divergence, dependency blocks, "
+    },
+    {
+      "id": "group-2",
+      "type": "group",
+      "x": -40,
+      "y": 3230,
+      "width": 2090,
+      "height": 520,
+      "label": "speckit-analyze / speckit-checklist / speckit-clarify ..."
+    },
+    {
+      "id": "speckit-analyze",
+      "type": "text",
+      "x": 0,
+      "y": 3290,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit-analyze\n[[.skills/speckit-analyze/SKILL.md|Open skill]]\n\n8 reviewed connections\nPerform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md after task generation."
+    },
+    {
+      "id": "speckit-checklist",
+      "type": "text",
+      "x": 410,
+      "y": 3290,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit-checklist\n[[.skills/speckit-checklist/SKILL.md|Open skill]]\n\n8 reviewed connections\nGenerate a custom checklist for the current feature based on user requirements."
+    },
+    {
+      "id": "speckit-clarify",
+      "type": "text",
+      "x": 820,
+      "y": 3290,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit-clarify\n[[.skills/speckit-clarify/SKILL.md|Open skill]]\n\n8 reviewed connections\nIdentify underspecified areas in the current feature spec by asking up to 5 highly targeted clarification questions and encoding answers back into the spec."
+    },
+    {
+      "id": "speckit-constitution",
+      "type": "text",
+      "x": 1230,
+      "y": 3290,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit-constitution\n[[.skills/speckit-constitution/SKILL.md|Open skill]]\n\n8 reviewed connections\nCreate or update the project constitution from interactive or provided principle inputs."
+    },
+    {
+      "id": "speckit-converge",
+      "type": "text",
+      "x": 1640,
+      "y": 3290,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit-converge\n[[.skills/speckit-converge/SKILL.md|Open skill]]\n\n9 reviewed connections\nAssess the current codebase against the feature's spec, plan, and tasks, then append any remaining unbuilt work as new tasks to tasks.md so implement can comple"
+    },
+    {
+      "id": "speckit-implement",
+      "type": "text",
+      "x": 0,
+      "y": 3500,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit-implement\n[[.skills/speckit-implement/SKILL.md|Open skill]]\n\n9 reviewed connections\nExecute the implementation plan by processing and executing all tasks defined in tasks.md"
+    },
+    {
+      "id": "speckit-plan",
+      "type": "text",
+      "x": 410,
+      "y": 3500,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit-plan\n[[.skills/speckit-plan/SKILL.md|Open skill]]\n\n9 reviewed connections\nExecute the implementation planning workflow using the plan template to generate design artifacts."
+    },
+    {
+      "id": "speckit-specify",
+      "type": "text",
+      "x": 820,
+      "y": 3500,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit-specify\n[[.skills/speckit-specify/SKILL.md|Open skill]]\n\n5 reviewed connections\nCreate or update the feature specification from a natural language feature description."
+    },
+    {
+      "id": "speckit-tasks",
+      "type": "text",
+      "x": 1230,
+      "y": 3500,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit-tasks\n[[.skills/speckit-tasks/SKILL.md|Open skill]]\n\n8 reviewed connections\nGenerate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts."
+    },
+    {
+      "id": "speckit-taskstoissues",
+      "type": "text",
+      "x": 1640,
+      "y": 3500,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit-taskstoissues\n[[.skills/speckit-taskstoissues/SKILL.md|Open skill]]\n\n6 reviewed connections\nDeprecated: Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts."
+    },
+    {
+      "id": "group-3",
+      "type": "group",
+      "x": -40,
+      "y": 3880,
+      "width": 2090,
+      "height": 310,
+      "label": "local-llm-harness-wiring / ollama-harness-paradigm / ollama-structured ..."
+    },
+    {
+      "id": "local-llm-harness-wiring",
+      "type": "text",
+      "x": 0,
+      "y": 3940,
+      "width": 350,
+      "height": 175,
+      "text": "## local-llm-harness-wiring\n[[.skills/local-llm-harness-wiring/SKILL.md|Open skill]]\n\n3 reviewed connections\nWire local Ollama models into agent harnesses (pi, opencode, hermes, open-webui) reliably, optionally behind a LiteLLM gateway. Use when a local model \"works in"
+    },
+    {
+      "id": "ollama-harness-paradigm",
+      "type": "text",
+      "x": 410,
+      "y": 3940,
+      "width": 350,
+      "height": 175,
+      "text": "## ollama-harness-paradigm\n[[.skills/ollama-harness-paradigm/SKILL.md|Open skill]]\n\n2 reviewed connections\nCompare local Ollama behavior across open-webui, opencode, hermes, and Pi using the retained four-harness matrix and dated probe evidence. Use for cross-harness"
+    },
+    {
+      "id": "ollama-structured",
+      "type": "text",
+      "x": 820,
+      "y": 3940,
+      "width": 350,
+      "height": 175,
+      "text": "## ollama-structured\n[[.skills/ollama-structured/SKILL.md|Open skill]]\n\n2 reviewed connections\nStructured JSON output from Ollama models via schema-constrained generation. Two paths: native ollama SDK (format=Model.model_json_schema()) or OpenAI-compat en"
+    },
+    {
+      "id": "pi-config",
+      "type": "text",
+      "x": 1230,
+      "y": 3940,
+      "width": 350,
+      "height": 175,
+      "text": "## pi-config\n[[.skills/pi-config/SKILL.md|Open skill]]\n\n3 reviewed connections\nConfigure the .pi agent — register providers and models in models.json, set defaults in settings.json, and wire local Ollama models (built from Modelfiles) into"
+    },
+    {
+      "id": "pi-ollama-config",
+      "type": "text",
+      "x": 1640,
+      "y": 3940,
+      "width": 350,
+      "height": 175,
+      "text": "## pi-ollama-config\n[[.skills/pi-ollama-config/SKILL.md|Open skill]]\n\n2 reviewed connections\nRedirect for the superseded Pi local-Ollama configuration skill. Use pi-config for provider registration, installed-model discovery, validation, and failure dia"
+    },
+    {
+      "id": "group-4",
+      "type": "group",
+      "x": -40,
+      "y": 4320,
+      "width": 1680,
+      "height": 310,
+      "label": "adapter-merging-strategies / continual-learning / mergekit ..."
+    },
+    {
+      "id": "adapter-merging-strategies",
+      "type": "text",
+      "x": 0,
+      "y": 4380,
+      "width": 350,
+      "height": 175,
+      "text": "## adapter-merging-strategies\n[[.skills/adapter-merging-strategies/SKILL.md|Open skill]]\n\n1 reviewed connections\nDARE + TIES-merging pipeline for combining 4+ independently trained LoRA adapters with different reward signals. Covers task arithmetic baseline, TIES sign-awar"
+    },
+    {
+      "id": "continual-learning",
+      "type": "text",
+      "x": 410,
+      "y": 4380,
+      "width": 350,
+      "height": 175,
+      "text": "## continual-learning\n[[.skills/continual-learning/SKILL.md|Open skill]]\n\n2 reviewed connections\nPrevent catastrophic forgetting when a model or agent is updated across multiple tasks, domains, or environments. Covers regularization (EWC), episodic buffer m"
+    },
+    {
+      "id": "mergekit",
+      "type": "text",
+      "x": 820,
+      "y": 4380,
+      "width": 350,
+      "height": 175,
+      "text": "## mergekit\n[[.skills/mergekit/SKILL.md|Open skill]]\n\n3 reviewed connections\nMerge, interpolate, frankenmerge, or extract LoRA adapters from pretrained LLMs using the `arcee-ai/mergekit` library. Use when producing a merged model or adap"
+    },
+    {
+      "id": "model-size-reduction",
+      "type": "text",
+      "x": 1230,
+      "y": 4380,
+      "width": 350,
+      "height": 175,
+      "text": "## model-size-reduction\n[[.skills/model-size-reduction/SKILL.md|Open skill]]\n\n2 reviewed connections\nArchitecture-agnostic checkpoint slimming for Hugging Face models. Use when the goal is a smaller or more portable model artifact via dtype casting, layer dropp"
+    },
+    {
+      "id": "group-5",
+      "type": "group",
+      "x": -40,
+      "y": 4760,
+      "width": 1270,
+      "height": 310,
+      "label": "class-balancing / copula-manifold-sampler / token-budget-bin-packing"
+    },
+    {
+      "id": "class-balancing",
+      "type": "text",
+      "x": 0,
+      "y": 4820,
+      "width": 350,
+      "height": 175,
+      "text": "## class-balancing\n[[.skills/class-balancing/SKILL.md|Open skill]]\n\n1 reviewed connections\nConstruct a stratified, token-efficient training distribution for reasoning transfer using **conditional stratification**. Use when mixing disparate linguistic "
+    },
+    {
+      "id": "copula-manifold-sampler",
+      "type": "text",
+      "x": 410,
+      "y": 4820,
+      "width": 350,
+      "height": 175,
+      "text": "## copula-manifold-sampler\n[[.skills/copula-manifold-sampler/SKILL.md|Open skill]]\n\n1 reviewed connections\nMulti-dimensional class-balanced training sampler that tracks a joint manifold of (dataset × answer_type × token_length_quantile × score_bucket) with cumulative"
+    },
+    {
+      "id": "token-budget-bin-packing",
+      "type": "text",
+      "x": 820,
+      "y": 4820,
+      "width": 350,
+      "height": 175,
+      "text": "## token-budget-bin-packing\n[[.skills/token-budget-bin-packing/SKILL.md|Open skill]]\n\n2 reviewed connections\nDynamic bin-packing sampler for LLM training: streams records into fixed-count bins sized by VRAM token budget. Combines delta-ratio class balancing with greedy"
+    },
+    {
+      "id": "group-6",
+      "type": "group",
+      "x": -40,
+      "y": 5200,
+      "width": 1270,
+      "height": 310,
+      "label": "hyper-parm_tuning / mlflow / optuna-nested-cv"
+    },
+    {
+      "id": "hyper-parm_tuning",
+      "type": "text",
+      "x": 0,
+      "y": 5260,
+      "width": 350,
+      "height": 175,
+      "text": "## hyper-parm_tuning\n[[.skills/hyper-parm_tuning/SKILL.md|Open skill]]\n\n1 reviewed connections\nHyperparameter optimization protocol for expensive systems. Use when tuning retrieval stacks, model pipelines, rankers, thresholds, or any workflow where evalua"
+    },
+    {
+      "id": "mlflow",
+      "type": "text",
+      "x": 410,
+      "y": 5260,
+      "width": 350,
+      "height": 175,
+      "text": "## mlflow\n[[.skills/mlflow/SKILL.md|Open skill]]\n\n1 reviewed connections\nMLflow experiment tracking protocol. Use when running Optuna searches, comparing model or pipeline variants, or operating agentic harnesses where params, metric"
+    },
+    {
+      "id": "optuna-nested-cv",
+      "type": "text",
+      "x": 820,
+      "y": 5260,
+      "width": 350,
+      "height": 175,
+      "text": "## optuna-nested-cv\n[[.skills/optuna-nested-cv/SKILL.md|Open skill]]\n\n2 reviewed connections\nOptuna-based hyperparameter search protocol. Use when running TPE search over algorithm choice, model architecture, or pipeline hyperparameters where evaluation"
+    },
+    {
+      "id": "group-7",
+      "type": "group",
+      "x": -40,
+      "y": 5640,
+      "width": 860,
+      "height": 310,
+      "label": "agentic-hyperparm-macd / signal-modulation"
+    },
+    {
+      "id": "agentic-hyperparm-macd",
+      "type": "text",
+      "x": 0,
+      "y": 5700,
+      "width": 350,
+      "height": 175,
+      "text": "## agentic-hyperparm-macd\n[[.skills/agentic-hyperparm-macd/SKILL.md|Open skill]]\n\n1 reviewed connections\nFrame any continuous hyperparameter or system-tuning problem as an agentic equilibrium control loop. Use when the objective is to MAINTAIN a metric within an em"
+    },
+    {
+      "id": "signal-modulation",
+      "type": "text",
+      "x": 410,
+      "y": 5700,
+      "width": 350,
+      "height": 175,
+      "text": "## signal-modulation\n[[.skills/signal-modulation/SKILL.md|Open skill]]\n\n1 reviewed connections\nDemodulate a noisy, non-stationary signal into a normalized space, then apply RL band maintenance to maximize time within an empirically derived target window. "
+    },
+    {
+      "id": "group-8",
+      "type": "group",
+      "x": -40,
+      "y": 6080,
+      "width": 860,
+      "height": 310,
+      "label": "auto-ingest / pdf-extraction"
+    },
+    {
+      "id": "auto-ingest",
+      "type": "text",
+      "x": 0,
+      "y": 6140,
+      "width": 350,
+      "height": 175,
+      "text": "## auto-ingest\n[[.skills/auto-ingest/SKILL.md|Open skill]]\n\n1 reviewed connections\nOn-demand and background PDF enrichment pipeline for the arxiv_rag corpus. Use when a retrieval session needs full extracted methods for top papers, when checki"
+    },
+    {
+      "id": "pdf-extraction",
+      "type": "text",
+      "x": 410,
+      "y": 6140,
+      "width": 350,
+      "height": 175,
+      "text": "## pdf-extraction\n[[.skills/pdf-extraction/SKILL.md|Open skill]]\n\n1 reviewed connections\nFull 6-phase PDF → enriched Markdown pipeline. Use when converting any PDF into a structured document with VLM image descriptions, enhanced tables, and extracte"
+    },
+    {
+      "id": "group-9",
+      "type": "group",
+      "x": -40,
+      "y": 6520,
+      "width": 860,
+      "height": 310,
+      "label": "consolidation / nearest-neighbor-chain"
+    },
+    {
+      "id": "consolidation",
+      "type": "text",
+      "x": 0,
+      "y": 6580,
+      "width": 350,
+      "height": 175,
+      "text": "## consolidation\n[[.skills/consolidation/SKILL.md|Open skill]]\n\n1 reviewed connections\nTriplet-based document consolidation: derive pairwise correlation matrix from subject-predicate-object triplet overlap, run greedy nearest-neighbor chain decomp"
+    },
+    {
+      "id": "nearest-neighbor-chain",
+      "type": "text",
+      "x": 410,
+      "y": 6580,
+      "width": 350,
+      "height": 175,
+      "text": "## nearest-neighbor-chain\n[[.skills/nearest-neighbor-chain/SKILL.md|Open skill]]\n\n1 reviewed connections\nGreedy nearest-neighbor chain decomposition: convert a pairwise similarity matrix into an ordered list of variable-length chains (semantic threads) by walking t"
+    },
+    {
+      "id": "group-10",
+      "type": "group",
+      "x": -40,
+      "y": 6960,
+      "width": 860,
+      "height": 310,
+      "label": "context-compaction / continuity-log"
+    },
+    {
+      "id": "context-compaction",
+      "type": "text",
+      "x": 0,
+      "y": 7020,
+      "width": 350,
+      "height": 175,
+      "text": "## context-compaction\n[[.skills/context-compaction/SKILL.md|Open skill]]\n\n1 reviewed connections\nActive context-window management for long agentic runs: tiered memory eviction, automatic summarization triggers, and pre/post-compaction lifecycle hooks. Use w"
+    },
+    {
+      "id": "continuity-log",
+      "type": "text",
+      "x": 410,
+      "y": 7020,
+      "width": 350,
+      "height": 175,
+      "text": "## continuity-log\n[[.skills/continuity-log/SKILL.md|Open skill]]\n\n1 reviewed connections\nCompact-safe working-memory protocol. Use during long or multi-turn tasks to persist distilled decisions, rejected approaches, blockers, and resume points to di"
+    },
+    {
+      "id": "group-11",
+      "type": "group",
+      "x": -40,
+      "y": 7400,
+      "width": 860,
+      "height": 310,
+      "label": "data-science-skills / parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever"
+    },
+    {
+      "id": "data-science-skills",
+      "type": "text",
+      "x": 0,
+      "y": 7460,
+      "width": 350,
+      "height": 175,
+      "text": "## data-science-skills\n[[.skills/data-science-skills/SKILL.md|Open skill]]\n\n1 reviewed connections\nUSE THIS to look up or ground any data-science, reinforcement-learning, or knowledge-graph concept before implementing it — a searchable, curated knowledge base"
+    },
+    {
+      "id": "parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever",
+      "type": "text",
+      "x": 410,
+      "y": 7460,
+      "width": 350,
+      "height": 175,
+      "text": "## parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever\n[[.skills/parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever/SKILL.md|Open skill]]\n\n1 reviewed connections\nA retrieval-PROCESS skill: a parallel-lane RRF + graph-RAG hybrid cascade -> MMR -> late-interaction retriever for a markdown skill corpus, plus the ingestion p"
+    },
+    {
+      "id": "group-12",
+      "type": "group",
+      "x": -40,
+      "y": 7840,
+      "width": 860,
+      "height": 310,
+      "label": "debugging / debugging-and-error-recovery"
+    },
+    {
+      "id": "debugging",
+      "type": "text",
+      "x": 0,
+      "y": 7900,
+      "width": 350,
+      "height": 175,
+      "text": "## debugging\n[[.skills/debugging/SKILL.md|Open skill]]\n\n1 reviewed connections\nDebugging protocol for isolating and fixing errors. Use when an error is present, a fix is confirmed broken, or the same class of error is repeating. Covers the"
+    },
+    {
+      "id": "debugging-and-error-recovery",
+      "type": "text",
+      "x": 410,
+      "y": 7900,
+      "width": 350,
+      "height": 175,
+      "text": "## debugging-and-error-recovery\n[[.skills/debugging-and-error-recovery/SKILL.md|Open skill]]\n\n1 reviewed connections\nCompatibility redirect for the superseded debugging-and-error-recovery protocol. Use the canonical debugging skill for root-cause isolation, operational triage,"
+    },
+    {
+      "id": "group-13",
+      "type": "group",
+      "x": -40,
+      "y": 8280,
+      "width": 860,
+      "height": 310,
+      "label": "design-patterns / skill-wiki"
+    },
+    {
+      "id": "design-patterns",
+      "type": "text",
+      "x": 0,
+      "y": 8340,
+      "width": 350,
+      "height": 175,
+      "text": "## design-patterns\n[[.skills/design-patterns/SKILL.md|Open skill]]\n\n1 reviewed connections\nPattern-selection protocol for code and architecture work. Use when choosing or refactoring around GoF patterns, programming contracts, or Pragmatic Programmer "
+    },
+    {
+      "id": "skill-wiki",
+      "type": "text",
+      "x": 410,
+      "y": 8340,
+      "width": 350,
+      "height": 175,
+      "text": "## skill-wiki\n[[.skills/skill-wiki/SKILL.md|Open skill]]\n\n1 reviewed connections\nLiving skill library lifecycle governor. Invoke when: authoring a new skill from integrate/ intake; updating a skill with new evidence; routing verified work ch"
+    },
+    {
+      "id": "group-14",
+      "type": "group",
+      "x": -40,
+      "y": 8720,
+      "width": 860,
+      "height": 310,
+      "label": "evaluator-optimizer / prompt-optimization"
+    },
+    {
+      "id": "evaluator-optimizer",
+      "type": "text",
+      "x": 0,
+      "y": 8780,
+      "width": 350,
+      "height": 175,
+      "text": "## evaluator-optimizer\n[[.skills/evaluator-optimizer/SKILL.md|Open skill]]\n\n1 reviewed connections\nIterative LLM-generates → LLM-critiques → LLM-regenerates loop. Use when a single generation pass is insufficient and quality must compound across iterations. C"
+    },
+    {
+      "id": "prompt-optimization",
+      "type": "text",
+      "x": 410,
+      "y": 8780,
+      "width": 350,
+      "height": 175,
+      "text": "## prompt-optimization\n[[.skills/prompt-optimization/SKILL.md|Open skill]]\n\n1 reviewed connections\nSystematic prompt quality improvement via DSPy (trace-guided compilation), TextGrad (text-space gradient descent), OPRO (meta-prompting), ProTeGi (error-case te"
+    },
+    {
+      "id": "group-15",
+      "type": "group",
+      "x": -40,
+      "y": 9160,
+      "width": 860,
+      "height": 310,
+      "label": "ewma-eta-watchdog / timeout-guard"
+    },
+    {
+      "id": "ewma-eta-watchdog",
+      "type": "text",
+      "x": 0,
+      "y": 9220,
+      "width": 350,
+      "height": 175,
+      "text": "## ewma-eta-watchdog\n[[.skills/ewma-eta-watchdog/SKILL.md|Open skill]]\n\n1 reviewed connections\nAdaptive-alpha EWMA of per-job durations for a windowed batch runner, giving (1) a live ETA and (2) a 95% prediction-interval watchdog that kills runaway jobs. "
+    },
+    {
+      "id": "timeout-guard",
+      "type": "text",
+      "x": 410,
+      "y": 9220,
+      "width": 350,
+      "height": 175,
+      "text": "## timeout-guard\n[[.skills/timeout-guard/SKILL.md|Open skill]]\n\n1 reviewed connections\nUse for hung or slow local LLM generations, retry policy design, timeout tuning, or documenting latency-outlier handling. Covers hard per-attempt timeout caps, "
+    },
+    {
+      "id": "group-16",
+      "type": "group",
+      "x": -40,
+      "y": 9600,
+      "width": 860,
+      "height": 310,
+      "label": "gist_correlation_matrix / siamese_from_correlation_matrix"
+    },
+    {
+      "id": "gist_correlation_matrix",
+      "type": "text",
+      "x": 0,
+      "y": 9660,
+      "width": 350,
+      "height": 175,
+      "text": "## gist_correlation_matrix\n[[.skills/gist_correlation_matrix/SKILL.md|Open skill]]\n\n1 reviewed connections\nTreat the sorted correlation matrix as a complete relational information artifact. Use when deriving the GIST output layer, computing greedy decorrelation sort "
+    },
+    {
+      "id": "siamese_from_correlation_matrix",
+      "type": "text",
+      "x": 410,
+      "y": 9660,
+      "width": 350,
+      "height": 175,
+      "text": "## siamese_from_correlation_matrix\n[[.skills/siamese_from_correlation_matrix/SKILL.md|Open skill]]\n\n1 reviewed connections\nTrain siamese / metric-learning models by deriving training signals directly from embedding space structure (correlation matrix) rather than external labels. Us"
+    },
+    {
+      "id": "group-17",
+      "type": "group",
+      "x": -40,
+      "y": 10040,
+      "width": 860,
+      "height": 310,
+      "label": "grpo-from-scratch / grpo-stability-improvements"
+    },
+    {
+      "id": "grpo-from-scratch",
+      "type": "text",
+      "x": 0,
+      "y": 10100,
+      "width": 350,
+      "height": 175,
+      "text": "## grpo-from-scratch\n[[.skills/grpo-from-scratch/SKILL.md|Open skill]]\n\n1 reviewed connections\nImplement Group Relative Policy Optimization (GRPO) for RLVR from first principles. Covers: rollout sampling with temperature+top-p, reward calculation from ver"
+    },
+    {
+      "id": "grpo-stability-improvements",
+      "type": "text",
+      "x": 410,
+      "y": 10100,
+      "width": 350,
+      "height": 175,
+      "text": "## grpo-stability-improvements\n[[.skills/grpo-stability-improvements/SKILL.md|Open skill]]\n\n1 reviewed connections\nPractical extensions to stabilize GRPO training for reasoning models. Covers: clipped policy ratios, KL divergence penalties (when to use and when to omit), for"
+    },
+    {
+      "id": "group-18",
+      "type": "group",
+      "x": -40,
+      "y": 10480,
+      "width": 860,
+      "height": 310,
+      "label": "interview-me / to-questionnaire"
+    },
+    {
+      "id": "interview-me",
+      "type": "text",
+      "x": 0,
+      "y": 10540,
+      "width": 350,
+      "height": 175,
+      "text": "## interview-me\n[[.skills/interview-me/SKILL.md|Open skill]]\n\n1 reviewed connections\nExtracts what the user actually wants instead of what they think they should want. Achieves this through one-question-at-a-time interview until ~95% confidence "
+    },
+    {
+      "id": "to-questionnaire",
+      "type": "text",
+      "x": 410,
+      "y": 10540,
+      "width": 350,
+      "height": 175,
+      "text": "## to-questionnaire\n[[.skills/to-questionnaire/SKILL.md|Open skill]]\n\n1 reviewed connections\nTurn a decision you can't fully answer into a questionnaire for someone else to fill in."
+    },
+    {
+      "id": "group-19",
+      "type": "group",
+      "x": -40,
+      "y": 10920,
+      "width": 860,
+      "height": 310,
+      "label": "reasoning-distillation / sft-instruction-finetuning"
+    },
+    {
+      "id": "reasoning-distillation",
+      "type": "text",
+      "x": 0,
+      "y": 10980,
+      "width": 350,
+      "height": 175,
+      "text": "## reasoning-distillation\n[[.skills/reasoning-distillation/SKILL.md|Open skill]]\n\n1 reviewed connections\nHard distillation for reasoning models: training a smaller student LLM on reasoning traces from a larger teacher. Answer-only cross-entropy loss, dataset prepar"
+    },
+    {
+      "id": "sft-instruction-finetuning",
+      "type": "text",
+      "x": 410,
+      "y": 10980,
+      "width": 350,
+      "height": 175,
+      "text": "## sft-instruction-finetuning\n[[.skills/sft-instruction-finetuning/SKILL.md|Open skill]]\n\n1 reviewed connections\nSupervised fine-tuning (SFT) for instruction-following LLMs. Covers: dataset preparation with instruction/output pairs, completion-only loss masking (labels=-10"
+    },
+    {
+      "id": "group-20",
+      "type": "group",
+      "x": -40,
+      "y": 11360,
+      "width": 2090,
+      "height": 5350,
+      "label": "Distinct skills without a reviewed connection"
+    },
+    {
+      "id": "active-inference",
+      "type": "text",
+      "x": 0,
+      "y": 11420,
+      "width": 350,
+      "height": 175,
+      "text": "## active-inference\n[[.skills/active-inference/SKILL.md|Open skill]]\n\n0 reviewed connections\nBayesian agent decision-making via the Free Energy Principle. An Active Inference agent maintains a generative model (A/B/C/D matrices) over hidden world states"
+    },
+    {
+      "id": "adjacent-surface-scan",
+      "type": "text",
+      "x": 410,
+      "y": 11420,
+      "width": 350,
+      "height": 175,
+      "text": "## adjacent-surface-scan\n[[.skills/adjacent-surface-scan/SKILL.md|Open skill]]\n\n0 reviewed connections\nOne-degree-out debugging protocol. Use when an error names one concrete missing/invalid item inside a structured surface: image filename, UI asset, config key, "
+    },
+    {
+      "id": "agent-governance",
+      "type": "text",
+      "x": 820,
+      "y": 11420,
+      "width": 350,
+      "height": 175,
+      "text": "## agent-governance\n[[.skills/agent-governance/SKILL.md|Open skill]]\n\n0 reviewed connections\nSafety rails, policy-based tool-access controls, audit trail, trust scoring, and semantic intent classification for agent actions. Use whenever an agent can tak"
+    },
+    {
+      "id": "agent-long-term-memory",
+      "type": "text",
+      "x": 1230,
+      "y": 11420,
+      "width": 350,
+      "height": 175,
+      "text": "## agent-long-term-memory\n[[.skills/agent-long-term-memory/SKILL.md|Open skill]]\n\n0 reviewed connections\nChoose, build, and gate cross-session memory for an agent harness: which substrate serves which memory function, how writes consolidate, how reads are bounded, "
+    },
+    {
+      "id": "agentic-hyperparm",
+      "type": "text",
+      "x": 1640,
+      "y": 11420,
+      "width": 350,
+      "height": 175,
+      "text": "## agentic-hyperparm\n[[.skills/agentic-hyperparm/SKILL.md|Open skill]]\n\n0 reviewed connections\nBehavioral hyperparameter tuning protocol for AI agents. Use when tuning the cognitive dial set of an agentic system: retrieval depth, reranking, chunking, cont"
+    },
+    {
+      "id": "architecture",
+      "type": "text",
+      "x": 0,
+      "y": 11630,
+      "width": 350,
+      "height": 175,
+      "text": "## architecture\n[[.skills/architecture/SKILL.md|Open skill]]\n\n0 reviewed connections\nArchitecture and system design protocol. Use for greenfield design, abstract class planning, novel system structure, or when mapping domain concepts to code. Co"
+    },
+    {
+      "id": "arxiv-bridge",
+      "type": "text",
+      "x": 410,
+      "y": 11630,
+      "width": 350,
+      "height": 175,
+      "text": "## arxiv-bridge\n[[.skills/arxiv-bridge/SKILL.md|Open skill]]\n\n0 reviewed connections\nUpstream arXiv paper discovery layer for scientific/academic queries. Bridges local corpus retrieval with live Semantic Scholar and arXiv Atom APIs. Use when th"
+    },
+    {
+      "id": "autoresearch",
+      "type": "text",
+      "x": 820,
+      "y": 11630,
+      "width": 350,
+      "height": 175,
+      "text": "## autoresearch\n[[.skills/autoresearch/SKILL.md|Open skill]]\n\n0 reviewed connections\nAutonomous iterative hill-climbing research loop. Use when the goal is quantitative improvement on a defined metric: define objective + scorer, loop (propose ch"
+    },
+    {
+      "id": "axiom-ladder-search",
+      "type": "text",
+      "x": 1230,
+      "y": 11630,
+      "width": 350,
+      "height": 175,
+      "text": "## axiom-ladder-search\n[[.skills/axiom-ladder-search/SKILL.md|Open skill]]\n\n0 reviewed connections\nRound-based parameter search for expensive, human-judged systems. Sample ONE axiom, rank the top 3, make those winners fixed BASES, then cross them against a DI"
+    },
+    {
+      "id": "bitter-lesson",
+      "type": "text",
+      "x": 1640,
+      "y": 11630,
+      "width": 350,
+      "height": 175,
+      "text": "## bitter-lesson\n[[.skills/bitter-lesson/SKILL.md|Open skill]]\n\n0 reviewed connections\nDecide whether a hand-designed signal is a representation prior or a verdict — does it change what the optimal policy IS, or only how fast you find it. Use when"
+    },
+    {
+      "id": "bm25-autoencoder",
+      "type": "text",
+      "x": 0,
+      "y": 11840,
+      "width": 350,
+      "height": 175,
+      "text": "## bm25-autoencoder\n[[.skills/bm25-autoencoder/SKILL.md|Open skill]]\n\n0 reviewed connections\nBuild a multi-granularity sparse retrieval system over a text corpus. Use when the task involves: paragraph-level balanced sampling with token-length and topic "
+    },
+    {
+      "id": "bm25-corpus-sampling",
+      "type": "text",
+      "x": 410,
+      "y": 11840,
+      "width": 350,
+      "height": 175,
+      "text": "## bm25-corpus-sampling\n[[.skills/bm25-corpus-sampling/SKILL.md|Open skill]]\n\n0 reviewed connections\nRepresentative corpus sampling for BM25 fitting. When the full corpus would take > 2 hours to index, extract a ~2000-document sample whose WordNet token distrib"
+    },
+    {
+      "id": "book-concept-distillation",
+      "type": "text",
+      "x": 820,
+      "y": 11840,
+      "width": 350,
+      "height": 175,
+      "text": "## book-concept-distillation\n[[.skills/book-concept-distillation/SKILL.md|Open skill]]\n\n0 reviewed connections\nDistill core concepts from technical books (data science, programming) into reusable SKILL.md artifacts, using a local multimodal pipeline. Concepts are tagged "
+    },
+    {
+      "id": "bpe-bm25",
+      "type": "text",
+      "x": 1230,
+      "y": 11840,
+      "width": 350,
+      "height": 175,
+      "text": "## bpe-bm25\n[[.skills/bpe-bm25/SKILL.md|Open skill]]\n\n0 reviewed connections\nDEFAULT FOR TERM SALIENCE (operator 2026-10-04): a term's salience is its share of the sparsevec INNER PRODUCT between a chunk and its sparsevec neighbours, ove"
+    },
+    {
+      "id": "build-observability",
+      "type": "text",
+      "x": 1640,
+      "y": 11840,
+      "width": 350,
+      "height": 175,
+      "text": "## build-observability\n[[.skills/build-observability/SKILL.md|Open skill]]\n\n0 reviewed connections\nLive build observability protocol for agentic systems. Invoke when long-running agent execution needs a normalized runs/events/commands model, a build dashboard"
+    },
+    {
+      "id": "business-writing",
+      "type": "text",
+      "x": 0,
+      "y": 12050,
+      "width": 350,
+      "height": 175,
+      "text": "## business-writing\n[[.skills/business-writing/SKILL.md|Open skill]]\n\n0 reviewed connections\nUse this skill whenever the user asks to write, rewrite, or improve a resume, CV, cover letter, or professional portfolio content. Triggers include: \"update my "
+    },
+    {
+      "id": "causal-inference",
+      "type": "text",
+      "x": 410,
+      "y": 12050,
+      "width": 350,
+      "height": 175,
+      "text": "## causal-inference\n[[.skills/causal-inference/SKILL.md|Open skill]]\n\n0 reviewed connections\nHybrid causal reasoning protocol: LLM proposes the causal graph structure, symbolic libraries (DoWhy, causal-learn) execute identification and estimation, LLM i"
+    },
+    {
+      "id": "caveman",
+      "type": "text",
+      "x": 820,
+      "y": 12050,
+      "width": 350,
+      "height": 175,
+      "text": "## caveman\n[[.skills/caveman/SKILL.md|Open skill]]\n\n0 reviewed connections\nTerse caveman voice: answer first, fluff gone, every technical fact kept. Use for /caveman, \"caveman mode\", \"talk like caveman\", \"be brief\", \"less tokens\". Stay"
+    },
+    {
+      "id": "checklist",
+      "type": "text",
+      "x": 1230,
+      "y": 12050,
+      "width": 350,
+      "height": 175,
+      "text": "## checklist\n[[.skills/checklist/SKILL.md|Open skill]]\n\n0 reviewed connections\nPydantic-schema LLM-as-judge validation pattern. Use when a pipeline node must produce structured, auditable findings — gaps, violations, proposals, or quality "
+    },
+    {
+      "id": "chrome-extensions",
+      "type": "text",
+      "x": 1640,
+      "y": 12050,
+      "width": 350,
+      "height": 175,
+      "text": "## chrome-extensions\n[[.skills/chrome-extensions/SKILL.md|Open skill]]\n\n0 reviewed connections\nBuild, install and verify a personal Chrome extension that does something on the local machine (write a file, run a script) when its toolbar button is clicked. "
+    },
+    {
+      "id": "claude",
+      "type": "text",
+      "x": 0,
+      "y": 12260,
+      "width": 350,
+      "height": 175,
+      "text": "## claude\n[[.skills/claude/SKILL.md|Open skill]]\n\n0 reviewed connections\nCheat sheet for Claude Code project structure and file organization — what belongs in CLAUDE.md (project memory), .claude/ subfolders, agents, commands, hooks, "
+    },
+    {
+      "id": "cluster-quantized-knn",
+      "type": "text",
+      "x": 410,
+      "y": 12260,
+      "width": 350,
+      "height": 175,
+      "text": "## cluster-quantized-knn\n[[.skills/cluster-quantized-knn/SKILL.md|Open skill]]\n\n0 reviewed connections\nCluster-quantized O(1) approximate distance for KNN scoring and walk-mode traversal over embedding spaces. Use when you have a pre-clustered corpus (micro/meso/"
+    },
+    {
+      "id": "code",
+      "type": "text",
+      "x": 820,
+      "y": 12260,
+      "width": 350,
+      "height": 175,
+      "text": "## code\n[[.skills/code/SKILL.md|Open skill]]\n\n0 reviewed connections\nCode standards and implementation protocol. Use for any code generation, modification, or review task. Covers codebase exploration (RRS/PRRS multi-lens analysis"
+    },
+    {
+      "id": "code-extraction",
+      "type": "text",
+      "x": 1230,
+      "y": 12260,
+      "width": 350,
+      "height": 175,
+      "text": "## code-extraction\n[[.skills/code-extraction/SKILL.md|Open skill]]\n\n0 reviewed connections\nExtract source files and configs into a normalized, copy-paste-ready artifact for LLM consumption. Use when preparing a codebase for LLM context, generating doc"
+    },
+    {
+      "id": "code-localization",
+      "type": "text",
+      "x": 1640,
+      "y": 12260,
+      "width": 350,
+      "height": 175,
+      "text": "## code-localization\n[[.skills/code-localization/SKILL.md|Open skill]]\n\n0 reviewed connections\nUse when an agent must find the *right place* in a large codebase to act -- which files/functions cause an issue, where a bottleneck lives, or where a feature s"
+    },
+    {
+      "id": "codebase-design",
+      "type": "text",
+      "x": 0,
+      "y": 12470,
+      "width": 350,
+      "height": 175,
+      "text": "## codebase-design\n[[.skills/codebase-design/SKILL.md|Open skill]]\n\n0 reviewed connections\nShared vocabulary for designing deep modules. Use when the user wants to design or improve a module's interface, find deepening opportunities, decide where a se"
+    },
+    {
+      "id": "codemap",
+      "type": "text",
+      "x": 410,
+      "y": 12470,
+      "width": 350,
+      "height": 175,
+      "text": "## codemap\n[[.skills/codemap/SKILL.md|Open skill]]\n\n0 reviewed connections\nGenerate comprehensive hierarchical codemaps for UNFAMILIAR repositories. Expensive operation - only use when explicitly asked for codebase documentation or ini"
+    },
+    {
+      "id": "comfyui-api-render",
+      "type": "text",
+      "x": 820,
+      "y": 12470,
+      "width": 350,
+      "height": 175,
+      "text": "## comfyui-api-render\n[[.skills/comfyui-api-render/SKILL.md|Open skill]]\n\n0 reviewed connections\nRun a ComfyUI workflow end-to-end via the HTTP API on the sd-worker build (feeding an input image for image-to-video), and iterate on the Docker build files unt"
+    },
+    {
+      "id": "concept-segmentation",
+      "type": "text",
+      "x": 1230,
+      "y": 12470,
+      "width": 350,
+      "height": 175,
+      "text": "## concept-segmentation\n[[.skills/concept-segmentation/SKILL.md|Open skill]]\n\n0 reviewed connections\nSegment a chunked document into concept -> chunk_id ranges using a SQLite-backed read-and-extend loop, then optionally prune each concept's evidence to verbatim"
+    },
+    {
+      "id": "create-steering-documents",
+      "type": "text",
+      "x": 1640,
+      "y": 12470,
+      "width": 350,
+      "height": 175,
+      "text": "## create-steering-documents\n[[.skills/create-steering-documents/SKILL.md|Open skill]]\n\n0 reviewed connections\nCreate comprehensive steering documents for development projects. Generates project-specific standards, git workflows, and technology guidelines in .kiro/steeri"
+    },
+    {
+      "id": "cross-hatch-sampling",
+      "type": "text",
+      "x": 0,
+      "y": 12680,
+      "width": 350,
+      "height": 175,
+      "text": "## cross-hatch-sampling\n[[.skills/cross-hatch-sampling/SKILL.md|Open skill]]\n\n0 reviewed connections\nTwo-axis class-balanced batch construction that projects dataset source (Y) and answer type (X) simultaneously to express the full latent representation across "
+    },
+    {
+      "id": "crystallization",
+      "type": "text",
+      "x": 410,
+      "y": 12680,
+      "width": 350,
+      "height": 175,
+      "text": "## crystallization\n[[.skills/crystallization/SKILL.md|Open skill]]\n\n0 reviewed connections\nDistill a completed work chain into a durable digest page plus reusable lessons: the downstream crystallization step that turns finished work into a reusable ar"
+    },
+    {
+      "id": "ctp2-image-patching",
+      "type": "text",
+      "x": 820,
+      "y": 12680,
+      "width": 350,
+      "height": 175,
+      "text": "## ctp2-image-patching\n[[.skills/ctp2-image-patching/SKILL.md|Open skill]]\n\n0 reviewed connections\nPatch Call to Power II game images via CSV/schema parsing for units, city improvements, and terrain, followed by observer validation. Use when the task involves"
+    },
+    {
+      "id": "deep-q-rl",
+      "type": "text",
+      "x": 1230,
+      "y": 12680,
+      "width": 350,
+      "height": 175,
+      "text": "## deep-q-rl\n[[.skills/deep-q-rl/SKILL.md|Open skill]]\n\n0 reviewed connections\nDeep Q-learning with Russian Doll MCTS for any scored discrete-action environment. Use when you have a state space you can encode as a tensor, a score/evaluatio"
+    },
+    {
+      "id": "deep-research",
+      "type": "text",
+      "x": 1640,
+      "y": 12680,
+      "width": 350,
+      "height": 175,
+      "text": "## deep-research\n[[.skills/deep-research/SKILL.md|Open skill]]\n\n0 reviewed connections\nDeep research framework protocol. Use when a task requires gathering web evidence, multi-source corroboration, or producing a claim-backed report before or alon"
+    },
+    {
+      "id": "design-documentation",
+      "type": "text",
+      "x": 0,
+      "y": 12890,
+      "width": 350,
+      "height": 175,
+      "text": "## design-documentation\n[[.skills/design-documentation/SKILL.md|Open skill]]\n\n0 reviewed connections\nTransform approved requirements into comprehensive technical designs. Define system architecture, component interactions, data models, and interfaces to create "
+    },
+    {
+      "id": "diagnostic-scanner",
+      "type": "text",
+      "x": 410,
+      "y": 12890,
+      "width": 350,
+      "height": 175,
+      "text": "## diagnostic-scanner\n[[.skills/diagnostic-scanner/SKILL.md|Open skill]]\n\n0 reviewed connections\nLanguage-aware diagnostic scanning. Invokes compilers/linters, captures errors and warnings, groups by severity, and generates fix prompts. Use for automated co"
+    },
+    {
+      "id": "doc-synthesizer",
+      "type": "text",
+      "x": 820,
+      "y": 12890,
+      "width": 350,
+      "height": 175,
+      "text": "## doc-synthesizer\n[[.skills/doc-synthesizer/SKILL.md|Open skill]]\n\n0 reviewed connections\nCode analysis, dependency visualization, and optional URI fetch/crawl. Produces AST-based documentation with Mermaid diagrams for module dependencies and data f"
+    },
+    {
+      "id": "documentation",
+      "type": "text",
+      "x": 1230,
+      "y": 12890,
+      "width": 350,
+      "height": 175,
+      "text": "## documentation\n[[.skills/documentation/SKILL.md|Open skill]]\n\n0 reviewed connections\nDocumentation strategy and artifact-selection protocol. Use when updating README/changelog/docs, choosing timestamped vs cumulative records, or producing valida"
+    },
+    {
+      "id": "domain-adaptation",
+      "type": "text",
+      "x": 1640,
+      "y": 12890,
+      "width": 350,
+      "height": 175,
+      "text": "## domain-adaptation\n[[.skills/domain-adaptation/SKILL.md|Open skill]]\n\n0 reviewed connections\nUse when a general model must perform in a specialized vertical -- healthcare, finance, tabular/numeric prediction, law -- where generic behavior fails on domai"
+    },
+    {
+      "id": "doubt-driven-development",
+      "type": "text",
+      "x": 0,
+      "y": 13100,
+      "width": 350,
+      "height": 175,
+      "text": "## doubt-driven-development\n[[.skills/doubt-driven-development/SKILL.md|Open skill]]\n\n0 reviewed connections\nSubjects every non-trivial decision to a fresh-context adversarial review before it stands. Use when correctness matters more than speed, when working in unfami"
+    },
+    {
+      "id": "extractive-context-pruning",
+      "type": "text",
+      "x": 410,
+      "y": 13100,
+      "width": 350,
+      "height": 175,
+      "text": "## extractive-context-pruning\n[[.skills/extractive-context-pruning/SKILL.md|Open skill]]\n\n0 reviewed connections\nSelect verbatim spans from retrieved chunks using query-conditioned extractive methods before LLM generation. Use in any RAG or agentic memory recall path where"
+    },
+    {
+      "id": "fable-mode",
+      "type": "text",
+      "x": 820,
+      "y": 13100,
+      "width": 350,
+      "height": 175,
+      "text": "## fable-mode\n[[.skills/fable-mode/SKILL.md|Open skill]]\n\n0 reviewed connections\nActivates Fable-style agentic behavior: explicit multi-stage planning, aggressive sub-agent delegation, and mandatory self-verification at each stage. Use this "
+    },
+    {
+      "id": "fabro-create-workflow",
+      "type": "text",
+      "x": 1230,
+      "y": 13100,
+      "width": 350,
+      "height": 175,
+      "text": "## fabro-create-workflow\n[[.skills/fabro-create-workflow/SKILL.md|Open skill]]\n\n0 reviewed connections\nCreate Fabro workflow DOT graphs and TOML run configurations from natural language requirements. Use when the user wants to create a new workflow, build a pipel"
+    },
+    {
+      "id": "failed-feature-iteration",
+      "type": "text",
+      "x": 1640,
+      "y": 13100,
+      "width": 350,
+      "height": 175,
+      "text": "## failed-feature-iteration\n[[.skills/failed-feature-iteration/SKILL.md|Open skill]]\n\n0 reviewed connections\nTrack failed feature implementations in persistent todos to enable iterative refinement across varying approaches (e.g., map-reduce, embedding analogies) until "
+    },
+    {
+      "id": "generalization-theory",
+      "type": "text",
+      "x": 0,
+      "y": 13310,
+      "width": 350,
+      "height": 175,
+      "text": "## generalization-theory\n[[.skills/generalization-theory/SKILL.md|Open skill]]\n\n0 reviewed connections\nTraining-dynamics diagnostic skill for distinguishing signal learning from memorization through the empirical NTK signal/noise partition. Use when a model fits "
+    },
+    {
+      "id": "gist-retriever",
+      "type": "text",
+      "x": 410,
+      "y": 13310,
+      "width": 350,
+      "height": 175,
+      "text": "## gist-retriever\n[[.skills/gist-retriever/SKILL.md|Open skill]]\n\n0 reviewed connections\nMulti-layer GraphRAG retrieval protocol over a compact derived triplet space. Use when running or designing hybrid BM25+dense retrieval, RRF fusion, L2 neighbor"
+    },
+    {
+      "id": "git-workflow",
+      "type": "text",
+      "x": 820,
+      "y": 13310,
+      "width": 350,
+      "height": 175,
+      "text": "## git-workflow\n[[.skills/git-workflow/SKILL.md|Open skill]]\n\n0 reviewed connections\nGit branching and push strategy for thistleknot/skills repository. Use this skill to understand when to create branches, when to push to dev vs main, and approv"
+    },
+    {
+      "id": "graphify",
+      "type": "text",
+      "x": 1230,
+      "y": 13310,
+      "width": 350,
+      "height": 175,
+      "text": "## graphify\n[[.skills/graphify/SKILL.md|Open skill]]\n\n0 reviewed connections\nUse for any question about a codebase, its architecture, file relationships, or project content — especially when graphify-out/ exists, where the question shoul"
+    },
+    {
+      "id": "grilling",
+      "type": "text",
+      "x": 1640,
+      "y": 13310,
+      "width": 350,
+      "height": 175,
+      "text": "## grilling\n[[.skills/grilling/SKILL.md|Open skill]]\n\n0 reviewed connections\nGrill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases."
+    },
+    {
+      "id": "harness-rsi",
+      "type": "text",
+      "x": 0,
+      "y": 13520,
+      "width": 350,
+      "height": 175,
+      "text": "## harness-rsi\n[[.skills/harness-rsi/SKILL.md|Open skill]]\n\n0 reviewed connections\nImprove an agentic harness with frozen, matched-control behavioral experiments. Use when testing prompts, tools, memory, skills, guardrails, or control flow wit"
+    },
+    {
+      "id": "headless-browser-verification",
+      "type": "text",
+      "x": 410,
+      "y": 13520,
+      "width": 350,
+      "height": 175,
+      "text": "## headless-browser-verification\n[[.skills/headless-browser-verification/SKILL.md|Open skill]]\n\n0 reviewed connections\nVisual verification protocol using headless browsers to capture screenshots (PNG) before handing off updated web pages to users. Use when code changes affect re"
+    },
+    {
+      "id": "human-verification-checkpoints",
+      "type": "text",
+      "x": 820,
+      "y": 13520,
+      "width": 350,
+      "height": 175,
+      "text": "## human-verification-checkpoints\n[[.skills/human-verification-checkpoints/SKILL.md|Open skill]]\n\n0 reviewed connections\nSurface real, human-verifiable artifacts at critical junctions instead of proceeding on self-assessed \"it works.\" Use during any multi-step or pipeline work whe"
+    },
+    {
+      "id": "hypothesis-forge",
+      "type": "text",
+      "x": 1230,
+      "y": 13520,
+      "width": 350,
+      "height": 175,
+      "text": "## hypothesis-forge\n[[.skills/hypothesis-forge/SKILL.md|Open skill]]\n\n0 reviewed connections\nStructured ideation-to-validation loop. Takes a problem statement and runs: TRIZ idea seeds → initial searches → Six Hats synthesis → hypothesis formation → dir"
+    },
+    {
+      "id": "hypothesis-ledger",
+      "type": "text",
+      "x": 1640,
+      "y": 13520,
+      "width": 350,
+      "height": 175,
+      "text": "## hypothesis-ledger\n[[.skills/hypothesis-ledger/SKILL.md|Open skill]]\n\n0 reviewed connections\nTrack multiple competing, evolving hypotheses at the todo tier. Each hypothesis is a statement (the \"description\") with premises (the key-values) that get valid"
+    },
+    {
+      "id": "inflight-request-queue",
+      "type": "text",
+      "x": 0,
+      "y": 13730,
+      "width": 350,
+      "height": 175,
+      "text": "## inflight-request-queue\n[[.skills/inflight-request-queue/SKILL.md|Open skill]]\n\n0 reviewed connections\nKeep a bounded number of independent blocking I/O requests in flight (a \"queue of N\", often 2) instead of issuing them strictly sequentially, to overlap the rou"
+    },
+    {
+      "id": "kg_ontology",
+      "type": "text",
+      "x": 410,
+      "y": 13730,
+      "width": 350,
+      "height": 175,
+      "text": "## kg_ontology\n[[.skills/kg_ontology/SKILL.md|Open skill]]\n\n0 reviewed connections\nDKG entity-identity layer for the Meta Context Graph. Resolves canonical node identities from extracted spans via synset/hypernym BM25 injection — enabling cros"
+    },
+    {
+      "id": "lessons-learned",
+      "type": "text",
+      "x": 820,
+      "y": 13730,
+      "width": 350,
+      "height": 175,
+      "text": "## lessons-learned\n[[.skills/lessons-learned/SKILL.md|Open skill]]\n\n0 reviewed connections\nLocal SQLite3 catalog for agentic ops lessons — failure modes, model quirks, routing anti-patterns, config gotchas, and what was learned the hard way. Local fil"
+    },
+    {
+      "id": "linear-programming-hyperparm-tuning",
+      "type": "text",
+      "x": 1230,
+      "y": 13730,
+      "width": 350,
+      "height": 175,
+      "text": "## linear-programming-hyperparm-tuning\n[[.skills/linear-programming-hyperparm-tuning/SKILL.md|Open skill]]\n\n0 reviewed connections\nFrame any hyperparameter or configuration tuning problem as a linear or mixed-integer program. Use when the parameter space is discrete, the objective is measur"
+    },
+    {
+      "id": "litellm-windows-service",
+      "type": "text",
+      "x": 1640,
+      "y": 13730,
+      "width": 350,
+      "height": 175,
+      "text": "## litellm-windows-service\n[[.skills/litellm-windows-service/SKILL.md|Open skill]]\n\n0 reviewed connections\nEnd-to-end runbook for standing up a local LiteLLM-fronted model stack on Windows: (A) prepare the ollama Modelfiles it serves — regenerate from base GGUFs with"
+    },
+    {
+      "id": "llm-pipeline-layer-tdd",
+      "type": "text",
+      "x": 0,
+      "y": 13940,
+      "width": 350,
+      "height": 175,
+      "text": "## llm-pipeline-layer-tdd\n[[.skills/llm-pipeline-layer-tdd/SKILL.md|Open skill]]\n\n0 reviewed connections\nGate-based TDD for layered LLM/ETL pipelines. Test each layer in isolation with spoofed inputs. Do not proceed to layer N+1 until layer N passes its contract on"
+    },
+    {
+      "id": "llm-pretraining-fundamentals",
+      "type": "text",
+      "x": 410,
+      "y": 13940,
+      "width": 350,
+      "height": 175,
+      "text": "## llm-pretraining-fundamentals\n[[.skills/llm-pretraining-fundamentals/SKILL.md|Open skill]]\n\n0 reviewed connections\nCore mechanics of pretraining a causal language model: next-token prediction via cross-entropy loss, training loop (zero_grad/forward/loss/backward/step), tempe"
+    },
+    {
+      "id": "long-horizon-attention",
+      "type": "text",
+      "x": 820,
+      "y": 13940,
+      "width": 350,
+      "height": 175,
+      "text": "## long-horizon-attention\n[[.skills/long-horizon-attention/SKILL.md|Open skill]]\n\n0 reviewed connections\nUse when an agent or LLM must sustain reasoning over a long, growing, or noise-filled context and keeps losing the thread -- multi-step tool chains, extended hi"
+    },
+    {
+      "id": "lora-parameter-efficient",
+      "type": "text",
+      "x": 1230,
+      "y": 13940,
+      "width": 350,
+      "height": 175,
+      "text": "## lora-parameter-efficient\n[[.skills/lora-parameter-efficient/SKILL.md|Open skill]]\n\n0 reviewed connections\nLoRA (Low-Rank Adaptation) for parameter-efficient fine-tuning of LLMs. Covers: the low-rank decomposition (W = W0 + BA), rank selection, alpha scaling, target "
+    },
+    {
+      "id": "mad-dynamic-batching",
+      "type": "text",
+      "x": 1640,
+      "y": 13940,
+      "width": 350,
+      "height": 175,
+      "text": "## mad-dynamic-batching\n[[.skills/mad-dynamic-batching/SKILL.md|Open skill]]\n\n0 reviewed connections\nMAD-gated token-aware dynamic batching for ML training data. Convert MAD to sigma (×1.4826), filter within 95% CI of median, then split the retained data into 4"
+    },
+    {
+      "id": "marginal-poly-compression",
+      "type": "text",
+      "x": 0,
+      "y": 14150,
+      "width": 350,
+      "height": 175,
+      "text": "## marginal-poly-compression\n[[.skills/marginal-poly-compression/SKILL.md|Open skill]]\n\n0 reviewed connections\nCompress a 2D joint count table (categories x sources) into a compact (x, y, z) state where x and y are marginal proportion vectors and z is a single global sca"
+    },
+    {
+      "id": "mcp-tool-registry",
+      "type": "text",
+      "x": 410,
+      "y": 14150,
+      "width": 350,
+      "height": 175,
+      "text": "## mcp-tool-registry\n[[.skills/mcp-tool-registry/SKILL.md|Open skill]]\n\n0 reviewed connections\nPattern for registering, discovering, and routing to MCP (Model Context Protocol) tools as the universal agent-tool interface. Use when building or consuming MC"
+    },
+    {
+      "id": "median-bifurcation",
+      "type": "text",
+      "x": 820,
+      "y": 14150,
+      "width": 350,
+      "height": 175,
+      "text": "## median-bifurcation\n[[.skills/median-bifurcation/SKILL.md|Open skill]]\n\n0 reviewed connections\nUniversal pattern for splitting any problem space along median boundaries to create discriminative signal. Choose a partition axis, produce both sides explicitl"
+    },
+    {
+      "id": "megacave",
+      "type": "text",
+      "x": 1230,
+      "y": 14150,
+      "width": 350,
+      "height": 175,
+      "text": "## megacave\n[[.skills/megacave/SKILL.md|Open skill]]\n\n0 reviewed connections\nCaveman in Classical Chinese: 文言文 register, far fewer characters, technical terms verbatim. Invoke only with /megacave or /caveman wenyan. Stays on until \"stop "
+    },
+    {
+      "id": "mmr-dst",
+      "type": "text",
+      "x": 1640,
+      "y": 14150,
+      "width": 350,
+      "height": 175,
+      "text": "## mmr-dst\n[[.skills/mmr-dst/SKILL.md|Open skill]]\n\n0 reviewed connections\nMMR selection over a candidate pool, in two domains. TEXT: tagging a corpus with salient and differentiating terms for BM25/MMR retrieval tuning — a preferred-t"
+    },
+    {
+      "id": "model-interoperability",
+      "type": "text",
+      "x": 0,
+      "y": 14360,
+      "width": 350,
+      "height": 175,
+      "text": "## model-interoperability\n[[.skills/model-interoperability/SKILL.md|Open skill]]\n\n0 reviewed connections\nUse when heterogeneous models, embeddings, adapters, or tools must work together across a boundary -- translating embeddings between vector spaces, composing Lo"
+    },
+    {
+      "id": "mouse-model-testing",
+      "type": "text",
+      "x": 410,
+      "y": 14360,
+      "width": 350,
+      "height": 175,
+      "text": "## mouse-model-testing\n[[.skills/mouse-model-testing/SKILL.md|Open skill]]\n\n0 reviewed connections\nTest/tune a system component in an isolated, accelerated micro-harness (a \"mouse model\") instead of the full pipeline. Use whenever validating a feature, tuning"
+    },
+    {
+      "id": "multi-agent-coordination",
+      "type": "text",
+      "x": 820,
+      "y": 14360,
+      "width": 350,
+      "height": 175,
+      "text": "## multi-agent-coordination\n[[.skills/multi-agent-coordination/SKILL.md|Open skill]]\n\n0 reviewed connections\nMulti-agent team patterns for autonomous software development: peer-to-peer agent messaging, plan-approval gates, shared task ownership with file-locks, dynamic"
+    },
+    {
+      "id": "neurosymbolic",
+      "type": "text",
+      "x": 1230,
+      "y": 14360,
+      "width": 350,
+      "height": 175,
+      "text": "## neurosymbolic\n[[.skills/neurosymbolic/SKILL.md|Open skill]]\n\n0 reviewed connections\nUse when a task needs both neural pattern intuition and symbolic exactness/interpretability -- abstract reasoning (ARC-style), program or library synthesis, sam"
+    },
+    {
+      "id": "orange",
+      "type": "text",
+      "x": 1640,
+      "y": 14360,
+      "width": 350,
+      "height": 175,
+      "text": "## orange\n[[.skills/orange/SKILL.md|Open skill]]\n\n0 reviewed connections\nUse Orange Data Mining for visual, traceable data science workflows: EDA, preparation, modeling, clustering, dimensionality reduction, and evaluation. Prefer it"
+    },
+    {
+      "id": "pipeline-input-review",
+      "type": "text",
+      "x": 0,
+      "y": 14570,
+      "width": 350,
+      "height": 175,
+      "text": "## pipeline-input-review\n[[.skills/pipeline-input-review/SKILL.md|Open skill]]\n\n0 reviewed connections\nProtocol for partitioning a pipeline problem to its minimal failing unit, verifying inputs at that exact stage, and giving an agentic harness a hyper-focused pr"
+    },
+    {
+      "id": "pmi-coverage-deviation",
+      "type": "text",
+      "x": 410,
+      "y": 14570,
+      "width": 350,
+      "height": 175,
+      "text": "## pmi-coverage-deviation\n[[.skills/pmi-coverage-deviation/SKILL.md|Open skill]]\n\n0 reviewed connections\nSurface where a 2D joint count table (e.g. model x sub-topic) deviates from its independence baseline, using pointwise mutual information (PMI) as the per-cell "
+    },
+    {
+      "id": "procedural-memory",
+      "type": "text",
+      "x": 820,
+      "y": 14570,
+      "width": 350,
+      "height": 175,
+      "text": "## procedural-memory\n[[.skills/procedural-memory/SKILL.md|Open skill]]\n\n0 reviewed connections\nSK-Gen pipeline for automatic procedure extraction from episodic experience traces. Extracts recurring action patterns, verifies them with an LLM, constructs pr"
+    },
+    {
+      "id": "program-synthesis",
+      "type": "text",
+      "x": 1230,
+      "y": 14570,
+      "width": 350,
+      "height": 175,
+      "text": "## program-synthesis\n[[.skills/program-synthesis/SKILL.md|Open skill]]\n\n0 reviewed connections\nLLM-guided formal verification and specification-first code synthesis. Three production targets: Verus (Rust ghost specs via AutoVerus), Dafny (SMT-backed pre/p"
+    },
+    {
+      "id": "pxpipe-claude-sdk-litellm",
+      "type": "text",
+      "x": 1640,
+      "y": 14570,
+      "width": 350,
+      "height": 175,
+      "text": "## pxpipe-claude-sdk-litellm\n[[.skills/pxpipe-claude-sdk-litellm/SKILL.md|Open skill]]\n\n0 reviewed connections\nEnd-to-end runbook for exposing subscription-billed Claude (Fable/Opus/Sonnet) through the local LiteLLM `:4000` gateway as plain OpenAI-format models, via a px"
+    },
+    {
+      "id": "rag-eval",
+      "type": "text",
+      "x": 0,
+      "y": 14780,
+      "width": 350,
+      "height": 175,
+      "text": "## rag-eval\n[[.skills/rag-eval/SKILL.md|Open skill]]\n\n0 reviewed connections\nSingle-pass 10-metric RAG response evaluation via a structured LLM judge. One prompt → qwen3.5:4b (Ollama) → Pydantic RAGEvalResult with macro_mean. Use wheneve"
+    },
+    {
+      "id": "ragas",
+      "type": "text",
+      "x": 410,
+      "y": 14780,
+      "width": 350,
+      "height": 175,
+      "text": "## ragas\n[[.skills/ragas/SKILL.md|Open skill]]\n\n0 reviewed connections\nReproduce ragas-style multi-aspect LLM evaluation with a SINGLE small model and ONE JSON schema (a wrapper-based \"own version of ragas\"), instead of many per-me"
+    },
+    {
+      "id": "react-fastapi-sqlite",
+      "type": "text",
+      "x": 820,
+      "y": 14780,
+      "width": 350,
+      "height": 175,
+      "text": "## react-fastapi-sqlite\n[[.skills/react-fastapi-sqlite/SKILL.md|Open skill]]\n\n0 reviewed connections\nScaffold and implement a full-stack web application using React (with TanStack Query for server-state), FastAPI (with SQLModel/SQLAlchemy for ORM), and SQLite a"
+    },
+    {
+      "id": "reasoning",
+      "type": "text",
+      "x": 1230,
+      "y": 14780,
+      "width": 350,
+      "height": 175,
+      "text": "## reasoning\n[[.skills/reasoning/SKILL.md|Open skill]]\n\n0 reviewed connections\nReasoning, orientation, and problem-solving protocol. Use when tackling an open-ended problem, design decision, analysis task, architecture question, or any tas"
+    },
+    {
+      "id": "reduce_overlaps",
+      "type": "text",
+      "x": 1640,
+      "y": 14780,
+      "width": 350,
+      "height": 175,
+      "text": "## reduce_overlaps\n[[.skills/reduce_overlaps/SKILL.md|Open skill]]\n\n0 reviewed connections\nUse when chunking long text (markdown notes, docs, transcripts) for training corpora, RAG, or context generation — derives chunk size from the document's OWN se"
+    },
+    {
+      "id": "representation-pipeline",
+      "type": "text",
+      "x": 0,
+      "y": 14990,
+      "width": 350,
+      "height": 175,
+      "text": "## representation-pipeline\n[[.skills/representation-pipeline/SKILL.md|Open skill]]\n\n0 reviewed connections\nProgressive representation refinement protocol. Use when designing or diagnosing a multi-stage pipeline where raw features are transformed through successive la"
+    },
+    {
+      "id": "request-intent-resolution",
+      "type": "text",
+      "x": 410,
+      "y": 14990,
+      "width": 350,
+      "height": 175,
+      "text": "## request-intent-resolution\n[[.skills/request-intent-resolution/SKILL.md|Open skill]]\n\n0 reviewed connections\nBuild an end-to-end request intent resolution pipeline. Use this skill whenever the task involves: mapping support requests to prior resolved threads, extractin"
+    },
+    {
+      "id": "requirements-engineering",
+      "type": "text",
+      "x": 820,
+      "y": 14990,
+      "width": 350,
+      "height": 175,
+      "text": "## requirements-engineering\n[[.skills/requirements-engineering/SKILL.md|Open skill]]\n\n0 reviewed connections\nTransform vague feature ideas into clear, testable requirements using EARS format. Capture user stories, define acceptance criteria, identify edge cases, and va"
+    },
+    {
+      "id": "response-style",
+      "type": "text",
+      "x": 1230,
+      "y": 14990,
+      "width": 350,
+      "height": 175,
+      "text": "## response-style\n[[.skills/response-style/SKILL.md|Open skill]]\n\n0 reviewed connections\nResponse and prose protocol. Use when drafting user-facing prose, expanding a user's ideas, or tuning tone and format to preserve voice, avoid AI cliches, and m"
+    },
+    {
+      "id": "retrieve-skills",
+      "type": "text",
+      "x": 1640,
+      "y": 14990,
+      "width": 350,
+      "height": 175,
+      "text": "## retrieve-skills\n[[.skills/retrieve-skills/SKILL.md|Open skill]]\n\n0 reviewed connections\nRetrieval-augmented skill routing. Use at the start of any non-trivial task to check whether specialized instructions exist in the local skill store. Calls the "
+    },
+    {
+      "id": "reverse-engineer-anything",
+      "type": "text",
+      "x": 0,
+      "y": 15200,
+      "width": 350,
+      "height": 175,
+      "text": "## reverse-engineer-anything\n[[.skills/reverse-engineer-anything/SKILL.md|Open skill]]\n\n0 reviewed connections\nReverse engineer native, managed, Electron/JavaScript, packaged, firmware, and browser targets with REA. Use shipped-artifact or requested runtime evidence to e"
+    },
+    {
+      "id": "rocky10-gnome-rdp",
+      "type": "text",
+      "x": 410,
+      "y": 15200,
+      "width": 350,
+      "height": 175,
+      "text": "## rocky10-gnome-rdp\n[[.skills/rocky10-gnome-rdp/SKILL.md|Open skill]]\n\n0 reviewed connections\nEnable GNOME native RDP on a Rocky Linux 10 KVM VM when you only have SSH access and the virt-manager console mouse is broken. Use this skill whenever the task "
+    },
+    {
+      "id": "rust-wrapper",
+      "type": "text",
+      "x": 820,
+      "y": 15200,
+      "width": 350,
+      "height": 175,
+      "text": "## rust-wrapper\n[[.skills/rust-wrapper/SKILL.md|Open skill]]\n\n0 reviewed connections\nScaffold and guide building a Rust-to-Python native extension using PyO3 and maturin — generates a working Cargo.toml + src/lib.rs with"
+    },
+    {
+      "id": "schema-induction",
+      "type": "text",
+      "x": 1230,
+      "y": 15200,
+      "width": 350,
+      "height": 175,
+      "text": "## schema-induction\n[[.skills/schema-induction/SKILL.md|Open skill]]\n\n0 reviewed connections\nCross-instance schema discovery via pairwise contrast. Collect N examples of the same kind, partition each pair into SAME | VARIES, aggregate to find constants "
+    },
+    {
+      "id": "security-and-hardening",
+      "type": "text",
+      "x": 1640,
+      "y": 15200,
+      "width": 350,
+      "height": 175,
+      "text": "## security-and-hardening\n[[.skills/security-and-hardening/SKILL.md|Open skill]]\n\n0 reviewed connections\nHardens code against vulnerabilities. Use when handling user input, authentication, data storage, or external integrations. Use when building any feature that a"
+    },
+    {
+      "id": "security-review",
+      "type": "text",
+      "x": 0,
+      "y": 15410,
+      "width": 350,
+      "height": 175,
+      "text": "## security-review\n[[.skills/security-review/SKILL.md|Open skill]]\n\n0 reviewed connections\nCodebase security scanning protocol: STRIDE-A threat modeling, OWASP Top 10 for LLMs and web apps, data-flow tracing to sinks, secret/credential detection, CVE "
+    },
+    {
+      "id": "semantic-search-enrichment",
+      "type": "text",
+      "x": 410,
+      "y": 15410,
+      "width": 350,
+      "height": 175,
+      "text": "## semantic-search-enrichment\n[[.skills/semantic-search-enrichment/SKILL.md|Open skill]]\n\n0 reviewed connections\nEnrich regex and text searches with linguistic normalization and semantic expansion using lemmas, synsets, and hypernyms. Use when a simple substring/regex sear"
+    },
+    {
+      "id": "session-recap",
+      "type": "text",
+      "x": 820,
+      "y": 15410,
+      "width": 350,
+      "height": 175,
+      "text": "## session-recap\n[[.skills/session-recap/SKILL.md|Open skill]]\n\n0 reviewed connections\nRecursively summarize a prior Claude Code session from its transcript. Use when the user gives a session id (e.g. \"claude -r <session_id>\", \"what did we do in s"
+    },
+    {
+      "id": "simplify",
+      "type": "text",
+      "x": 1230,
+      "y": 15410,
+      "width": 350,
+      "height": 175,
+      "text": "## simplify\n[[.skills/simplify/SKILL.md|Open skill]]\n\n0 reviewed connections\nSimplifies code for clarity without changing behavior. Use for readability, maintainability, and complexity reduction after behavior is understood."
+    },
+    {
+      "id": "skill-sync",
+      "type": "text",
+      "x": 1640,
+      "y": 15410,
+      "width": 350,
+      "height": 175,
+      "text": "## skill-sync\n[[.skills/skill-sync/SKILL.md|Open skill]]\n\n0 reviewed connections\nLLM-assisted merge protocol for diverged skill copies across local and remote mirrors. Use when syncing the skills master repo with mirrors that have both been "
+    },
+    {
+      "id": "socratic-questioning",
+      "type": "text",
+      "x": 0,
+      "y": 15620,
+      "width": 350,
+      "height": 175,
+      "text": "## socratic-questioning\n[[.skills/socratic-questioning/SKILL.md|Open skill]]\n\n0 reviewed connections\nUse when a user's request is underspecified or ambiguous and guessing wastes work -- the fix is to actively probe and resolve intent through targeted questions "
+    },
+    {
+      "id": "sparsevec-lexsem-graph",
+      "type": "text",
+      "x": 410,
+      "y": 15620,
+      "width": 350,
+      "height": 175,
+      "text": "## sparsevec-lexsem-graph\n[[.skills/sparsevec-lexsem-graph/SKILL.md|Open skill]]\n\n0 reviewed connections\nBuild and validate a lexical (capped subword sparsevec BM25: BPE or WordPiece with ## marker) + semantic (dense) retrieval stack on pgvector/HNSW with UMAP-Leid"
+    },
+    {
+      "id": "spec",
+      "type": "text",
+      "x": 820,
+      "y": 15620,
+      "width": 350,
+      "height": 175,
+      "text": "## spec\n[[.skills/spec/SKILL.md|Open skill]]\n\n0 reviewed connections\nDraft, validate, repair, and render structured specifications of any kind — flat requirements, object-oriented module structure, stateful/sequenced behavior, an"
+    },
+    {
+      "id": "speckit",
+      "type": "text",
+      "x": 1230,
+      "y": 15620,
+      "width": 350,
+      "height": 175,
+      "text": "## speckit\n[[.skills/speckit/SKILL.md|Open skill]]\n\n0 reviewed connections\nGitHub Spec Kit (specify CLI) entry point: bootstrap a project with `specify init`, then drive spec-driven development through the speckit-* skills in order (co"
+    },
+    {
+      "id": "sphinx",
+      "type": "text",
+      "x": 1640,
+      "y": 15620,
+      "width": 350,
+      "height": 175,
+      "text": "## sphinx\n[[.skills/sphinx/SKILL.md|Open skill]]\n\n0 reviewed connections\nCreate source-grounded Sphinx and Sphinx-Needs architecture pages, including functional diagrams derived from pyreverse, code2flow, pycallgraph, and graphifyy/g"
+    },
+    {
+      "id": "spiral-radial-clustering-display",
+      "type": "text",
+      "x": 0,
+      "y": 15830,
+      "width": 350,
+      "height": 175,
+      "text": "## spiral-radial-clustering-display\n[[.skills/spiral-radial-clustering-display/SKILL.md|Open skill]]\n\n0 reviewed connections\nMulti-dimensional spiral radial clustering visualization with hierarchical layer encoding. Maps decorrelated ordering and centrality metrics into 2D space via U"
+    },
+    {
+      "id": "stat-partitioning",
+      "type": "text",
+      "x": 410,
+      "y": 15830,
+      "width": 350,
+      "height": 175,
+      "text": "## stat-partitioning\n[[.skills/stat-partitioning/SKILL.md|Open skill]]\n\n0 reviewed connections\nDerive principled numeric boundaries on a measurable space instead of picking magic constants. Use when setting a threshold, cutoff, outlier band, chunk boundar"
+    },
+    {
+      "id": "stratified-quota-sampling",
+      "type": "text",
+      "x": 820,
+      "y": 15830,
+      "width": 350,
+      "height": 175,
+      "text": "## stratified-quota-sampling\n[[.skills/stratified-quota-sampling/SKILL.md|Open skill]]\n\n0 reviewed connections\nStratify a long-tailed dataset by normalizing raw counts via Box-Cox (or Yeo-Johnson for zero-containing data), bin into tiers at standard deviation cutoffs, th"
+    },
+    {
+      "id": "subtractive-debugging",
+      "type": "text",
+      "x": 1230,
+      "y": 15830,
+      "width": 350,
+      "height": 175,
+      "text": "## subtractive-debugging\n[[.skills/subtractive-debugging/SKILL.md|Open skill]]\n\n0 reviewed connections\nSystematic regression isolation by subtracting from a known-good state. Invoke when a feature used to work, many changes landed, and you need the first cascaded"
+    },
+    {
+      "id": "synthetic-data",
+      "type": "text",
+      "x": 1640,
+      "y": 15830,
+      "width": 350,
+      "height": 175,
+      "text": "## synthetic-data\n[[.skills/synthetic-data/SKILL.md|Open skill]]\n\n0 reviewed connections\nStructured pipeline for generating high-quality synthetic training data for LLM fine-tuning and agent training. Covers eight generation paradigms (Self-Instruct"
+    },
+    {
+      "id": "test-planner",
+      "type": "text",
+      "x": 0,
+      "y": 16040,
+      "width": 350,
+      "height": 175,
+      "text": "## test-planner\n[[.skills/test-planner/SKILL.md|Open skill]]\n\n0 reviewed connections\nCoverage-aware test plan generation. Identifies testable subjects, analyzes existing coverage, proposes scenarios by level (smoke/unit/integration/e2e/regressio"
+    },
+    {
+      "id": "todo",
+      "type": "text",
+      "x": 410,
+      "y": 16040,
+      "width": 350,
+      "height": 175,
+      "text": "## todo\n[[.skills/todo/SKILL.md|Open skill]]\n\n0 reviewed connections\nSQLite-backed todo MCP setup and usage protocol. Use when installing or operating a persistent todo tool for Copilot CLI, especially when the user says `todo se"
+    },
+    {
+      "id": "training-loop-enhancements",
+      "type": "text",
+      "x": 820,
+      "y": 16040,
+      "width": 350,
+      "height": 175,
+      "text": "## training-loop-enhancements\n[[.skills/training-loop-enhancements/SKILL.md|Open skill]]\n\n0 reviewed connections\nLearning rate warmup, cosine decay schedule, and gradient clipping for stable LLM training. Includes complete enhanced training function combining all three tec"
+    },
+    {
+      "id": "training-regime-principles",
+      "type": "text",
+      "x": 1230,
+      "y": 16040,
+      "width": 350,
+      "height": 175,
+      "text": "## training-regime-principles\n[[.skills/training-regime-principles/SKILL.md|Open skill]]\n\n0 reviewed connections\nCross-regime training principles for CPT → SFT → RL pipelines on small models (≤1B). Covers: what each regime teaches vs what it cannot, dependency chain enforc"
+    },
+    {
+      "id": "ultracave",
+      "type": "text",
+      "x": 1640,
+      "y": 16040,
+      "width": 350,
+      "height": 175,
+      "text": "## ultracave\n[[.skills/ultracave/SKILL.md|Open skill]]\n\n0 reviewed connections\nCaveman at maximum compression: fragments, one word when one word is enough, each fact once. Invoke only with /ultracave or /caveman ultra. Stays on until \"stop"
+    },
+    {
+      "id": "uncertainty-quantification",
+      "type": "text",
+      "x": 0,
+      "y": 16250,
+      "width": 350,
+      "height": 175,
+      "text": "## uncertainty-quantification\n[[.skills/uncertainty-quantification/SKILL.md|Open skill]]\n\n0 reviewed connections\nStructured UQ protocol for LLM outputs: three-tier sampling consistency (semantic entropy, SelfCheckGPT), conformal prediction sets, and verbalized confidence. "
+    },
+    {
+      "id": "universal-filter",
+      "type": "text",
+      "x": 410,
+      "y": 16250,
+      "width": 350,
+      "height": 175,
+      "text": "## universal-filter\n[[.skills/universal-filter/SKILL.md|Open skill]]\n\n0 reviewed connections\nSet an asymmetric cutoff on a skewed distribution by mapping values into a near-normal space, taking the percentile bound there (e.g. upper 97.5%), then inverti"
+    },
+    {
+      "id": "unsupervised-entity-relations",
+      "type": "text",
+      "x": 820,
+      "y": 16250,
+      "width": 350,
+      "height": 175,
+      "text": "## unsupervised-entity-relations\n[[.skills/unsupervised-entity-relations/SKILL.md|Open skill]]\n\n0 reviewed connections\nDerive entities, entity classes and relation classes from raw text with no parser, no NER and no pretrained model, using information-theoretic statistics: DIRT "
+    },
+    {
+      "id": "validation",
+      "type": "text",
+      "x": 1230,
+      "y": 16250,
+      "width": 350,
+      "height": 175,
+      "text": "## validation\n[[.skills/validation/SKILL.md|Open skill]]\n\n0 reviewed connections\nValidation and testing protocol. Use when confirming a working implementation, writing tests, or verifying pipeline outputs."
+    },
+    {
+      "id": "validation-artifacts",
+      "type": "text",
+      "x": 1640,
+      "y": 16250,
+      "width": 350,
+      "height": 175,
+      "text": "## validation-artifacts\n[[.skills/validation-artifacts/SKILL.md|Open skill]]\n\n0 reviewed connections\nMandatory validation artifacts collection protocol. Before claiming \"validation passed\", produce reproducible evidence: training records (holdout splits, loss c"
+    },
+    {
+      "id": "vram-downscale",
+      "type": "text",
+      "x": 0,
+      "y": 16460,
+      "width": 350,
+      "height": 175,
+      "text": "## vram-downscale\n[[.skills/vram-downscale/SKILL.md|Open skill]]\n\n0 reviewed connections\nRun GPU training at the full card and BREAK loudly on overflow instead of silently paging, then downscale one memory knob and resume from the last checkpoint. U"
+    },
+    {
+      "id": "wait-what",
+      "type": "text",
+      "x": 410,
+      "y": 16460,
+      "width": 350,
+      "height": 175,
+      "text": "## wait-what\n[[.skills/wait-what/SKILL.md|Open skill]]\n\n0 reviewed connections\nStop. That last message did not land: re-pitch it."
+    },
+    {
+      "id": "web-council",
+      "type": "text",
+      "x": 820,
+      "y": 16460,
+      "width": 350,
+      "height": 175,
+      "text": "## web-council\n[[.skills/web-council/SKILL.md|Open skill]]\n\n0 reviewed connections\nWeb-council protocol: three adviser lenses (critique, pipeline-restructure, next-question) each propose from evolving ledger-stored briefs, every proposal is gr"
+    },
+    {
+      "id": "legend",
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 1800,
+      "height": 300,
+      "text": "# Skill consolidation — 2026-10-31\nPurple: completed | Cyan: reviewed cross-reference | Gray: keep separate\nOrange: reviewed eligible migration | Red: raw/unreviewed (none permitted at completion)\nScores are correlations, not merge authorization.\n[[.skills/consolidation/merge_verdicts|Open every decision and its source evidence]]\n[[.skills/consolidation/merge_report|Open the complete current candidate screen]]"
+    },
+    {
+      "id": "completion-0",
+      "type": "text",
+      "x": 0,
+      "y": 350,
+      "width": 850,
+      "height": 240,
+      "color": "6",
+      "text": "## COMPLETED: debugging / debugging-and-error-recovery\nRecovery triage migrated to debugging; old invocation is a short redirect.\n\n[[.skills/debugging/SKILL.md|debugging]] / [[.skills/debugging-and-error-recovery/SKILL.md|debugging-and-error-recovery]]\n[[.skills/consolidation/merge_verdicts|Evidence and preserved boundaries]]"
+    },
+    {
+      "id": "completion-1",
+      "type": "text",
+      "x": 920,
+      "y": 350,
+      "width": 850,
+      "height": 240,
+      "color": "6",
+      "text": "## COMPLETED: pi-config / pi-ollama-config\nPi model configuration consolidated; old invocation is a short redirect.\n\n[[.skills/pi-config/SKILL.md|pi-config]] / [[.skills/pi-ollama-config/SKILL.md|pi-ollama-config]]\n[[.skills/consolidation/merge_verdicts|Evidence and preserved boundaries]]"
+    },
+    {
+      "id": "completion-2",
+      "type": "text",
+      "x": 0,
+      "y": 630,
+      "width": 850,
+      "height": 240,
+      "color": "6",
+      "text": "## COMPLETED: agentic-design-patterns / agentic-orchestration\nGeneric chooser canonical in orchestration; LangGraph application guidance retained.\n\n[[.skills/agentic-design-patterns/SKILL.md|agentic-design-patterns]] / [[.skills/agentic-orchestration/SKILL.md|agentic-orchestration]]\n[[.skills/consolidation/merge_verdicts|Evidence and preserved boundaries]]"
+    },
+    {
+      "id": "completion-3",
+      "type": "text",
+      "x": 920,
+      "y": 630,
+      "width": 850,
+      "height": 240,
+      "color": "6",
+      "text": "## COMPLETED: local-llm-harness-wiring / ollama-harness-paradigm\nGeneric wiring canonical; comparison matrix and dated probe evidence retained.\n\n[[.skills/local-llm-harness-wiring/SKILL.md|local-llm-harness-wiring]] / [[.skills/ollama-harness-paradigm/SKILL.md|ollama-harness-paradigm]]\n[[.skills/consolidation/merge_verdicts|Evidence and preserved boundaries]]"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e377cb07f680341a",
+      "fromNode": "spec-new",
+      "toNode": "spec-next",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.867 B=0.185"
+    },
+    {
+      "id": "5733dbb550c97453",
+      "fromNode": "speckit-converge",
+      "toNode": "speckit-specify",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.867 B=0.185"
+    },
+    {
+      "id": "a484ec889d1a4fdd",
+      "fromNode": "agentic-harness",
+      "toNode": "meta-harness",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.867 B=0.185"
+    },
+    {
+      "id": "9bc63270a654d90a",
+      "fromNode": "speckit-specify",
+      "toNode": "speckit-taskstoissues",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.866 B=0.185"
+    },
+    {
+      "id": "0b6ace3cd5258cc3",
+      "fromNode": "spec-driven-development",
+      "toNode": "spec-next",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.819 B=0.231"
+    },
+    {
+      "id": "6fdcc83916c3f7b1",
+      "fromNode": "context-compaction",
+      "toNode": "continuity-log",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.818 B=0.231"
+    },
+    {
+      "id": "1a0466ae4254d278",
+      "fromNode": "speckit-clarify",
+      "toNode": "speckit-implement",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.862 B=0.185"
+    },
+    {
+      "id": "dce9debbe0920d88",
+      "fromNode": "data-science-skills",
+      "toNode": "parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.858 B=0.185"
+    },
+    {
+      "id": "acf9af441920e320",
+      "fromNode": "spec-approve",
+      "toNode": "spec-next",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.812 B=0.231"
+    },
+    {
+      "id": "4f23b6b6c339e885",
+      "fromNode": "git-workflow",
+      "toNode": "incremental-implementation",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.856 B=0.185"
+    },
+    {
+      "id": "170142a57614ab84",
+      "fromNode": "memory-architecture",
+      "toNode": "memory-bank",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.851 B=0.185"
+    },
+    {
+      "id": "30704aef8f286944",
+      "fromNode": "adapter-merging-strategies",
+      "toNode": "continual-learning",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.847 B=0.185"
+    },
+    {
+      "id": "9f92426333d0b045",
+      "fromNode": "code-review-and-quality",
+      "toNode": "incremental-implementation",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.839 B=0.185"
+    },
+    {
+      "id": "5938a8fa8cb87b38",
+      "fromNode": "evaluator-optimizer",
+      "toNode": "prompt-optimization",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.838 B=0.185"
+    },
+    {
+      "id": "2e7a23a4a46dff4d",
+      "fromNode": "code-review-and-quality",
+      "toNode": "codebase-knowledge-graph",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.836 B=0.185"
+    },
+    {
+      "id": "aa1db97e0782c6a5",
+      "fromNode": "spec-next",
+      "toNode": "spec-status",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.835 B=0.185"
+    },
+    {
+      "id": "f60a3d23931c2913",
+      "fromNode": "context-engineering",
+      "toNode": "writing-for-agents",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.831 B=0.185"
+    },
+    {
+      "id": "b609516b8ee178e8",
+      "fromNode": "codebase-knowledge-graph",
+      "toNode": "git-workflow",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.831 B=0.185"
+    },
+    {
+      "id": "656ad4c959a6f1d8",
+      "fromNode": "rag-eval",
+      "toNode": "ragas",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.830 B=0.185"
+    },
+    {
+      "id": "1369d9efd07fa7b2",
+      "fromNode": "active-inference",
+      "toNode": "continual-learning",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.830 B=0.185"
+    },
+    {
+      "id": "56931d0491743afe",
+      "fromNode": "agentic-orchestration",
+      "toNode": "context-engineering",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.826 B=0.185"
+    },
+    {
+      "id": "13dd751dd74155bb",
+      "fromNode": "ewma-eta-watchdog",
+      "toNode": "timeout-guard",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.825 B=0.185"
+    },
+    {
+      "id": "4865c61e0143b5ef",
+      "fromNode": "program-synthesis",
+      "toNode": "synthetic-data",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.824 B=0.185"
+    },
+    {
+      "id": "1c14e2e4c471e04e",
+      "fromNode": "agentic-harness",
+      "toNode": "recursive-harness-self-improvement",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.822 B=0.185"
+    },
+    {
+      "id": "1b145e647a5c4ba3",
+      "fromNode": "speckit-checklist",
+      "toNode": "speckit-taskstoissues",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.821 B=0.185"
+    },
+    {
+      "id": "2a6c7b282adbed99",
+      "fromNode": "llm-pretraining-fundamentals",
+      "toNode": "reasoning-distillation",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.817 B=0.185"
+    },
+    {
+      "id": "6742d3547c97de73",
+      "fromNode": "spec-next",
+      "toNode": "troubleshooting",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.811 B=0.185"
+    },
+    {
+      "id": "65f8622d8a78a709",
+      "fromNode": "codebase-knowledge-graph",
+      "toNode": "incremental-implementation",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.810 B=0.185"
+    },
+    {
+      "id": "ccfe372ec1421440",
+      "fromNode": "ollama-structured",
+      "toNode": "pi-ollama-config",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | below current floors"
+    },
+    {
+      "id": "db2def407f3a89ca",
+      "fromNode": "hyper-parm_tuning",
+      "toNode": "mergekit",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.748 B=0.185"
+    },
+    {
+      "id": "06ab81821152819f",
+      "fromNode": "speckit-constitution",
+      "toNode": "speckit-implement",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.744 B=0.185"
+    },
+    {
+      "id": "74480efd66145075",
+      "fromNode": "agent-identity",
+      "toNode": "writing-for-agents",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.743 B=0.185"
+    },
+    {
+      "id": "256e10e448c69602",
+      "fromNode": "speckit-constitution",
+      "toNode": "speckit-taskstoissues",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.739 B=0.185"
+    },
+    {
+      "id": "e0c240d814e4cbbf",
+      "fromNode": "spec-init",
+      "toNode": "speckit-specify",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.737 B=0.185"
+    },
+    {
+      "id": "dd56bc08f75e3790",
+      "fromNode": "evidence-first-exploration",
+      "toNode": "incremental-implementation",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.729 B=0.185"
+    },
+    {
+      "id": "0e035d38ae2e6082",
+      "fromNode": "linear-programming-hyperparm-tuning",
+      "toNode": "memory-architecture",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.719 B=0.185"
+    },
+    {
+      "id": "fd61631205d69891",
+      "fromNode": "react-fastapi-sqlite",
+      "toNode": "request-intent-resolution",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.719 B=0.185"
+    },
+    {
+      "id": "b01f6cf18818ce45",
+      "fromNode": "ai-prompting",
+      "toNode": "spec-driven-development",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.715 B=0.185"
+    },
+    {
+      "id": "bfa57f959cb2e9da",
+      "fromNode": "gstack",
+      "toNode": "quality-assurance",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.712 B=0.185"
+    },
+    {
+      "id": "d9d7b14f5ec150f2",
+      "fromNode": "caveman",
+      "toNode": "session-recap",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.696 B=0.185"
+    },
+    {
+      "id": "0a880c0378b661e1",
+      "fromNode": "concept-segmentation",
+      "toNode": "universal-filter",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.613 B=0.167"
+    },
+    {
+      "id": "6c70aa2873b8d663",
+      "fromNode": "siamese_from_correlation_matrix",
+      "toNode": "spec-driven-development",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.594 B=0.185"
+    },
+    {
+      "id": "01ee5e0e213711f2",
+      "fromNode": "speckit-plan",
+      "toNode": "speckit-tasks",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.938 B=0.524"
+    },
+    {
+      "id": "e747b6187f2a20c6",
+      "fromNode": "agentic-design-patterns",
+      "toNode": "agentic-orchestration",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "6",
+      "label": "COMPLETED | A=0.867 B=0.143"
+    },
+    {
+      "id": "5d7ca68913a37242",
+      "fromNode": "speckit-analyze",
+      "toNode": "speckit-converge",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.914 B=0.391"
+    },
+    {
+      "id": "5c25501154c3e93f",
+      "fromNode": "auto-research",
+      "toNode": "recursive-harness-self-improvement",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.911 B=0.391"
+    },
+    {
+      "id": "5338c0ccfd11c04c",
+      "fromNode": "caveman",
+      "toNode": "ultracave",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.909 B=0.391"
+    },
+    {
+      "id": "68062cbaeea58432",
+      "fromNode": "cognitive-taxonomy",
+      "toNode": "memory-architecture",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.904 B=0.391"
+    },
+    {
+      "id": "f40c40a16b058e79",
+      "fromNode": "speckit-tasks",
+      "toNode": "speckit-taskstoissues",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.886 B=0.391"
+    },
+    {
+      "id": "fade3f0d2bd3d44a",
+      "fromNode": "speckit-plan",
+      "toNode": "speckit-taskstoissues",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.880 B=0.391"
+    },
+    {
+      "id": "6ae11402573646db",
+      "fromNode": "task-breakdown",
+      "toNode": "troubleshooting",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.808 B=0.455"
+    },
+    {
+      "id": "f8a8cc250b8234b1",
+      "fromNode": "quality-assurance",
+      "toNode": "spec-driven-development",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.828 B=0.391"
+    },
+    {
+      "id": "fc04d2bf63c1eb1f",
+      "fromNode": "local-llm-harness-wiring",
+      "toNode": "ollama-harness-paradigm",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "6",
+      "label": "COMPLETED | A=0.819 B=0.280"
+    },
+    {
+      "id": "d361cfef4ad3459a",
+      "fromNode": "agentic_kg_memory",
+      "toNode": "memory-bank",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.909 B=0.280"
+    },
+    {
+      "id": "ad3c71dfa55e088d",
+      "fromNode": "hyper-parm_tuning",
+      "toNode": "optuna-nested-cv",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.904 B=0.280"
+    },
+    {
+      "id": "54b19e029c3f8303",
+      "fromNode": "speckit-analyze",
+      "toNode": "speckit-tasks",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.903 B=0.280"
+    },
+    {
+      "id": "bc3647f986ff79ad",
+      "fromNode": "speckit-converge",
+      "toNode": "speckit-tasks",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.891 B=0.280"
+    },
+    {
+      "id": "00abaa98679557b5",
+      "fromNode": "speckit-analyze",
+      "toNode": "speckit-clarify",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.890 B=0.280"
+    },
+    {
+      "id": "f4f0cbad94e570ca",
+      "fromNode": "speckit-checklist",
+      "toNode": "speckit-clarify",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.887 B=0.280"
+    },
+    {
+      "id": "6471ee128b88d487",
+      "fromNode": "agentic-orchestration",
+      "toNode": "react-agent",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.886 B=0.280"
+    },
+    {
+      "id": "cfbe88b2305e1379",
+      "fromNode": "gist_correlation_matrix",
+      "toNode": "siamese_from_correlation_matrix",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.885 B=0.280"
+    },
+    {
+      "id": "9af17bb092d1bd00",
+      "fromNode": "speckit-converge",
+      "toNode": "speckit-implement",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.880 B=0.280"
+    },
+    {
+      "id": "29cc7055d80503d1",
+      "fromNode": "speckit-converge",
+      "toNode": "speckit-plan",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.880 B=0.280"
+    },
+    {
+      "id": "2510766c9e03b2ad",
+      "fromNode": "copula-manifold-sampler",
+      "toNode": "token-budget-bin-packing",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.877 B=0.280"
+    },
+    {
+      "id": "9cb77df05011358d",
+      "fromNode": "speckit-implement",
+      "toNode": "speckit-tasks",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.913 B=0.231"
+    },
+    {
+      "id": "0889697c06b03cdb",
+      "fromNode": "speckit-analyze",
+      "toNode": "speckit-checklist",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.862 B=0.280"
+    },
+    {
+      "id": "0657bda8f2f95bb4",
+      "fromNode": "agentic-harness",
+      "toNode": "substrate-selection",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.859 B=0.280"
+    },
+    {
+      "id": "e783feccbe85c80e",
+      "fromNode": "speckit-checklist",
+      "toNode": "speckit-converge",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.859 B=0.280"
+    },
+    {
+      "id": "1948b6e47d16229a",
+      "fromNode": "local-llm-harness-wiring",
+      "toNode": "pi-config",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.849 B=0.280"
+    },
+    {
+      "id": "774ae808047174d6",
+      "fromNode": "speckit-implement",
+      "toNode": "speckit-plan",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.906 B=0.231"
+    },
+    {
+      "id": "94dc5c9564621075",
+      "fromNode": "consolidation",
+      "toNode": "nearest-neighbor-chain",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.905 B=0.231"
+    },
+    {
+      "id": "5f83ae35659d25df",
+      "fromNode": "speckit-analyze",
+      "toNode": "speckit-implement",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.890 B=0.231"
+    },
+    {
+      "id": "0c8135c390cea802",
+      "fromNode": "spec-driven-development",
+      "toNode": "task-breakdown",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.806 B=0.455"
+    },
+    {
+      "id": "d4a1ba232c1a92ee",
+      "fromNode": "quality-assurance",
+      "toNode": "task-breakdown",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.778 B=0.455"
+    },
+    {
+      "id": "84fff141d438c636",
+      "fromNode": "speckit-constitution",
+      "toNode": "speckit-converge",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.804 B=0.280"
+    },
+    {
+      "id": "2a2decc52410b919",
+      "fromNode": "llm-pretraining-fundamentals",
+      "toNode": "sft-instruction-finetuning",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.799 B=0.280"
+    },
+    {
+      "id": "048b87d26112d04b",
+      "fromNode": "speckit-constitution",
+      "toNode": "speckit-plan",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.768 B=0.280"
+    },
+    {
+      "id": "09869547e965477b",
+      "fromNode": "spec-init",
+      "toNode": "spec-status",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.799 B=0.231"
+    },
+    {
+      "id": "3b88d3f9c27c0294",
+      "fromNode": "speckit-constitution",
+      "toNode": "speckit-tasks",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.749 B=0.280"
+    },
+    {
+      "id": "96fd8b96b15399e2",
+      "fromNode": "reasoning-distillation",
+      "toNode": "sft-instruction-finetuning",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.775 B=0.231"
+    },
+    {
+      "id": "8c1e36c3e5b8a225",
+      "fromNode": "design-patterns",
+      "toNode": "skill-wiki",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.804 B=0.185"
+    },
+    {
+      "id": "83ad00cdc2b1ae75",
+      "fromNode": "active-inference",
+      "toNode": "synthetic-data",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.804 B=0.185"
+    },
+    {
+      "id": "e28bdabcca38cb5e",
+      "fromNode": "class-balancing",
+      "toNode": "token-budget-bin-packing",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.801 B=0.185"
+    },
+    {
+      "id": "e0602d5375e85056",
+      "fromNode": "hyper-parm_tuning",
+      "toNode": "memory-architecture",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.755 B=0.231"
+    },
+    {
+      "id": "e5415df98a564fec",
+      "fromNode": "active-inference",
+      "toNode": "program-synthesis",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.799 B=0.185"
+    },
+    {
+      "id": "5a5a9e9a71a2f57f",
+      "fromNode": "agent-identity",
+      "toNode": "memory-architecture",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.797 B=0.185"
+    },
+    {
+      "id": "922d6f2e0dfcf8cc",
+      "fromNode": "linear-programming-hyperparm-tuning",
+      "toNode": "mergekit",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.796 B=0.185"
+    },
+    {
+      "id": "5114a39b0a7895d4",
+      "fromNode": "spec-driven-development",
+      "toNode": "troubleshooting",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.840 B=0.280"
+    },
+    {
+      "id": "6a6d83dc019d1a38",
+      "fromNode": "speckit-checklist",
+      "toNode": "speckit-tasks",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.840 B=0.280"
+    },
+    {
+      "id": "16c1bfd5bdc39a5a",
+      "fromNode": "ollama-harness-paradigm",
+      "toNode": "pi-config",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.826 B=0.280"
+    },
+    {
+      "id": "72895e87c34d956d",
+      "fromNode": "speckit-checklist",
+      "toNode": "speckit-implement",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.838 B=0.280"
+    },
+    {
+      "id": "62f4d4dbe818dfde",
+      "fromNode": "speckit-implement",
+      "toNode": "speckit-taskstoissues",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.887 B=0.231"
+    },
+    {
+      "id": "013e9a5352ddeb84",
+      "fromNode": "mergekit",
+      "toNode": "model-size-reduction",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.835 B=0.280"
+    },
+    {
+      "id": "91af0573cd08a613",
+      "fromNode": "mlflow",
+      "toNode": "optuna-nested-cv",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.880 B=0.231"
+    },
+    {
+      "id": "1fec4a4b83afc23e",
+      "fromNode": "debugging",
+      "toNode": "debugging-and-error-recovery",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "6",
+      "label": "COMPLETED | below current floors"
+    },
+    {
+      "id": "95a8d86ae23426e6",
+      "fromNode": "speckit-checklist",
+      "toNode": "speckit-specify",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.878 B=0.231"
+    },
+    {
+      "id": "8d1d81fba5ca7fea",
+      "fromNode": "pi-config",
+      "toNode": "pi-ollama-config",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "6",
+      "label": "COMPLETED | A=0.835 B=0.103"
+    },
+    {
+      "id": "fda62291b013a184",
+      "fromNode": "quality-assurance",
+      "toNode": "troubleshooting",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.821 B=0.280"
+    },
+    {
+      "id": "b602c128bc91b8df",
+      "fromNode": "grpo-from-scratch",
+      "toNode": "grpo-stability-improvements",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.870 B=0.231"
+    },
+    {
+      "id": "6105bd0c2cb53beb",
+      "fromNode": "adapter-merging-strategies",
+      "toNode": "mergekit",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.868 B=0.231"
+    },
+    {
+      "id": "45ef5f5ff879186d",
+      "fromNode": "speckit-analyze",
+      "toNode": "speckit-taskstoissues",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.868 B=0.231"
+    },
+    {
+      "id": "0e909820ad755bb7",
+      "fromNode": "speckit-converge",
+      "toNode": "speckit-taskstoissues",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.864 B=0.231"
+    },
+    {
+      "id": "69e6571f4b53d1cc",
+      "fromNode": "speckit-clarify",
+      "toNode": "speckit-plan",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.855 B=0.231"
+    },
+    {
+      "id": "90431f24263e8b57",
+      "fromNode": "speckit-clarify",
+      "toNode": "speckit-tasks",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.855 B=0.231"
+    },
+    {
+      "id": "2fce89468293dffb",
+      "fromNode": "auto-ingest",
+      "toNode": "pdf-extraction",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.850 B=0.231"
+    },
+    {
+      "id": "bdfc9fc7816f5f04",
+      "fromNode": "speckit-analyze",
+      "toNode": "speckit-plan",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.895 B=0.185"
+    },
+    {
+      "id": "75117e9c1dde1758",
+      "fromNode": "megacave",
+      "toNode": "ultracave",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "#888888",
+      "label": "KEEP | A=0.849 B=0.231"
+    },
+    {
+      "id": "f7cf907a913bb9d7",
+      "fromNode": "speckit-plan",
+      "toNode": "speckit-specify",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.890 B=0.185"
+    },
+    {
+      "id": "5925d35ec9b0ccab",
+      "fromNode": "agentic-design-patterns",
+      "toNode": "react-agent",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.822 B=0.067"
+    },
+    {
+      "id": "6c0793b11fa37b4c",
+      "fromNode": "agentic-hyperparm-macd",
+      "toNode": "signal-modulation",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.884 B=0.185"
+    },
+    {
+      "id": "f66f3971d8c066eb",
+      "fromNode": "continual-learning",
+      "toNode": "model-size-reduction",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.831 B=0.231"
+    },
+    {
+      "id": "ccbeecc7b995d490",
+      "fromNode": "speckit-clarify",
+      "toNode": "speckit-taskstoissues",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.831 B=0.231"
+    },
+    {
+      "id": "c5c36d789438f2c9",
+      "fromNode": "continual-learning",
+      "toNode": "mergekit",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.828 B=0.231"
+    },
+    {
+      "id": "18909480e3d30424",
+      "fromNode": "speckit-implement",
+      "toNode": "speckit-specify",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.873 B=0.185"
+    },
+    {
+      "id": "4e0442cabab3ef58",
+      "fromNode": "speckit-clarify",
+      "toNode": "speckit-converge",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.873 B=0.185"
+    },
+    {
+      "id": "f0a3ac7dbd0287dd",
+      "fromNode": "agentic-design-patterns",
+      "toNode": "agentic-harness",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.838 B=0.143"
+    },
+    {
+      "id": "48741a5f014df4d0",
+      "fromNode": "speckit-checklist",
+      "toNode": "speckit-plan",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.822 B=0.231"
+    },
+    {
+      "id": "490d56c7ad8c8aec",
+      "fromNode": "local-llm-harness-wiring",
+      "toNode": "ollama-structured",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.795 B=0.185"
+    },
+    {
+      "id": "5b7bc4caf8732b26",
+      "fromNode": "speckit-analyze",
+      "toNode": "speckit-constitution",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.789 B=0.185"
+    },
+    {
+      "id": "e74492e590447cfa",
+      "fromNode": "speckit-checklist",
+      "toNode": "speckit-constitution",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.742 B=0.231"
+    },
+    {
+      "id": "beadfb2d7c720137",
+      "fromNode": "incremental-implementation",
+      "toNode": "tdd-agent",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.782 B=0.185"
+    },
+    {
+      "id": "0c36e5672aeb63bd",
+      "fromNode": "incremental-implementation",
+      "toNode": "task-breakdown",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.781 B=0.185"
+    },
+    {
+      "id": "4de602e0bc3e2aec",
+      "fromNode": "speckit-constitution",
+      "toNode": "speckit-specify",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.774 B=0.185"
+    },
+    {
+      "id": "e1e8b3993b94b429",
+      "fromNode": "auto-research",
+      "toNode": "react-agent",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.770 B=0.185"
+    },
+    {
+      "id": "2dd26253576ffa93",
+      "fromNode": "openspec-workflow",
+      "toNode": "troubleshooting",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.766 B=0.185"
+    },
+    {
+      "id": "afc9524427f3d12e",
+      "fromNode": "speckit-clarify",
+      "toNode": "speckit-constitution",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.765 B=0.185"
+    },
+    {
+      "id": "84f056a0cc583baf",
+      "fromNode": "meta-harness",
+      "toNode": "recursive-harness-self-improvement",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.763 B=0.185"
+    },
+    {
+      "id": "f971962dc25adb37",
+      "fromNode": "memory-bank",
+      "toNode": "retro",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.762 B=0.185"
+    },
+    {
+      "id": "61c736024b8f704e",
+      "fromNode": "spec-driven-development",
+      "toNode": "spec-new",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.756 B=0.185"
+    },
+    {
+      "id": "1253b85056075e07",
+      "fromNode": "agent-identity",
+      "toNode": "cognitive-taxonomy",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.754 B=0.185"
+    },
+    {
+      "id": "e6b6e06a02dde847",
+      "fromNode": "interview-me",
+      "toNode": "to-questionnaire",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.754 B=0.185"
+    },
+    {
+      "id": "065852d6f84c927e",
+      "fromNode": "cua-desktop-agent",
+      "toNode": "react-agent",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.753 B=0.185"
+    },
+    {
+      "id": "71cb34e613298349",
+      "fromNode": "agentic-design-patterns",
+      "toNode": "pi",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.786 B=0.280"
+    },
+    {
+      "id": "681caacc88975b54",
+      "fromNode": "agentic-design-patterns",
+      "toNode": "meta-harness",
+      "fromEnd": "none",
+      "toEnd": "none",
+      "color": "5",
+      "label": "XREF | A=0.802 B=0.185"
+    }
+  ]
+}

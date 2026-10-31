@@ -1,5 +1,16 @@
 # skills
 
+## Current consolidation
+
+2026-10-31: Open the [Obsidian skill map](.skills/consolidation/skill-map.canvas), [reviewed dispositions](.skills/consolidation/merge_verdicts.md), and [current correlation screen](.skills/consolidation/merge_report.md).
+
+[debugging](.skills/debugging/SKILL.md) owns the root-cause protocol; [debugging-and-error-recovery](.skills/debugging-and-error-recovery/SKILL.md) retains its invocation as a redirect, with the original guidance preserved in [the source archive](.skills/debugging/references/error-recovery-2026-10-30.md).
+
+[pi-config](.skills/pi-config/SKILL.md) owns Pi model configuration; [pi-ollama-config](.skills/pi-ollama-config/SKILL.md) retains its invocation as a redirect, with its original archived by the canonical skill.
+
+Added after the reviewed screen: [plan-do](.skills/plan-do/SKILL.md) and [ux-law](.skills/ux-law/SKILL.md); they are not included in the 209-source correlation counts.
+
+
 Reusable skill library for agentic coding, memory, retrieval, tuning, and orchestration.
 
 Each skill lives in its own folder as `SKILL.md`. The repo is no longer just an

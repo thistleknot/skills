@@ -3,7 +3,7 @@ name: pi-config
 description: Configure the .pi agent — register providers and models in models.json, set defaults in settings.json, and wire local Ollama models (built from Modelfiles) into pi as an OpenAI-compatible provider. Use when adding/editing pi models, onboarding a local LLM, debugging "model not found", or tuning reasoning/thinking behavior.
 status: active
 last_validated: 2026-06-28
-supersedes: []
+supersedes: [pi-ollama-config]
 validation_method: session
 ---
 # Pi Config
@@ -199,6 +199,21 @@ curl http://localhost:11434/v1/chat/completions -H "Content-Type: application/js
   -d '{"model":"qwen3.5-reasoning-oc:9b","messages":[{"role":"user","content":"ping"}]}'
 ```
 
+## Discover, Reload, and Validate Local Models
+
+Use the installed Ollama tags as the source of truth before changing `models.json`:
+
+```bash
+ollama list
+curl http://localhost:11434/v1/models
+python -m json.tool ~/.pi/agent/models.json > /dev/null
+```
+
+Copy each `ollama list` tag character-for-character into the corresponding model `id`.
+After saving the file, open `/model` (Ctrl+L) in pi; it reloads the registry on open, so no restart is required. The `~/.pi/agent/` directory survives a pi uninstall, so remove stale entries deliberately.
+
+Before reload, make every model `id` unique within its provider. Pi merges duplicate IDs and a later entry silently replaces the earlier one; malformed JSON makes pi fall back to built-in models, hiding local entries.
+
 ## Failure Modes
 
 - **"model not found" / empty `/model` list** — the `id` in `models.json` doesn't match an `ollama list` tag exactly (tag, casing, `:size`), or Ollama isn't running.
@@ -206,6 +221,8 @@ curl http://localhost:11434/v1/chat/completions -H "Content-Type: application/js
 - **Thinking tags leak into output** (`<think>…`) — `compat.thinkingFormat` is wrong for the model, or `reasoning` is `false` while the template still emits think blocks. For Qwen reasoning GGUFs use `thinkingFormat: "qwen"`.
 - **Context truncation / forgotten content** — `contextWindow` exceeds the Modelfile `num_ctx`. Rebuild the Modelfile with a larger `PARAMETER num_ctx`, or lower `contextWindow`.
 - **Role errors from the server** — set `compat.supportsDeveloperRole: false`.
+- **Auth error despite a reachable local server** — `apiKey` is missing or empty. Set any non-empty placeholder such as `"ollama"`; Ollama ignores its value but pi requires one.
+- **A model disappears after a config change** — validate JSON and remove duplicate IDs within the provider before reopening `/model`.
 - **Edits ignored** — editing the project `.pi/settings.json` when you meant global `~/.pi/agent/`, or vice versa. Remember: project merges over global per-key.
 
 ## Tuning Notes (measured 2026-06-28)

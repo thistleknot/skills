@@ -1,0 +1,3 @@
+interface:
+  display_name: "Orange Data Mining"
+  short_description: "Build visual, traceable data science workflows"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "UX Law Review"
+  short_description: "Turn UX principles into testable design advice"
+  default_prompt: "Use $ux-law to review this interface and give evidence-based, testable recommendations."

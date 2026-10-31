@@ -1,0 +1,12 @@
+[
+  {
+    "pair": ["agentic-design-patterns", "pi"],
+    "decision": "XREF",
+    "evidence": "agentic-design-patterns/SKILL.md:12-22 applies a selected pattern through LangGraph typed state, named nodes and conditional edges; pi/SKILL.md:12-36 defines a bounded delegated external harness runtime. Graph implementation and runtime substrate are complementary responsibilities; the names match their current contracts."
+  },
+  {
+    "pair": ["agentic-design-patterns", "meta-harness"],
+    "decision": "XREF",
+    "evidence": "agentic-design-patterns/SKILL.md:12-22 owns LangGraph implementation contracts after pattern selection; meta-harness/SKILL.md:16-24 owns objective framing, scope partitioning, session topology and handoff policy above execution mechanics. Backend graph implementation and upstream control-plane policy remain distinct; no rename or merge is warranted."
+  }
+]
