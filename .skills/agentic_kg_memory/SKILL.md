@@ -378,38 +378,42 @@ Before any LLM extraction, run a fast regex/NER pass that detects known entity n
 (people, organizations, places) and upserts them into the **knowledge graph** as typed
 directed edges.
 
-#### Optional GLiNER2 candidate pass
+#### GLiNER2 entity extraction
 
-Use GLiNER2 when the corpus needs local, schema-guided discovery of entity mentions
-that the known-name pass cannot find. Install the local inference extra with
-`pip install "gliner2[local]"`; load checkpoints through `AutoExtractor`.
-For English CPU trials, start with `fastino/gliner2.5-small-v1`; compare with
-`fastino/gliner2.5-base-v1` when extraction coverage is insufficient. Use
-`fastino/gliner2.5-multi-v1` for multilingual source text.
+Run GLiNER2 for entity extraction in every memory-graph ingestion. Install local
+inference with `pip install "gliner2[local]"` and load checkpoints through
+`AutoExtractor`. Use `fastino/gliner2.5-base-v1` for English by default; use
+`fastino/gliner2.5-small-v1` on CPU-constrained systems and `fastino/gliner2.5-multi-v1`
+for multilingual text. The small checkpoint remains the required extractor when it
+is selected; it is not a reason to skip entity extraction. Resolve installation or
+checkpoint-loading failures before ingestion; do not silently bypass this stage.
+
+Define a domain-specific entity schema with descriptions that separate adjacent types.
+Request spans and confidence scores. Tune thresholds against labeled examples, and
+retain the model/checkpoint, schema, source reference, span, and score with each result.
 
 Treat every output as a **candidate surface span**:
 
-- Request spans and confidence scores; verify each returned offset against the exact
-  input text.
-- Keep the source reference, source span, model/checkpoint, schema, and score with
-  each candidate.
-- Send candidates through `kg_ontology` for canonical identity; never use raw
-  extractor strings as node IDs or write candidate mentions directly as graph edges.
+- Verify each returned offset against the exact input text.
+- Send source-grounded candidates through `kg_ontology` for canonical identity; write
+  graph nodes only after canonicalization. Never use raw extractor strings as node IDs
+  or write candidate mentions directly as graph edges.
 - Relation extraction is also candidate generation. Preserve head/tail spans and
   relation type, then validate the relation against its source before producing an
   affirmed or negated triplet. GLiNER2 relation output does not replace the Pass 1
   triplet contract or its polarity and inference labels.
-- Keep this pass opt-in until a labeled sample shows useful precision and recall
-  against the existing known-name pass and spans remain traceable to source text.
+- Continue running entity extraction while refining the schema and thresholds; only
+  source-grounded spans proceed to ontology resolution, and only canonicalized entities
+  proceed to graph writes.
 
-**Skill-corpus pilot (2026-11-01):** the `fastino/gliner2.5-small-v1` local CPU
-checkpoint loaded and ran on three excerpts from `agentic_kg_memory`,
-`agent-long-term-memory`, and `codebase-knowledge-graph`. It found a few useful
-mentions (including `kg_ontology` and `BM25`) but missed obvious stores such as
-SQLite and Chroma. Relation output included useful candidates, but also broad or
-missing links (for example, it linked “The agentic_kg_memory skill” to “triplets”
-and missed `canonicalizes`). This pilot supports trying GLiNER2 as a reviewable
-candidate source; it does not support automatic graph writes or making it the default.
+**Current disposition (2026-11-01):** GLiNER2 is the required entity-extraction
+stage. On three skill excerpts, `fastino/gliner2.5-base-v1` found the skill names,
+`kg_ontology`, SQLite, BM25, and Chroma with source spans. The same trial exposed
+type errors (`raw traces` labeled as a data store and `repository graph` labeled as
+a data store), so entity types and thresholds still need corpus-specific validation.
+The small checkpoint missed SQLite and Chroma in the same sample. Relation extraction
+also returned broad or missing links; it remains candidate-only and does not replace
+the Pass 1 triplet contract. See the [official GLiNER2 model and API guide](https://github.com/fastino-ai/GLiNER2/blob/main/README.md).
 
 **Why a graph instead of BM25 for entity relations:**
 
