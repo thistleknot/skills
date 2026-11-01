@@ -1,6 +1,6 @@
 ---
 name: sphinx
-description: Create source-grounded Sphinx and Sphinx-Needs architecture pages, including functional diagrams derived from pyreverse, code2flow, pycallgraph, and graphifyy/graphify traces. Use typed needs as the shared model for filtered flows and inventories; verify the rendered HTML and graph edges.
+description: Create source-grounded Sphinx and Sphinx-Needs architecture pages, including functional diagrams derived from pyreverse, code2flow, pycallgraph, and graphifyy/graphify traces. Apply ELK-informed layered layout conventions to Graphviz diagrams so node ranks and arrow routes stay readable; verify rendered HTML and graph edges.
 ---
 
 # Sphinx architecture diagrams
@@ -68,6 +68,56 @@ Render multiple views from the same needs rather than maintaining a second hand-
 
 Use filters to keep each view legible. Include shared inputs and checkpoints explicitly when their scope falls outside the phase filter; otherwise a valid edge can disappear from the selected view. Prefer left-to-right flow for pipeline-like material. Use restrained type colors and make missing and proposed work visibly distinct, such as red gaps and dashed amber proposed links. Keep node text concise; put detailed contracts in need fields and the inventory.
 
+## Apply ELK-informed layered layout conventions
+
+Use ELK Layered's phases as a layout checklist: break cycles, assign layers, reduce crossings, place nodes, then route edges. These are design conventions here, not a claim that Sphinx or Graphviz is running ELK. Sphinx's `sphinx.ext.graphviz` invokes Graphviz; a DOT file does not execute ELK options. If an actual ELK renderer is used separately, name and version that renderer and keep its generated artifact distinct from Sphinx's DOT output.
+
+For Sphinx-Needs `needflow` with the Graphviz engine, define a named `needs_graphviz_styles` profile and select it in the directive. Keep rank direction, spacing, and edge routing in the graph profile so diagrams share a predictable baseline:
+
+```python
+needs_graphviz_styles = {
+    "layered": {
+        "graph": {
+            "rankdir": "LR",
+            "ranksep": 0.8,
+            "nodesep": 0.35,
+            "splines": "polyline",
+        },
+        "edge": {"arrowsize": 0.7},
+    }
+}
+```
+
+```rst
+.. needflow::
+   :engine: graphviz
+   :config: layered
+   :direction: right
+```
+
+Treat the spacing values as starting points; inspect the rendered graph and tune them to its labels and node sizes. Confirm the installed Sphinx-Needs version supports the chosen options. Its `needs_graphviz_styles` accepts `root`, `graph`, `node`, and `edge` attributes; use `:engine: graphviz` so the selected Graphviz profile is actually applied.
+
+For hand-authored DOT, keep the main data or control path flowing in one direction. Place true parallel stages on the same rank, and order edge declarations only when that order reflects the intended visual order. For a left-to-right graph, use east-side exits and west-side entries as the default; use named ports when a component has distinct inputs or outputs, and keep their order tied to those semantics. DOT supports `tailport` and `headport` for endpoints and named ports on record or HTML-like nodes. The generated `needflow` profile shown above does not set per-edge ports.
+
+```dot
+digraph Flow {
+  graph [rankdir=LR, ranksep=0.8, nodesep=0.35, splines=polyline];
+  ordering=out;
+
+  Source -> Parse [tailport=e, headport=w];
+  Parse -> Validate -> Store;
+  Validate -> Retry [constraint=false, style=dashed, label="feedback"];
+}
+```
+
+Use `minlen` only to give a real rank gap more room. Mark secondary or feedback edges `constraint=false` when they should not distort the main ranks. Use `ordering=out` only when DOT edge declaration order is meaningful; it constrains the order of a node's outgoing edges but does not remove semantic crossings. Keep distinct relationships as distinct edges; do not use edge concentration to hide or merge them.
+
+Use `splines=polyline` or `splines=spline` when edges carry labels or connect through ports. Graphviz documents a limitation in `dot`: `splines=ortho` does not handle ports or edge labels. Orthogonal routing is therefore not a universal fix for overlapping arrows. Prefer short edge labels, adequate rank/node separation, meaningful rank constraints, and a smaller filtered view when routes still collide. Do not add dummy nodes or hub edges unless they represent real components or handoffs.
+
+If a `needflow` view does not expose enough control to resolve a crossing, first split it into phase-specific views or use another view of the same needs. Keep a custom DOT diagram only for a concrete layout need that the canonical needs flow cannot express; never let visual routing change the source-backed relationship model.
+
+References: [ELK Layered algorithm and phases](https://eclipse.dev/elk/reference/algorithms/org-eclipse-elk-layered.html), [Graphviz `dot`](https://graphviz.org/docs/layouts/dot/), [Graphviz edge ports](https://graphviz.org/docs/edges/), [Graphviz `splines`](https://graphviz.org/docs/attrs/splines/), and [Sphinx-Needs Graphviz styles](https://sphinx-needs.readthedocs.io/en/latest/configuration.html#needs-graphviz-styles).
+
 ## Configure and render
 
 For a standalone page, keep the Sphinx configuration, pinned documentation dependencies, source page, and any small required stylesheet together. Configure Graphviz as a declared dependency and select it from `PATH`; add a platform-specific location only when the target environment requires it. Do not add a custom static Graphviz drawing that duplicates needflow relationships.
@@ -89,6 +139,7 @@ Sphinx's built-in [`sphinx.ext.graphviz`](https://www.sphinx-doc.org/en/master/u
 - Look for duplicate reciprocal arrows, isolated nodes that should connect, and edges that join the wrong phase or artifact.
 - Verify shared checkpoints, trial-specific inputs, and launch defaults appear in the appropriate filtered view.
 - Check graph size, node wrapping, contrast, and reading order in the rendered page, not only in the RST source.
+- Inspect edge crossings, arrowhead overlap, labels colliding with routes, and feedback edges pulling nodes out of their main phase ranks; fix these through layer/order/spacing choices or narrower views.
 - Reconcile known implementation gaps in both the graph and nearby explanatory text; never let prose imply a connection the graph does not show.
 
 ## Keep the deliverable focused
