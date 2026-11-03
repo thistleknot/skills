@@ -5,39 +5,42 @@ description: >
   premises into a knowledge graph, retrieving evidence with BM25/NLI, updating
   memory entries from new evidence, or maintaining wiki-like throughlines that
   evolve as the graph learns.
-status: active
-tier: L1
-last_validated: 2026-04-28
+metadata:
+  status: active
+  tier: L1
+  last_validated: '2026-11-02'
 ---
 
 # Agentic KG Memory
 
-## Retrieval Tier: L1 (Vector / Semantic)
+## Retrieval Tier: L1 (Structured memory; dense retrieval optional)
 
 This skill is **L1** in the three-tier knowledge retrieval cascade:
 
 | Tier | Skill | Role |
 |---|---|---|
 | L2 | `memory-bank` / skills markdown | Compiled durable knowledge — try first |
-| **L1** | **`agentic_kg_memory`** | **Atomic triplets and semantic pages — try if L2 misses** |
+| **L1** | **`agentic_kg_memory`** | **Atomic triplets and semantic pages; lexical baseline, dense/graph optional** |
 | L0 | `deep-research` | Live web evidence — last resort |
 
-**Promotion & annealing.** L1 here is a running, self-**annealing** log — the global Chroma
-store at `C:\Users\user\memory-bank\.chroma` (served by the `mem-chroma` service on
-`127.0.0.1:8055`, collection `memories`; see the `memory-index` tool). Entries earn
-durability by use: **recalled ≥ 3 times → promote to L2 durable markdown** (global markdown
-`~\memory-bank\*.md` for cross-project/system patterns; local markdown `[repo]\.memory-bank\`
-for project-specific lessons). **Recalled < 3 times → eventually annealed** (decays out of the
-log). Promotion is one-way, L1 → L2. `memory-bank` is the authority on this tier model.
+**Admission and durability.** Retrieval and citation counts are diagnostic only: they record
+what was searched or referenced, not whether it helped. Recall MUST NOT change admission
+counters, promote, or retire a memory. Admission to shared or durable scope follows
+`agent-long-term-memory` R14: recurrence on at least three independent tasks or a
+control-versus-treatment pass, with source evidence retained. This skill describes graph
+extraction and evidence use; it does not authorize automatic promotion.
 
 ## Memory Scope: Global vs Repo
 
-Each wiki page carries a `scope` field:
+Wiki-page scope labels map to the active `memory-index` scope contract:
 
-- `global` — cross-project facts, patterns, procedures → stored in `C:\Users\user\memory-bank\`
-- `repo` — project-specific context, architecture decisions, code-level facts → stored in `[repo-root]\.memory-bank\`
+| Wiki label | `memory-index` scope | Required context |
+|---|---|---|
+| `global` | `shared` | Explicitly reusable across projects; no project URI. |
+| `repo` | `project` | Exact normalized workspace URI. |
+| session-only candidate | `session` | Exact workspace URI and session ID. |
 
-Not both. If a fact is genuinely reusable across all projects, it is global. If it is specific to one codebase, it is repo-scoped. The dense Chroma surface is the global annealing log described above; durable pages are what survive promotion out of it.
+A page has one scope. These wiki labels are not persisted as a parallel scope enum: graph edges copy the canonical `project_uri`, `scope`, and `session_id` snapshot from their source memory record, and `memory-index` remains the authorization authority.
 
 ## Scope Boundary
 
@@ -59,67 +62,16 @@ This skill owns:
 - BM25 narrowing and NLI or judge-based validation
 - reinforce/weaken/add memory evolution
 - throughlines as retrievable meta-memory
-- runtime quality updates on conclusions
+- outcome-based utility semantics for conclusions, with score updates gated on a verified memory-index binding
 - source-backed conclusion synthesis for final answers
 
-## Setup Mode
+## Setup Boundary
 
-If the user invokes **`agentic_kg_memory setup`**, treat that as a storage and
-retrieval installation request.
+This skill is design guidance; no graph writer, graph-table migration, or graph traversal runtime is wired into the active `memory-index` MCP. Its scoped SQLite store and `search_memory` / `open_memory` / `memory_feedback` tools remain the incumbent storage and authorization path. Do not create a second `wiki_memory.sqlite3` database or a new Chroma collection for graph memory.
 
-### Required paths
+The legacy `memory-index/mem.py` Chroma CLI is a separate tool whose log can promote after repeated searches. That recall-count behavior is not the admission contract for graph memories and MUST NOT be used for graph admission. Use the `memory-index` MCP scope/open/feedback contract and `agent-long-term-memory` R14 instead.
 
-Use these explicit paths on this machine:
-
-- `C:\Users\user\memory-bank\wiki_memory.sqlite3`
-- `C:\Users\user\memory-bank\.chroma\`  (served by the `mem-chroma` service, `127.0.0.1:8055`)
-- `C:\Users\user\memory-bank\clusters.json`
-- `C:\Users\user\memory-bank\cluster_metrics.json`
-
-The SQLite file is the sparse/metadata surface.
-The Chroma directory is the dense embedding surface — connect via the `mem-chroma`
-`HttpClient` (do not open a second `PersistentClient` on `.chroma`; the service owns it).
-KG triplet sequences use collection `memory-bank-triplet-sequences`, distinct from the
-`memories` recall log in the same server.
-
-> **Scope tags**: each wiki page should carry a `scope` field — `global` or `repo`.
-> Global pages belong in `C:\Users\user\memory-bank\`. Repo-specific pages belong
-> in `[repo-root]\.memory-bank\`. The SQLite and Chroma backends are partitioned
-> the same way: one global instance, one per active repo (started with `--memory-dir`
-> on the MCP server).
-
-### Setup actions
-
-When running setup, do all of the following:
-
-1. Create `C:\Users\user\memory-bank\wiki_memory.sqlite3`
-2. Create or migrate the page table:
-   - `bm25_text`
-   - `triplet_sequence_text`
-   - `embedding_ref`
-   - `cluster_id`
-3. Create the graph tables: `kg_nodes`, `kg_edges` (with indexes on `dst_slug` and `edge_type`)
-4. Ensure `C:\Users\user\memory-bank\.chroma\` exists as the Chroma persist directory (the `mem-chroma` service owns it)
-5. Build `triplet_sequence_text` from canonicalized extracted triplets in source order
-6. Embed `triplet_sequence_text` and store vectors in Chroma
-7. Cluster the normalized dense vectors
-8. Write the winning `cluster_id` back into SQLite
-9. Persist human-readable cluster outputs to:
-   - `C:\Users\user\memory-bank\clusters.json`
-   - `C:\Users\user\memory-bank\cluster_metrics.json`
-
-### Evaluation outputs
-
-The setup step is not complete until it persists:
-
-- cluster count
-- clustering method
-- normalization method
-- `bss`
-- `tss`
-- `bss_tss_ratio`
-
-If the system has only the design and no fitted clustering run yet, say so plainly.
+If setup is requested, first produce a code-level spec and migration plan to extend the incumbent store. Preserve lexical retrieval as the baseline; dense retrieval and graph traversal stay optional and off unless separately enabled and validated. The earlier standalone-store recipe is preserved in [the dated archive](history/2026-11-02-superseded-graph-setup.md).
 
 ## Core Thesis
 
@@ -189,8 +141,9 @@ that compounds over time.
 
 ## Consolidation Tiers
 
-Information should not stay at its entry tier forever. Promote it upward as
-evidence accumulates and confidence grows.
+Information may be represented at progressively more structured tiers as evidence accumulates.
+These transformations do not themselves admit an item into shared or durable scope; admission
+follows `agent-long-term-memory` R14. Recall or citation counts do not satisfy that gate.
 
 | Tier | Label | What lives here | Lifetime |
 |---|---|---|---|
@@ -203,10 +156,14 @@ Each tier is more compressed, more confident, and longer-lived than the one belo
 
 ### Promotion rules
 
-Promote a memory entry one tier when:
+Derive a candidate representation one tier when:
 - **Working → Episodic**: the session ends and the observation survived compression
 - **Episodic → Semantic**: the same claim appears across multiple episodes with consistent support
 - **Semantic → Procedural**: a cluster of semantic facts resolves to a reusable workflow or decision rule
+
+Before a candidate enters shared or durable scope, apply R14 independently of these
+representational steps. Retrieval frequency, citations, or model confidence alone are not
+admission evidence.
 
 Demotion is also valid: if a semantic claim is repeatedly contradicted, demote it back to episodic status pending re-evaluation.
 
@@ -265,18 +222,112 @@ This is the behavioral difference between a one-shot retriever and a living memo
 Manual ingest/query/lint loops work at small scale but should be automated.
 The goal is near-zero maintenance burden for the human once the initial schema is established.
 
+### Wired implementation (Claude Code, 2026-07-29)
+
+The abstract events below are now backed by real harness hooks, registered in
+`~/.claude/settings.json`:
+
+| Claude Code hook | Script | Role |
+|---|---|---|
+| SessionStart | `~/.claude/hooks/membank.py` | injects the six-file bank, then the most recent approved **user**-scope memories (recency-ordered — there is no prompt to rank against) |
+| SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop, SessionEnd | `~/.claude/hooks/log_event.py` | appends every event to `~/memory-bank/events.sqlite3` |
+| UserPromptSubmit | `~/.claude/hooks/membank.py` | prompt-ranked recall of reviewed memories, deduped per session |
+
+Capture store (`memory-index/events_store.py`) — MKG's `[:NEXT]` graph chain
+becomes `prev_event_id` + `seq`:
+
+```
+sessions(session_id PK, project_slug, cwd, started_at, ended_at, last_dreamed_at)
+events(event_id PK, session_id, prev_event_id, seq, event_name, timestamp,
+       project_slug, tool_name, tool_use_id, subagent_type, tool_input, tool_response,
+       tool_error, prompt, last_assistant_message, model, source, git_branch,
+       is_sidechain, origin)
+injections(session_id, memory_name, injected_at)
+```
+
+`tool_use_id` is load-bearing, not decoration: a tool *result* carries no tool name,
+only the id of the call it answers, so without it nothing can pair a `PostToolUse` with
+its `PreToolUse`. Schema changes go through `_migrate()` (additive `ALTER TABLE` only) —
+`CREATE TABLE IF NOT EXISTS` silently does nothing to an existing table.
+
+**The store is a cache, not primary data.** `mem backfill`
+(`memory-index/backfill.py`) reconstructs events from Claude Code's own transcripts at
+`~/.claude/projects/*/*.jsonl`, keyed on each record's `uuid` so re-running is a no-op.
+This is what makes the tier disposable in the annealing sense: Chroma rebuilds from
+markdown, events rebuild from transcripts, and only markdown is authored. An empty store
+is a cache miss.
+
+Reconstruction is richer than live capture — a transcript covers the session's whole
+history, including before the hooks existed (measured: 12,802 events rebuilt for a
+session where the hook had 126). It cannot recover `SessionStart`/`SessionEnd` `source`
+or `stop_hook_active`, which distillation does not read.
+
+Distillation is `mem dream` (`memory-index/dream.py`), exposed to agents as the
+`distil_sessions` tool on the `memory-bank` FastMCP server (`~/.copilot/memory_mcp.py`,
+registered in the skills repo's `.mcp.json` alongside `memory_status`,
+`rebuild_event_cache`, and `recall`). **No scheduler:** the agent calls it when work
+finishes. Mechanics include a per-session watermark, extraction behind a recursion guard,
+and contradiction checks against indexed evidence. A distillation result remains a candidate;
+it does not enter shared or durable scope without R14 admission. `mem dream` automatic
+approval remains off unless explicitly enabled, and that flag does not replace admission
+evidence. Raw-event retention follows the current memory-index contract.
+
+Retrieval frequency does not determine survival or admission. Durable/shared admission follows
+R14 and retains source evidence; raw-event retention follows the memory-index contract.
+
+Provenance and what was deliberately not ported:
+`.reference/meta-knowledge-graph/NOTES.md`.
+
+Three things capture does NOT do, on purpose: it stores no transcripts (prompts
+and assistant messages already carry the dialog, once each); it never blocks a
+session (every failure path returns quietly); and it makes no judgment about
+value, which is exactly what lets it be lossless.
+
+**Silent-failure sweep.** Because capture never blocks, it can die completely while
+every session still looks normal — the failure mode where silence and health are
+indistinguishable. `events_store.capture_health()` is therefore *polled* once per
+session by `membank.py` (nothing can fire on a non-event) and prints a loud line when
+the store is missing, unwritable, or empty. The same sweep reports distillation staleness and
+cache overrun, since an un-run distiller is silent in exactly the same way.
+
+The write probe is `PRAGMA user_version = <its current value>`. Two cheaper probes
+were measured against a genuinely read-only file and **both reported false health**:
+`connect()` (no write happens once the tables exist) and `BEGIN IMMEDIATE` (SQLite
+defers the lock until a statement writes). A probe that cannot fail is worse than no
+probe — see memory `write-probe-must-be-able-to-fail`.
+
+**Delegation is first-class, sub-sessions are not.** `subagent_type` is promoted to its
+own column and delegations render as `DELEGATED to <type>, returned/FAILED: ...` in the
+distillation corpus, so task patterns about which subagent suits which job are learnable.
+A subagent *sub-session* is deliberately absent because the data does not exist: measured
+across 973 transcripts / 204,732 records, `isSidechain` is `False` everywhere while 1,196
+`Agent` invocations are present — the transcript holds the invocation and its report,
+never the internal steps. MKG's `HAS_SUBAGENT` lane depends on seeing those steps.
+
+Still open: the dream pass does not extract triplets into `kg_nodes`/`kg_edges`.
+Any future `q_score` or `stability` updates require explicit outcome receipts; recall alone
+cannot update them. Decay remains `mem anneal`'s TTL behavior; no Ebbinghaus schedule is live.
+
 Recommended event hooks:
 
 | Event | Action |
 |---|---|
 | **on_new_source** | auto-ingest, extract triplets, update graph, update index.md |
-| **on_session_start** | load relevant context pages based on recent activity and current task |
-| **on_session_end** | compress session observations into episodic entries, file insights back to pages |
-| **on_query** | check whether the answer is worth filing back (confidence > threshold) |
+| **on_session_start** | load relevant context pages based on recent activity and current task — **wired**: `membank.py` |
+| **on_session_end** | compress session observations into episodic entries, file insights back to pages — **wired**: `log_event.py` captures, `mem dream` compresses |
+| **on_query** | retain a source-linked candidate if the answer may be worth filing; do not admit it based on query confidence or retrieval |
 | **on_memory_write** | check for contradictions with existing knowledge, trigger supersession if warranted; also run write-time Jaccard dedup against `isLatest=true` entries — if `sim > τ_merge` (default 0.7), supersede the old entry rather than creating a standalone duplicate: bump `version`, set `parentId`, mark old `isLatest=false` |
 | **on_schedule** | periodic lint, consolidation pass, temporal retention decay |
 
 ### Overnight Synthesis Recipe
+
+**Partially implemented** as `mem dream` (2026-07-29). Steps 1 and 2 are live:
+sessions are batched off `events.sqlite3` by watermark, and `lessons-learned` rows
+are folded in as corrections — once per run under a reserved `__lessons__`
+watermark, not once per session, since the corrections are not evidence about any
+one session. Steps 3–5 (source diff, in-place wiki reinforce/refine, `q_score` and
+`stability` persistence) are still unimplemented; `mem dream` writes new memory
+files with a `supersedes:` pointer rather than editing pages in place.
 
 The `on_schedule` hook should run a nightly synthesis pass in this order:
 
@@ -284,7 +335,7 @@ The `on_schedule` hook should run a nightly synthesis pass in this order:
 2. **Correction integration** — pull all `event_type: "correction"` episodes (and `lessons-learned` rows updated since last run) from the interval; these are the primary self-improvement signal
 3. **Source diff** — check each connector/source document for changes; re-ingest changed pages against the relevant wiki pages
 4. **Wiki update** — for each affected page, run the ingest→reinforce/refine loop in place; record supersession events for any claim that changes; do not append blindly
-5. **Persist** — commit updated `q_score`, page content, and throughline changes; reset `stability` clocks for touched entries
+5. **Persist** — retain source-backed candidate revisions; update utility scores or stability clocks only from explicit outcome receipts
 
 This converts raw session history into a progressively better starting context. Each nightly pass makes the wiki a stronger signal for the next day's tasks. Token cost of prior sessions is the investment; the wiki's improved recall and fewer dead-end turns are the return. Brain (Perplexity, 2026) reports +25% answer correctness on seen tasks and −13% cost on history-dependent tasks from this loop.
 
@@ -329,10 +380,11 @@ MemRL is the strongest validation of this design.
 Q_new <- Q_old + α(r - Q_old)
 ```
 
-Here `r` can come from downstream NLI or judge signal:
-- entailment -> reinforce
-- contradiction -> weaken
-- neutral -> weak update or no-op, depending on policy
+NLI or a judge may classify whether source evidence entails, is neutral to, or
+contradicts a candidate conclusion. Those labels update the conclusion's evidence
+state only through an explicit, reversible evidence revision; they are not task-utility
+rewards and MUST NOT change `q_score`. A downstream task outcome may update utility
+only through the separate, measured feedback contract below.
 
 ### A-MEM
 A-MEM validates that two-stage memory linking is load-bearing:
@@ -372,11 +424,12 @@ triplets. That preprocessing step belongs to `agentic_kg_memory`.
 
 The ingest pipeline has **two passes**:
 
-### Pass 0 — Entity wiring (zero LLM calls)
+### Pass 0 — Entity candidate discovery (zero LLM calls)
 
-Before any LLM extraction, run a fast regex/NER pass that detects known entity names
-(people, organizations, places) and upserts them into the **knowledge graph** as typed
-directed edges.
+Before relation extraction, a fast matcher or NER pass may identify candidate entity spans.
+Pass 0 may resolve known aliases to existing canonical entities, but it MUST NOT create
+relationship edges from mention co-occurrence. Entity mentions are evidence of presence in a
+source, not evidence that the entities relate to one another.
 
 #### GLiNER2 entity extraction
 
@@ -405,6 +458,9 @@ Treat every output as a **candidate surface span**:
 - Continue running entity extraction while refining the schema and thresholds; only
   source-grounded spans proceed to ontology resolution, and only canonicalized entities
   proceed to graph writes.
+- Co-occurrence may propose candidate pairs for later review, but it MUST NOT be stored as an
+  asserted relation. Every asserted edge must be supported by a validated relation in its
+  source and retain that source span, canonical endpoint IDs, polarity, and inference type.
 
 **Current disposition (2026-11-01):** GLiNER2 is the required entity-extraction
 stage. On three skill excerpts, `fastino/gliner2.5-base-v1` found the skill names,
@@ -415,19 +471,27 @@ The small checkpoint missed SQLite and Chroma in the same sample. Relation extra
 also returned broad or missing links; it remains candidate-only and does not replace
 the Pass 1 triplet contract. See the [official GLiNER2 model and API guide](https://github.com/fastino-ai/GLiNER2/blob/main/README.md).
 
-**Why a graph instead of BM25 for entity relations:**
+**When graph traversal may help:**
 
-BM25 over synset lemmas does approximate single-hop entity queries — if
-`Alice works_at Acme` was extracted, the `bm25_index` contains `"alice person works_at
-acme organization"` and "who works at Acme" surfaces it. For single-hop, BM25 is
-competitive.
+BM25 remains the default retrieval baseline for source passages and single-hop queries. A graph
+is a candidate route when a question requires joining multiple source-backed relations, such
+as finding funders of companies that a named person advises. That capability depends on the
+correctness and provenance of every edge in the path; graph traversal is not presumed to beat
+BM25, diversified BM25, or full context.
 
-The graph wins on two axes:
-1. **Scalability**: BM25 IDF weights drift with each new document. A graph adjacency
-   table is `INSERT OR REPLACE` — append-only, no global stats, no recompute ever.
-2. **Multi-hop traversal**: "who funded the companies Alice advises?" requires two hops.
-   BM25 requires both entities to co-occur in a single document. A graph answers it
-   natively via recursive CTE.
+Keep graph-assisted retrieval and graph-assisted reading separate:
+
+- **Retrieval** uses a query to follow validated graph relations and propose relevant source
+  passages. It changes which passages enter the candidate set.
+- **Reading** starts from passages already retrieved and opened, then organizes their claims,
+  support, contradictions, and unresolved links. It does not make an unsupported relation
+  true merely because a path can be drawn.
+- In either route, return source references for every traversed relation, open those source
+  spans, and base answer claims on the opened evidence. If a path is incomplete or sources
+  conflict, report the gap or conflict instead of silently filling it.
+
+Graph retrieval is optional and stays off by default until it beats the relevant lexical
+control at the same reader, judge, and context budget on held-out cases.
 
 **StructMem (2604.21748) middle path**: if full graph construction is too costly, use
 *dual-perspective extraction* + *periodic consolidation* as a lightweight alternative:
@@ -445,7 +509,7 @@ an additional abstraction.
 
 ```sql
 CREATE TABLE IF NOT EXISTS kg_nodes (
-    slug      TEXT PRIMARY KEY,
+    slug      TEXT PRIMARY KEY,           -- canonical entity ID from kg_ontology
     label     TEXT NOT NULL,
     node_type TEXT NOT NULL,  -- person|org|concept|event|place|skill
     page_ref  TEXT,           -- FK to wiki page slug if this node has a full page
@@ -458,54 +522,124 @@ CREATE TABLE IF NOT EXISTS kg_edges (
     edge_type TEXT NOT NULL,  -- works_at|attended|invested_in|founded|advises|mentions|implies|contradicts
     confidence REAL DEFAULT 1.0,
     polarity   TEXT DEFAULT 'affirmed',  -- affirmed|negated
-    source_page TEXT,                    -- which page created this edge
+    inference_type TEXT NOT NULL,        -- observed|inferred
+    source_ref TEXT NOT NULL,            -- stable original document/source identifier
+    memory_id TEXT NOT NULL,              -- memory-index source record ID
+    project_uri TEXT NOT NULL DEFAULT '', -- authorization snapshot; empty for shared scope
+    scope TEXT NOT NULL,                  -- project|session|shared; unknown is audit-only
+    session_id TEXT NOT NULL DEFAULT '',  -- set for session-scoped sources
+    source_version TEXT NOT NULL,         -- immutable memory-index raw_id for this record
+    source_sha256 TEXT NOT NULL,          -- hash of exact UTF-8 text returned by open_memory
+    source_char_count INTEGER NOT NULL,    -- complete opened text length after redaction
+    span_start INTEGER NOT NULL,          -- zero-based Unicode code-point offset
+    span_end   INTEGER NOT NULL,          -- exclusive end offset
     created_at  TEXT DEFAULT (datetime('now')),
-    PRIMARY KEY (src_slug, dst_slug, edge_type)
+    PRIMARY KEY (
+        src_slug, dst_slug, edge_type, source_ref, memory_id, source_version,
+        source_sha256, span_start, span_end, polarity, inference_type
+    ),
+    CHECK (scope IN ('project', 'session', 'shared')),
+    CHECK ((scope = 'session' AND session_id <> '') OR (scope <> 'session' AND session_id = '')),
+    CHECK (source_char_count BETWEEN 1 AND 6000),
+    CHECK (span_start >= 0 AND span_end > span_start AND span_end <= source_char_count),
+    CHECK (polarity IN ('affirmed', 'negated')),
+    CHECK (inference_type IN ('observed', 'inferred'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_kg_edges_dst ON kg_edges(dst_slug, edge_type);
 CREATE INDEX IF NOT EXISTS idx_kg_edges_type ON kg_edges(edge_type);
 ```
 
+**Source, scope, and schema compatibility contract:** This is a proposed schema revision,
+not a claim about a deployed table. `source_ref` identifies the original document;
+`memory_id` binds the edge to its scope-authorized record in `memory-index`; `source_version`
+is that record's immutable raw ID. `source_sha256` hashes the exact UTF-8 bytes returned by
+`open_memory` after its built-in redaction, and `source_char_count` records that complete
+returned text length. Graph source records MUST fit the 6000-character open limit; larger
+sources must be split into deterministic chunks before graph admission. Record the complete
+source character count at ingestion, before opening. Reject a body whose length differs from
+that count; a body at the limit is admissible only when the ingestion receipt proves the
+complete source chunk is exactly that length.
+Hash exact returned bytes before decoding. Offsets are zero-based Unicode code-point positions
+into that same returned text with an exclusive end; do not normalize line endings or Unicode
+before slicing. A consumer MUST verify raw ID, hash, count, bounds, and extracted span before
+using the edge.
+
+`project_uri`, `scope`, and `session_id` are authorization-filter snapshots copied from
+`memory-index`; they are not the authorization authority. Exclude `unknown` and stale-scope
+rows. Before ranking or traversing a candidate edge, apply the caller's workspace/session
+scope using the `memory-index` R5/R7 contract, then call `open_memory` with the same context.
+Only successfully opened sources whose raw ID, hash, and character count still match may enter
+an authorized source-ID set for graph ranking/traversal. If a source is inaccessible, changed, or outside
+scope, exclude it and any path that depends on it. Scope-specific records have distinct
+`memory_id` values, so out-of-scope evidence cannot overwrite an authorized row.
+
+The expanded primary key allows the same source span to retain distinct polarity and
+inference classifications, and lets changed source versions coexist. Before any runtime
+migration, define and version the migration in the owning implementation spec. Migration may
+backfill a memory ID/version/hash only when the exact source and span are recoverable and
+verified; otherwise preserve the old row in an audit-only legacy table and exclude it from
+traversal. Use a transaction and backup, verify row counts and identities, and never guess
+provenance. No live schema migration is authorized by this skill edit.
+
+The caller creates a request-local `authorized_memory_ids(memory_id PRIMARY KEY)` table
+only after each candidate source passes the scope filter, `open_memory`, raw-ID, and hash
+checks above. Graph queries join that set before traversal or ranking.
+
 **Single-hop query (SQLite):**
 ```sql
 -- Who works at Acme?
-SELECT n.slug, n.label FROM kg_edges e
+SELECT n.slug, n.label, e.source_ref, e.source_version, e.source_sha256,
+       e.span_start, e.span_end, e.polarity, e.inference_type FROM kg_edges e
 JOIN kg_nodes n ON e.src_slug = n.slug
-WHERE e.dst_slug = 'acme' AND e.edge_type = 'works_at' AND e.polarity = 'affirmed';
+WHERE e.dst_slug = 'acme' AND e.edge_type = 'works_at' AND e.polarity = 'affirmed'
+  AND e.memory_id IN (SELECT memory_id FROM authorized_memory_ids);
 ```
 
 **Multi-hop query (recursive CTE):**
 ```sql
 -- Who funded companies that Alice advises?
 WITH advised AS (
-    SELECT dst_slug AS company FROM kg_edges
-    WHERE src_slug = 'alice' AND edge_type = 'advises'
+    SELECT src_slug AS advisor, dst_slug AS company, source_ref, source_version,
+           source_sha256, span_start, span_end, polarity, inference_type
+    FROM kg_edges
+    WHERE src_slug = 'alice' AND edge_type = 'advises' AND polarity = 'affirmed'
+      AND memory_id IN (SELECT memory_id FROM authorized_memory_ids)
 )
-SELECT DISTINCT src_slug AS funder FROM kg_edges
-WHERE dst_slug IN (SELECT company FROM advised)
-  AND edge_type = 'invested_in';
+SELECT f.src_slug AS funder, a.company,
+       a.source_ref AS advises_source, a.source_version AS advises_version,
+       a.source_sha256 AS advises_sha256, a.span_start AS advises_start,
+       a.span_end AS advises_end, a.polarity AS advises_polarity,
+       a.inference_type AS advises_inference, f.source_ref AS funding_source,
+       f.source_version AS funding_version, f.source_sha256 AS funding_sha256,
+       f.span_start AS funding_start, f.span_end AS funding_end,
+       f.polarity AS funding_polarity, f.inference_type AS funding_inference
+FROM advised a
+JOIN kg_edges f ON f.dst_slug = a.company
+WHERE f.edge_type = 'invested_in' AND f.polarity = 'affirmed'
+  AND f.memory_id IN (SELECT memory_id FROM authorized_memory_ids);
 ```
 
-Pass 0 populates this graph from entity co-occurrence alone (no LLM). Pass 1 enriches
-it with semantically extracted predicate types and confidence.
+Pass 0 discovers entity spans and candidate canonical IDs only. Pass 1 may produce relation
+candidates; only source-validated, canonicalized relations become graph edges. Each edge keeps
+its own source span so repeated or conflicting evidence is not collapsed into one row.
 
 ### Pass 1 — LLM triplet extraction
 
-After entity wiring, the LLM extraction pass runs the full semantic layer. Extracted
-triplets are **written to both** the BM25 index (for semantic/fuzzy queries) and the
-graph (`kg_edges`) as typed edges.
+After entity candidate discovery, the LLM extraction pass may propose relations. Validated,
+canonicalized triplets are indexed for lexical retrieval and may also be written to the graph
+as typed edges with source span, polarity, and inference status retained.
 
 **Query routing:**
 | Query type | Use |
 |---|---|
-| Semantic / fuzzy ("what do we know about memory?") | BM25 + vector (Chroma) |
-| Relational / structural ("who works at X?", "what does Y imply?") | Graph traversal (`kg_edges`) |
-| Hybrid ("what did people who work at X say about memory?") | Graph narrows candidates → BM25 re-ranks |
+| Semantic / fuzzy ("what do we know about memory?") | BM25 by default; dense retrieval only when the incumbent memory-index config enables it and its gate passes |
+| Relational / structural ("who works at X?", "what does Y imply?") | Optional graph arm after matched-control gate; return and open source spans |
+| Hybrid ("what did people who work at X say about memory?") | Optional validated graph candidates → BM25 re-ranks; lexical control stays available |
 
 The high-level chain is:
 
-`source text -> LLM extraction (with guidance-resolved synsets) -> normalized triplets -> ontology winner ids -> bm25_index column + kg_edges -> storage`
+`source text -> candidate extraction -> source validation -> ontology winner ids -> BM25 index; optional provenance-bearing kg_edges`
 
 ### Synset/Hypernym Resolution via Guidance
 
@@ -607,16 +741,18 @@ Each **page / wiki entry** should carry:
 4. `entity_bag`
 5. `supporting_triplets`
 6. `fit_score`
-7. `read_count`
-8. `confirmed_read_count`
-9. `update_count`
-10. `wiki_summary`
-11. `throughlines`
-12. `bm25_text`
-13. `triplet_sequence_text`
-14. `embedding_ref`
-15. `cluster_id`
-16. `history`
+7. `update_count`
+8. `wiki_summary`
+9. `throughlines`
+10. `bm25_text`
+11. `triplet_sequence_text`
+12. `embedding_ref`
+13. `cluster_id`
+14. `history`
+
+Read and retrieval counters are not page state: recall must not change counters or admission.
+Use the memory-index `memory_feedback` receipt for explicit helpful/harmful outcomes, with its
+outcome ID and evidence reference.
 
 Example:
 
@@ -632,8 +768,6 @@ Example:
   },
   "supporting_triplets": ["t_18", "t_44", "t_51"],
   "fit_score": 0.81,
-  "read_count": 14,
-  "confirmed_read_count": 9,
   "update_count": 4,
   "wiki_summary": "Prior queries focused on ethical contrast, especially virtue and value frameworks.",
   "bm25_text": "contrast the ethical throughlines of two thinkers virtue value frameworks",
@@ -708,8 +842,8 @@ thesis_fingerprint TEXT # frozenset hash of normalized supporting_fks — dedup 
 supporting_fks   LIST   # source_ids, triplet_ids, and/or page_ids that entailed this conclusion
 source_fks       LIST   # concrete user-visible provenance used for the claim
 fact_fks         LIST   # normalized facts/triplets supporting the claim
-q_score          REAL   # runtime-learned trust score; always updated from prior, never reset
-visit_count      INT    # total confirmed retrievals; use as frequency signal or for α=1/n decay
+q_score          REAL   # score derived only from explicit outcome-feedback receipts
+outcome_count    INT    # evaluated, deduplicated outcome receipts; never retrieval count
 merge_score      REAL   # how strongly this aligns with another candidate claim
 status           TEXT   # active | competing | deprecated | merged
 merged_into      TEXT   # nullable canonical survivor id
@@ -773,7 +907,7 @@ entailing_premises = {p for p in retrieved if classify(p, conclusion) == entails
 fingerprint = frozenset(normalize(entailing_premises))
     |
     +- fingerprint matches existing throughline:
-    |    update q_score (see below)
+    |    retain candidate evidence; q_score changes only from outcome feedback
     |    if evidence warrants: refine claim_text
     |
     +- no match:
@@ -796,23 +930,21 @@ inference pass completes
 fingerprint match found
     |
     v
-q_score <- q_old + α(r - q_old)    ← score always updated; prior never reset
-visit_count += 1
+retain source refs and candidate evidence; q_score unchanged
     |
     v
 LLM critic pass (see below)
     |
     +- no deficiency found:   claim_text unchanged (accept as-is)
     +- gap identified:        claim_text refined to shore up the deficiency
-    +- contradiction:         q_score driven down; status → competing or deprecated
+    +- contradiction:         retain the contradicting source; q_score unchanged until outcome feedback
 ```
 
-**The old score is always the prior.** Repeated confirmation of the same premise set
-compounds the score asymptotically toward 1. Contradiction drives it down from
-wherever it currently stands. The score is never discarded or restarted.
+**The old score is always the prior.** Only explicit, deduplicated outcome receipts may update
+it; retrieved premise matches and LLM critique alone do not change the score.
 
 The roles are separate:
-- **Q-score** updates on every retrieval that includes this premise set
+- **Q-score** updates only from explicit outcome-feedback receipts with evidence references
 - **LLM** intervenes only when it can identify a specific deficiency in the existing claim
 
 ### LLM Critic Prompt Contract
@@ -844,16 +976,14 @@ Output format:
   rationale: <one sentence, null if accept>
 ```
 
-**If accept:** score update proceeds mechanically — `q_new = q_old + α(r - q_old)`.
+**If accept:** retain the source-supported conclusion candidate. Do not update `q_score` from
+retrieval or model acceptance; a score update requires an explicit outcome-feedback receipt.
 
-**If revise:** `revision_score` from the LLM becomes `r` in the update.
-A high-confidence revision (`revision_score ≈ 1`) drives the score up sharply.
-A tentative revision (`revision_score ≈ 0.5`) produces a conservative update.
-The prior `q_old` is always preserved as the anchor — the revision score
-shifts it, it does not replace it.
+**If revise:** the LLM may propose revised wording with its evidence and rationale. Model
+confidence alone does not update `q_score` or admit the revised conclusion.
 
-This keeps the score grounded in accumulated history while allowing the LLM's
-own quality judgment to inform how much a revision moves the needle.
+The revision confidence is an ephemeral review aid. It does not update `q_score`,
+which measures task utility only, and it does not establish truth or admission.
 
 ### Minimal score update
 
@@ -861,36 +991,34 @@ own quality judgment to inform how much a revision moves the needle.
 q_new <- q_old + α(r - q_old)
 ```
 
-Where `r` is the latest evidence outcome:
+`q_score` is downstream task utility, not epistemic confidence or entailment. A feedback
+receipt is `helpful` or `harmful` only when an observed task outcome and its evidence reference
+support that judgment. The current `memory_feedback` contract accepts those two outcomes and
+requires a stable outcome ID and evidence reference; it does not accept neutral/mixed and does
+not directly identify a throughline. Therefore, unless a durable throughline-to-`memory_id`
+binding is defined and verified, no `memory_feedback` receipt may update a throughline
+`q_score`.
 
-- support / entailment -> positive reward
-- neutral / mixed -> weak or zero reward
-- contradiction -> negative reward or sharp downweight
+Entailment, neutrality, and contradiction describe a source's relation to a candidate claim.
+They MUST be stored as evidence classification and MUST NOT be mapped to helpful/harmful
+rewards. Search, retrieval, source opening, entailment labels, or citation alone MUST NOT
+update `q_score` or an outcome counter. Feedback IDs remain idempotent.
 
-**Emergent frequency scoring.** With fixed α and binary `r=1` on every confirmation,
-this update converges monotonically toward 1 — making `q_score` a de-facto
-confirmation counter. That is useful: frequently retrieved and confirmed premise sets
-naturally accumulate higher scores, surfacing the most-used thesis positions.
-
-**To separate frequency from strength**, track `visit_count` alongside `q_score`
-and use a decaying learning rate `α = 1 / visit_count`:
+If a verified throughline-to-memory binding is later implemented, define `q_score` on
+[0, 1], map `helpful` to `r = 1` and `harmful` to `r = 0`, and use a running mean:
 
 ```text
-visit_count += 1
-α = 1 / visit_count
-q_new <- q_old + α(r - q_old)    ← running average; converges to mean(r) over all visits
+outcome_count += 1
+α = 1 / outcome_count
+q_new <- q_old + α(r - q_old)
 ```
 
-Under this regime:
-- `q_score` reflects average entailment strength across all retrievals
-- `visit_count` reflects raw frequency independently
-- A thesis confirmed 100× with weak signal and one confirmed 5× with strong signal
-  are distinguishable; with fixed α they would conflate
+A neutral/mixed outcome is not accepted by the current memory feedback API and must not
+be fabricated as either class. Until the binding and update path are implemented and
+validated, leave `q_score` and `outcome_count` unchanged. Afterward, `q_score` reflects the
+mean of accepted, deduplicated helpful/harmful task outcomes, never retrieval frequency.
 
-Use fixed α when frequency IS the signal you want. Use `α = 1/n` when you want
-mean strength and frequency as separate queryable dimensions.
-
-You do not need an elaborate learned merger before this becomes useful.
+Do not use retrieval frequency as a utility signal.
 
 ### Mergeable conclusion rule
 
@@ -909,7 +1037,7 @@ When merging:
 3. preserve both prior phrasings in `history`
 4. mark the loser as `status = merged`
 5. set `merged_into` on the loser
-6. update the survivor's `q_score` from the combined evidence
+6. preserve the survivor's prior `q_score`; a score update requires an explicit outcome receipt
 
 Do **not** merge contradictory claims just because they touch the same entities.
 
@@ -917,9 +1045,12 @@ Do **not** merge contradictory claims just because they touch the same entities.
 
 Do not force one conclusion too early.
 
-Multiple throughlines may coexist over the same evidence cluster. They compete
-by `q_score`. The highest score is the current best abductive explanation, not
-the permanent winner.
+Multiple throughlines may coexist over the same evidence cluster. Do not rank
+truth or explanatory support by `q_score`: it measures downstream task utility only.
+Compare competing claims using their source evidence, entailment, contradiction,
+source independence, and version freshness. Keep task utility as a separate signal;
+without an explicit throughline-to-memory binding and a valid feedback receipt, leave
+`q_score` unchanged.
 
 This is the escape hatch that keeps the living graph from becoming a headache:
 
@@ -932,14 +1063,14 @@ This is the escape hatch that keeps the living graph from becoming a headache:
 ```text
 triplet      extraction prior      -> observed/inferred + explicit confidence
 page         retrieval fitness     -> objective/throughline/entity fit
-throughline  runtime posterior     -> MemRL-style Q-score
+throughline  outcome-feedback score -> MemRL-style Q-score
 ```
 
 Each tier answers a different question:
 
 - **Triplet**: was this locally well-grounded?
 - **Page**: is this memory entry a good semantic match for the current task?
-- **Throughline**: has this conclusion held up under repeated use?
+- **Throughline**: has this conclusion received helpful or harmful outcome feedback?
 
 ## Forgetting and Temporal Decay
 
@@ -954,13 +1085,13 @@ retention(t) = e^(−t / stability)
 ```
 
 Where:
-- `t` is time since last access or confirmation
-- `stability` increases with each reinforcement (reset and lengthened by each access)
+- `t` is time since last explicit outcome feedback, not retrieval
+- `stability` may change only from explicit outcome feedback; a read does not reset it
 
 Practical implementation over the Q-score:
 
 ```text
-effective_q = q_score * retention(time_since_last_access)
+effective_q = q_score * retention(time_since_last_feedback)
 ```
 
 This does not erase the stored `q_score`. It downweights the **effective retrieval
@@ -979,15 +1110,16 @@ Decay rates should reflect how fast content becomes stale:
 
 ### Retention reset
 
-Every confirmed access or reinforcement resets the clock:
+Retrieval alone does not reinforce a memory, change its counters, or reset its decay clock.
+Where a lifecycle uses feedback, only an explicit outcome receipt can supply that signal.
 
 ```text
-stability_new = stability_old * growth_factor  # e.g. growth_factor = 1.5
-last_accessed = now()
+stability_new = stability_old * growth_factor  # only from explicit outcome feedback
+last_feedback_at = now()
 ```
 
-Over multiple confirmed retrievals the same claim becomes progressively harder to
-forget, which mirrors how important knowledge should compound.
+Repeated explicit helpful outcomes may affect a lifecycle score when that lifecycle defines
+and validates the scoring rule. Search or citation frequency alone never does.
 
 ### Forgetting vs. deletion
 
@@ -995,7 +1127,7 @@ Do not delete decayed memories. Instead:
 
 - drop `effective_q` below the retrieval threshold
 - mark as `status = dormant` when effective_q drops below a floor
-- promote back to active if later evidence re-confirms the claim
+- propose reactivation when new source evidence supports the claim; apply it as an append-only revision
 
 This is the semantic equivalent of moving something to a bottom drawer: deprioritized
 but recoverable.
@@ -1006,21 +1138,13 @@ Operationalizes the Ebbinghaus model above for coding session observations. Unit
 
 | Memory granularity | Half-life (sessions) | Prune trigger |
 |---|---|---|
-| File-level action (`modified X`, `added Y`) | 3 | `read_count = 0` after 6 sessions |
-| Function / class decision | 7 | `read_count = 0` after 14 sessions |
-| Bug / error pattern | 5 | `read_count = 0` after 10 sessions (bugs recur; keep longer than file actions) |
+| File-level action (`modified X`, `added Y`) | 3 | Explicit review after 6 sessions without useful outcome feedback |
+| Function / class decision | 7 | Explicit review after 14 sessions without useful outcome feedback |
+| Bug / error pattern | 5 | Explicit review after 10 sessions without useful outcome feedback (bugs recur; keep longer than file actions) |
 | Architectural decision | ∞ (no decay) | Manual prune only — never auto-expire |
 | Procedural workflow | ∞ (no decay) | Manual prune only |
 
-**Prune execution timing:** On session start, after memory is read — garbage-collect dormant entries whose `effective_q` fell below floor and whose `read_count` has been 0 for ≥ 2× half-life sessions.
-
-```python
-def prune_coding_memory(store, session_count):
-    for entry in store.list(status="dormant"):
-        age_sessions = session_count - entry.last_accessed_session
-        if age_sessions >= 2 * entry.half_life and entry.read_count == 0:
-            store.delete(entry.id)
-```
+**Prune execution timing:** A lifecycle may mark a record for explicit review after its stated interval. It MUST NOT retire or delete the record solely because it was not retrieved; retirement follows the append-only memory-index contract. This schedule is a review heuristic, not an implemented prune procedure.
 
 Architectural and workflow entries are assigned `half_life = float('inf')` — they never age into the prune window.
 
@@ -1127,9 +1251,9 @@ The organizing chain is:
 
 `query -> intent -> HyDE query -> cluster -> sparse+dense retrieval -> triplets -> sources+facts -> NLI/judge -> throughline update`
 
-If the query produces a durable synthesis rather than a transient answer, promote
-that synthesis back into the page / throughline layer as a new or revised memory
-artifact. Querying is allowed to improve the wiki, not just read from it.
+If the query produces a potentially durable synthesis rather than a transient answer, retain it
+as a source-linked candidate for a new or revised page / throughline. Admit it to shared or
+durable scope only after it meets R14; querying alone does not promote memory.
 
 ## Graph Traversal for Discovery
 
@@ -1148,8 +1272,9 @@ query: "what is the impact of upgrading Redis?"
    - "uses" → find all contexts where Redis is used
    - "caused" / "fixed" → find incident or resolution nodes
 3. Collect the reached nodes as candidate pages
-4. Score by traversal depth + edge weight + q_score of reached pages
-5. Return as a ranked evidence bundle
+4. Rank candidate pages by traversal depth and edge weight; any task-utility score may
+   affect retrieval priority only when its meaning and binding are verified
+5. Return a ranked evidence bundle with source provenance; ranking is not evidence support
 ```
 
 This finds connections that semantic similarity misses — things that are structurally
@@ -1165,15 +1290,16 @@ related but lexically distant.
 
 ### When to use traversal
 
-Use graph traversal when:
+Use graph traversal as a separate, optional retrieval arm only after its matched-control gate
+passes. During evaluation, include it only for cases where the graph is expected to matter:
 - the query asks about impact, dependencies, or downstream effects
 - the query asks about the history of a specific entity or decision
-- keyword/semantic search returns low-quality results for a structural question
-- the corpus has dense typed-relationship coverage
+- the corpus has validated typed-relationship coverage
 
 Use standard hybrid retrieval when:
 - the query is open-ended semantic exploration
-- the corpus does not have explicit typed edges yet
+- graph retrieval has not passed its matched-control gate
+- the corpus does not have validated typed edges for the query
 
 ### HyDE query translation
 
@@ -1216,7 +1342,10 @@ Schema: `{original, reformulations[], temporalConcretizations[], entityExtractio
 - Temporal concretization: if the query mentions time ("recently", "last week"), generate a date-anchored form
 - Entity extraction: capitalized non-stopword tokens + quoted phrases are zero-cost entity hints for the graph traversal leg
 
-Execution: run tripleStreamSearch (BM25 + vector + graph) for each reformulation in parallel; merge by taking the best score per page or observation ID. This expands recall without inflating context budget.
+Execution: run only the retrieval channels enabled by their acceptance gates. BM25 remains
+the mandatory lexical channel; dense retrieval and graph traversal remain separate optional
+arms. During a graph evaluation, return passage references, open the source spans, and compare
+against the same lexical control, reader, judge, and context budget.
 
 ### Two-Phase Compact→Expand Retrieval
 
@@ -1663,8 +1792,11 @@ Use it when `agentic_kg_memory` needs a concrete retrieval implementation for:
 - MMR within cluster slices
 - ColBERT reranking
 
-In this repo, that sub-skill should default to the **derived Chroma triplet space**,
-not a pgvector dependency.
+The active `memory-index` MCP currently serves scoped SQLite lexical retrieval; its dense
+flag is optional and was observed off on 2026-11-02. Do not assume a derived Chroma triplet
+collection exists. `gist-retriever` may supply an optional dense lane only when its own
+incumbent implementation and matched-control gate support it; graph traversal stays off by
+default under this skill's graph-admission rule.
 
 ### Why graph-based clustering is reasonable
 
@@ -1707,13 +1839,11 @@ retrieved evidence after recall has already been won.
 
 ### Storage guidance
 
-One workable storage split is:
-
-- SQLite or equivalent for page rows, triplet metadata, counts, scores, and `bm25_text`
-- Chroma or another vector store for `triplet_sequence_text` embeddings
-- a shared `page_id` / `embedding_ref` seam between the two
-
-Keep the sparse and dense surfaces linked, not duplicated blindly.
+A future storage split may keep page rows and `bm25_text` in the incumbent SQLite store,
+with an optional dense index linked by stable IDs. This is a design proposal, not a deployed
+backend or permission to create a second store. If approved later, extend `memory-index`
+under a versioned implementation spec and keep dense indexing disabled until its gate passes.
+Do not duplicate the source-of-truth pages in a new database.
 
 ## Intent, Objective, and Entity Bag Policy
 
@@ -1856,7 +1986,9 @@ Avoid:
 
 ## Three-View Indexing and Intent-Aware Retrieval (SimpleMem Pattern)
 
-Each atomic memory unit should be indexed across three independent representations:
+Proposed design only: a future atomic memory unit could use three representations. The active
+`memory-index` contract remains lexical by default, and this section does not enable dense
+retrieval or graph traversal.
 
 | View | Backend | Purpose |
 |---|---|---|
@@ -1864,7 +1996,8 @@ Each atomic memory unit should be indexed across three independent representatio
 | Sparse | BM25 inverted index | Lexical and keyword match |
 | Symbolic | Metadata tags (entity type, timestamp, provenance) | Structured filter |
 
-Retrieve in parallel across all three views and fuse results with RRF. Fixed top-k without intent-awareness degrades under query diversity.
+If all three views are implemented and pass their gates, retrieve in parallel and fuse with
+RRF. Until then, use the enabled lexical path and do not imply unavailable views are active.
 
 ### Write-time synthesis
 
