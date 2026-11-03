@@ -5,7 +5,7 @@ description: >
   MMR -> late-interaction retriever for a markdown skill corpus, plus the
   ingestion pipeline that feeds it. INGESTION SOURCE (the upstream corpus this
   reads, not part of the skill): C:\Users\user\Documents\wiki\data science\stackskills\skills_master\
-  (1,467 enriched markdown files; ingest_skills.py globs `*/*.md` from there).
+  (1,523 enriched markdown files; ingest_skills.py globs `*/*.md` from there).
   Windows-service deployment DELEGATES to the litellm-windows-service skill (NSSM
   procedure) — register-service.ps1 is just the concrete instance. Covers: Docling
   HybridChunker -> nomic-embed-text ->
@@ -46,14 +46,14 @@ description: >
   "graph retrieval for the stackskills wiki", "register the skills retrieval
   service", or any question about how that corpus's KG/retrieval pipeline works.
 status: draft
-last_validated: 2026-07-19
+last_validated: 2026-08-03
 ---
 
 # parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever
 
 A retrieval-**process** skill: parallel-lane RRF + graph-RAG hybrid → cascade →
 MMR → late-interaction. Ingestion + graph-augmented hybrid retrieval, scoped to
-one corpus: the 1,467
+one corpus: the 1,523
 enriched markdown files in `skills_master/` produced by the stackskills
 merge-and-enrich pipeline (see that folder's own build history for how the
 corpus itself was assembled — this skill starts from the finished files).
@@ -91,7 +91,7 @@ UTF-8 env vars, port-hold verification) are reused directly.
 ## Source of truth
 
 - **What folder is read**: `C:\Users\user\Documents\wiki\data science\stackskills\skills_master\*\*.md`
-  — 11 topic subfolders, each file has `name/description/topic/sources/
+  — 15 topic subfolders, each file has `name/description/topic/sources/
   merged_slugs/enriched` frontmatter plus `## What it is / Key mechanics /
   Pseudocode / Code / Gotchas or pitfalls / When to use` sections.
 - **Ingestion never writes back to `skills_master/`.** It is read-only input.
@@ -252,8 +252,11 @@ hierarchical fit given our options" answer. Default is `both`.
 ## Verification / status (2026-07-18)
 
 Verified working end-to-end on a **2-skill slice**: both test queries retrieved
-the correct skill as #1. The full **1,467-file ingest is a heavy batch job**
-(one KG LLM call per chunk) — it needs the run-timeout removed and ideally a
-free GPU; under docling GPU contention, 3 files took >9.5 min. Run
+the correct skill as #1. The full **1,523-file ingest takes ~1h25m** end to end
+(measured three times on 2026-08-02/03: 1,523 files -> 10,649 chunks). KG
+extraction is deterministic spaCy + WordNet — there is NO LLM call per chunk;
+an earlier note here said otherwise and was wrong. It still needs the run-timeout
+removed, so launch it DETACHED; `--resume` skips already-stored chunk ids, so a
+kill costs only unfinished work. Run
 `python scripts/ingest_skills.py --reset` for the full corpus once a GPU is
 free and the timeout lifted.

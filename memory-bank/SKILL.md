@@ -77,6 +77,36 @@ under-recalled log bits on its own.
 Project-specific + durable → local markdown. An unproven worked-out bit → Chroma log,
 pending promotion.
 
+#### Third lane: distilled memories
+
+Added 2026-07-29. A memory can now also arrive from **captured session events**, not
+just from a `mem log` bit or a hand write. `~/.claude/hooks/log_event.py` records every
+lifecycle event to `~/memory-bank/events.sqlite3`; `mem dream` distils sessions past
+their watermark into memories carrying `scope: user|project`, `confidence`, and
+`source_session`.
+
+**One ladder, one rule: retrieval promotes, disuse decays.** Distillation does not add a
+gate; it adds a rung below the ones already here:
+
+    log bit --3 retrievals--> memory (markdown) --3 retrievals--> skill (SKILL.md)
+
+Distilled memories are recallable the instant they are written and carry no `status`.
+Three retrievals promote a memory into the skill library (`promoted_to_skill` stamped on
+the source, which is kept); anything never retrieved decays out. An approval gate was
+built here first and then removed: it put the decision at the point of least evidence and
+made a human the bottleneck on every inferred fact, when usage answers the same question
+for free.
+
+Raw session events are the disposable tier: FIFO-capped at 10 GB, oldest whole session
+first, newest always kept, and rebuildable from transcripts with `mem backfill`.
+
+Distilled memories stay **flat** in the memory dir (project recorded in frontmatter,
+filename prefixed with the project slug) because `mem`'s indexer globs only the top
+level; a file under `projects/<slug>/` would be invisible to both recall and promotion.
+
+Full mechanics: `memory-index/README.md`. Hook wiring and schema:
+`agentic_kg_memory` §Automation Hooks.
+
 #### Initializing repo-local memory
 
 Repo-local memory is centralized under the global root at

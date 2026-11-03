@@ -15,6 +15,11 @@ metadata:
 
 Ship spec-driven apps with OpenSpec for specification and Fabro for implementation.
 
+> **Seam.** This is the lifecycle for repos on the `openspec` + `fabro` + `gh`
+> CLIs. For a local, harness-enforced lifecycle with no external tooling — phase
+> gates blocked by the `spec_gate.py` PreToolUse hook — use `/spec-init` and the
+> `spec-*` skills instead. Notation comes from the `spec` skill in both cases.
+
 ## Architecture
 
 | Role | Tool | What |

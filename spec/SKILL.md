@@ -32,6 +32,17 @@ metadata:
 
 # spec
 
+## Seam with the other two spec skills
+
+This skill owns **notation** — how a spec is written. It does not own a
+lifecycle. Pick by substrate:
+
+| Skill | Owns | Use when |
+|---|---|---|
+| **`spec`** (this one) | Grammar: EARS, the four layers, rendered artifacts | Always, whenever a spec is being written — the other two call into it |
+| `spec-init` / `spec-new` / `spec-next` / `spec-approve` / `spec-status` | Local phase-gated lifecycle, enforced by `spec_gate.py` | The repo has (or should have) `.spec/`. No external CLI |
+| `openspec-workflow` | Change management via the `openspec` + `fabro` + `gh` CLIs | The repo is already on those tools |
+
 ## Scope
 
 One skill, four layers. Every spec task lands in exactly one layer, or

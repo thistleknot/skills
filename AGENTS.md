@@ -1,4 +1,4 @@
-﻿# Multi-Model Agent Registry
+# Multi-Model Agent Registry
 
 ## Model Tiers & Cost Profiles
 
@@ -141,6 +141,25 @@ session:
   tool that isn't registered in this session.
 
 Always update `~/memory-bank/projects/skills/last_session.md` at the end of every significant exchange (cap: 50 lines). Sections: What Was Worked On, Current State, Key Decisions, Open Threads.
+
+**Session handoff.** When all tasks are complete and the session should hand off cleanly,
+or when context is approaching compaction threshold, invoke the shared handoff script:
+
+```bash
+python ~/.harness/hooks/session_handoff.py --mode <migrate|close|handoff> \
+  --workspace <cwd> \
+  --objective "<current objective>" \
+  --state '{"done":[...],"in_progress":[...],"pending":[...],"blocked":[...]}' \
+  --decisions '["settled decision 1","..."]' \
+  --files '["path/to/file1","..."]' \
+  --next-steps '["step 1","step 2"]'
+```
+
+This produces `./prompt.md` in the project root (CWD or git root), which is auto-injected on
+the next session start (in harnesses that support it). Modes: **handoff** (next session
+picks up), **close** (archive, no continuation), **migrate** (reset and continue fresh).
+Trigger: task completion, user request, or compaction proximity. Full protocol: skill
+`continuity-log`.
 
 Append timestamped entries. Do not overwrite history. Keep entries factual
 and concise.
@@ -307,6 +326,12 @@ Don't overthink, simply review your hypothesis, contrary evidence, collected evi
 
 # Bounded Scope
 
+## "AIN'T NOBODY GOT TIME FOR THAT"
+
+**Say it out loud before quoting any ETA over 15 minutes.** If the answer is yes, the test is
+mis-sized -- redesign it, do not schedule it. This is the operator's response to a proposed 3.5 h
+run, and it is the correct one.
+
 Always bound with ETA's for dispositioning
 - Answers in minutes not hours
   - i.e. <15 minutes per test with no more than 3 stacked tests before dispostion)
@@ -314,6 +339,66 @@ Always bound with ETA's for dispositioning
   - Total time to disposition is a non negotiable
   - iterative/interactive development
     - hour+ runs is not it
+
+### How a long test gets cut down (the moves, in order)
+
+1. **Shrink the RIG, not the question.** Test the mechanism on the smallest instrument that can
+   show it, then scale only if it fires. A 72-row / 48-eval rig answers "does this work here" in
+   ~12 min; the 4000-row production corpus answers "how much" in 3.5 h. Ask the first question first.
+2. **Cut arms before cutting rigour.** Never drop the matched control to save time -- an
+   uncontrolled result costs the whole run. Drop the third variant instead.
+3. **Move it off the critical resource.** Anything that is inference-only (generation, judging)
+   belongs on a remote endpoint where it runs CONCURRENTLY instead of queueing behind training.
+4. **Separate TESTING a technique from APPLYING it.** "Real effect -> the 3.5 h run is justified"
+   is a category error when the technique is unproven on this setup: that 3.5 h buys a VERDICT, and
+   applying it costs another full run on top. State both numbers or state neither.
+5. **A production run is not a test.** Training the model you intend to keep may legitimately take
+   hours. The bound governs EXPERIMENTS -- things run to learn something. Do not smuggle an
+   experiment past the bound by calling it a build.
+
+### The failure this prevents
+
+Stacking hour-long unknowns means a bad assumption is not caught for hours, and every stage queued
+behind it inherits the error. Three separate multi-hour losses in this repo trace to exactly that.
+
+# First Things First — the testing ladder
+
+**Layer 1 = testing.** Small, bounded, one assumption each, sized by the rule above.
+**Layer 2 = full runs.** Production training / the real build on the chain of blocks.
+
+**Layer 2 is unreachable until EVERY link in the chain has its assumptions closed.** Not just the
+link being worked on — every link, because a full run of one block is worthless if a block BENEATH
+it is unresolved: it was measured on the wrong substrate and has to be redone anyway.
+
+**The rule is RECURSIVE.** Discovering a new Layer 1 test sends you BACK to Layer 1. You do not note
+it and carry on to Layer 2. Go back to the drawing board, shore up the missing test, then reconsider.
+
+## How to apply
+
+1. **Write the chain down first.** `A -> B -> C`. Then, per link, list its assumptions and mark each
+   TESTED or OPEN with the evidence. Open assumptions anywhere in the chain block Layer 2 everywhere.
+2. **Find the ROOT.** Some open assumption gates the others — usually the earliest link, because
+   everything downstream was measured on a substrate it decides. That one is not a peer of the rest;
+   it runs alone and first.
+3. **Watch for assumptions no new test can close.** "All 19 downstream arms were measured on a stock
+   base" is not closable by adding a test — it is closable only by the root's verdict, which either
+   VALIDATES the existing results or INVALIDATES them. Those are the assumptions worth finding early.
+4. **Run the cheapest discriminating rung first**, even if it is weaker. A 6-minute damage detector
+   that says "do not bother running the 30-minute test" is worth more than the 30-minute test.
+5. **State the recursion's two outcomes before running the root**, and note that they are usually
+   asymmetric — one branch is cheap and one re-opens Layer 1. Knowing which you are on is the payoff.
+
+## How this composes with "ain't nobody got time for that"
+
+The size rule is what makes the layer rule followable. If a rung costs 3.5 h, going back to Layer 1
+is a punishment and it gets rationalised away. At 15 minutes a rung, backtracking costs nothing — so
+the discipline actually holds. **Size discipline exists to make sequencing discipline affordable.**
+
+## The failure it prevents
+
+Committing compute to a full run of one block while a block beneath it is unsettled. The run
+completes, looks like progress, and is then invalidated by a cheaper test that should have run
+first. Sequencing by convenience instead of by the chain is how that happens.
 
 ## Partnership
 Dialectic, not assistant. Challenge framing before accepting it. Name where your position is weakest before I ask. Distinguish explaining from endorsing. Default assumption: I'm presenting a problem to solve, not working code. Anticipate the user's [next] need. Don't ask to proceed when its obvious what next step is. 'less talking, more doing' aka tell me when EVERYTHING is done.

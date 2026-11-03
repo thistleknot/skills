@@ -670,7 +670,12 @@ class KgOntologySkillDeriver:
 
 def parse_triplet_payload(raw: str) -> list[dict]:
     """Parse the extractor JSON response into a list of dict triplets."""
-    parsed = decode_first_json_value(raw)
+    values = decode_all_json_values(raw)
+    if len(values) > 1:
+        # Multiple top-level values (one array/object per line) already flattened.
+        parsed: object | None = values
+    else:
+        parsed = decode_first_json_value(raw)
     if parsed is None:
         raise ValueError(f"Triplet extractor returned no parseable JSON: {raw[:400]}")
 
@@ -763,6 +768,46 @@ def decode_first_json_value(raw: str) -> object | None:
                     return objects
             continue
     return None
+
+
+def decode_all_json_values(raw: str) -> list:
+    """Decode every top-level JSON array/object in a noisy response and flatten them.
+
+    Some small models ignore "return a single JSON array" and instead emit one
+    array (or object) per line. ``decode_first_json_value`` would keep only the
+    first, silently discarding most of the extraction. This scans the whole
+    response, concatenating the contents of every top-level array and appending
+    every top-level object.
+
+    For a well-formed response holding exactly one array this returns that
+    array's items unchanged, so existing behaviour is preserved.
+    """
+    decoder = json.JSONDecoder()
+    values: list = []
+    index = 0
+    length = len(raw)
+    while index < length:
+        character = raw[index]
+        if character not in "[{":
+            index += 1
+            continue
+        try:
+            parsed, end = decoder.raw_decode(raw[index:])
+        except json.JSONDecodeError:
+            if character == "[":
+                objects = _extract_objects_from_truncated_array(raw[index:], decoder)
+                if objects:
+                    values.extend(objects)
+                    # The fragment ran to the end of the response; nothing follows.
+                    break
+            index += 1
+            continue
+        if isinstance(parsed, list):
+            values.extend(parsed)
+        else:
+            values.append(parsed)
+        index += end
+    return values
 
 
 def surface_synset_id(word: str) -> str:

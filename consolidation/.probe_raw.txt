@@ -1,0 +1,21 @@
+Thinking Process:
+
+1.  **Analyze the Request:**
+    *   Input: A skill document about "active-inference".
+    *   Task: Extract atomic factual and behavioral claims from the text.
+    *   Output Format: JSON array of objects matching a specific schema (`subject`, `predicate`, `object`, `polarity`, `inference_type`, `confidence`).
+    *   Constraints: Valid JSON only, no markdown fences, preserve source order (roughly), deduplicate obvious repeats, keep phrases short/copy-close to source. Object field must NEVER be blank. Prefer high-value claims over trivia.
+
+2.  **Analyze the Source Text:**
+    *   Title/Section: `active-inference` skill document.
+    *   Usage Criteria (When to use): Partial observability, no clean scalar reward signal, principled exploration without UCB/epsilon-annealing, tool selection driven by information gain, multi-modal observations or online-learnable transition model needed.
+    *   Comparison: Use `deep-q-rl` instead when full state observability exists, reliable evaluate function exists, need Russian Doll MCTS planning depth without generative model.
+    *   Theory Citations (Friston 2010): Minimizes variational free energy (proxy for surprise) over sensory states. Reduces to Q(s) belief vs P(s|o).
+    *   Theory Citations (Friston et al 2015): EFE formula involves pragmatic value (policy reaches preferred observations C), epistemic value (reduces uncertainty about hidden states). Action selection: softmax over -G(π). Trade-off between exploration and exploitation without scalar reward. Uncertain beliefs -> epistemic dominates (probe). Confident beliefs -> pragmatic dominates (act).
+    *   Library Citation (`pymdp`): Matrices parameterized as Dirichlet distributions, enabling online Bayesian learning from observations.
+    *   Repo Info: `infer-actively/pymdp`, MIT license, ~1000 stars. Install command provided.
+    *   JAX Rewrite (in progress).
+    *   Application Scenarios (Debugging/Diagnostic): EFE drives tool selection based on P(bug in fileA) uncertainty vs narrowing hypothesis pragmatic value. Agent stops probing when beliefs converge. Advantage over deep-q-rl: No reward function design needed, handles partial observability natively, prioritizes information-gathering before committing to fix.
+    *   Comparison (Russian Doll MCTS): Both use tree search over policies; EFE replaces Q-value as node scoring function.
+    *   Exploration Alternatives: ICM/RND are cheaper heuristics. EFE is theoretically grounded Bayesian alternative requiring no separate curiosity network, emerges from same generative model used for planning.
+    *   SE Agents with large tool sets: MCTS over EFE with `m

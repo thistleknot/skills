@@ -38,3 +38,8 @@ Thumbs.db
 .gstack
 # gstack is a vendored clone of github.com/garrytan/gstack (its own git repo)
 /gstack/
+
+# Merge conflict artifacts
+*.conflict
+# Agent handoff prompt (ephemeral, never versioned)
+prompt.md

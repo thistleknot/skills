@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "memory-bank": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["C:/Users/user/.copilot/memory_mcp.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}

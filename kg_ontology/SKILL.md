@@ -57,7 +57,13 @@ It does **not** own:
 Those belong to `agentic_kg_memory`.
 
 `kg_ontology` should preserve triplet epistemics and confidence metadata while it
-canonicalizes spans, but it does not compute or revise that confidence.
+canonicalizes spans, but it does not compute or revise that confidence. It MUST forward
+the immutable source reference, memory-index authorization ID, project/scope/session
+filter snapshot, source version/hash, exact source offsets, character count, polarity, and inference
+classification unchanged; canonicalization changes node identity, not evidence identity.
+`memory-index` remains the scope authority and must reauthorize every source open. Offsets
+remain zero-based Unicode code-point positions into the exact decoded source revision with
+an exclusive end, as defined by `agentic_kg_memory`.
 
 ## Core Thesis
 

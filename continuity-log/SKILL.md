@@ -158,3 +158,40 @@ When using this skill, the final answer should make clear:
 ## See Also
 [[react-agent]]  [[tdd-agent]]  [[continual-learning]]
 <!-- consolidation:see-also:end -->
+
+## Concrete Implementation: session_handoff.py
+
+When a task is complete, context is heavy, or a logical breakpoint is reached,
+invoke the shared handoff script to produce a standardized prompt.md:
+
+`ash
+python ~/.harness/hooks/session_handoff.py --mode <migrate|close|handoff> \
+  --workspace <cwd> \
+  --objective "<current objective>" \
+  --state '{"done":[...],"in_progress":[...],"pending":[...],"blocked":[...]}' \
+  --decisions '["settled decision 1","..."]' \
+  --files '["path/to/file1","..."]' \
+  --next-steps '["step 1","step 2"]'
+`
+
+Modes:
+- **migrate** — reset conversational memory, continue fresh from prompt.md
+- **close** — task complete, archive to ~/memory-bank/handoffs/
+- **handoff** — write prompt.md for the next session to pick up
+
+The script writes to `~/memory-bank/projects/<repo>/prompt.md` (project) or
+`~/memory-bank/handoffs/` (archive/global). On next session start, this file
+is injected as seed context automatically (where the harness supports it).
+
+### When to invoke (autonomous triggers)
+
+1. All tasks are complete and the session should hand off cleanly
+2. Context window is approaching compaction threshold
+3. User explicitly says "handoff", "wrap up", or "migrate"
+4. A multi-agent handoff boundary is reached
+
+### Staleness guard
+
+The script skips writing if an existing prompt.md was written less than 10
+minutes ago (prevents a bare Stop-hook invocation from clobbering a richer
+agent-written handoff). Explicit invocations with content always write.

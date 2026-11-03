@@ -1,13 +1,15 @@
 ---
 name: data-science-skills
 description: >
-  USE THIS to look up or ground any data-science or reinforcement-learning
-  concept before implementing it — a searchable, curated knowledge base of 1,467
-  enriched skills (regression, classification, clustering/dim-reduction, trees &
-  ensembles, model-eval, optimization, neural nets, probability & stats, data-prep,
-  RL, and more) distilled from 9 textbooks (ISL, Sutton & Barto, Deep RL in Action,
-  ML Algorithms, Statistics for ML, Applied Regression Modeling, Data Mining for
-  Business Analytics, Basic Statistics, Advanced ML with Python). It is the CONSUMER
+  USE THIS to look up or ground any data-science, reinforcement-learning, or
+  knowledge-graph concept before implementing it — a searchable, curated knowledge
+  base of 1,523 enriched skills (regression, classification, clustering/dim-reduction,
+  trees & ensembles, model-eval, optimization, neural nets, probability & stats,
+  data-prep, RL, knowledge-graphs, knowledge-extraction, graph-machine-learning,
+  graph-RAG, and more) distilled from 10 textbooks (ISL, Sutton & Barto, Deep RL in
+  Action, ML Algorithms, Statistics for ML, Applied Regression Modeling, Data Mining
+  for Business Analytics, Basic Statistics, Advanced ML with Python, Knowledge Graphs
+  and LLMs in Action). It is the CONSUMER
   layer: it does not store the corpus or run retrieval itself — it routes a query
   through a query expander (local ollama: query + ToC + tags -> rephrased query)
   into the parallel-rrf-graph-rag-hybrid-cascade-mmr-late-retriever engine, which
@@ -17,9 +19,11 @@ description: >
   cross-referenced treatment instead of reinventing it. Triggers on: "how do I
   implement X", "what technique for Y", "explain/compare A vs B", "search the data
   science skills", "look this up in the DS knowledge base", "ground this in the
-  stackskills corpus", any DS/ML/RL concept lookup.
+  stackskills corpus", any DS/ML/RL concept lookup, and knowledge-graph topics
+  (RDF vs LPG, ontologies, Cypher/neo4j modelling, text-to-Cypher, graph RAG,
+  entity extraction/disambiguation, GNN link prediction, metapaths/DWPC).
 status: draft
-last_validated: 2026-07-19
+last_validated: 2026-08-03
 ---
 
 # data-science-skills — the knowledge-base lookup skill
@@ -44,7 +48,7 @@ data-science-skills   ── THIS skill: when + how to query (the consumer/usage
   │  which was built from
   ▼
 skills_master/        ── the CORPUS (downstream data):
-   C:\Users\user\Documents\wiki\data science\stackskills\skills_master\  (1,467 *.md)
+   C:\Users\user\Documents\wiki\data science\stackskills\skills_master\  (1,523 *.md)
 ```
 
 ## When to use
@@ -55,7 +59,7 @@ skills_master/        ── the CORPUS (downstream data):
 - Want to **explain / ground** a concept with the corpus's cross-referenced version.
 - Debugging a method and want the canonical description + adjacent skills.
 
-Prefer this over reinventing: the corpus already merges 9 textbooks' treatments per
+Prefer this over reinventing: the corpus already merges 10 textbooks' treatments per
 concept, with pseudo-code and cross-language examples.
 
 ## How to use (the flow)
@@ -67,7 +71,7 @@ concept, with pseudo-code and cross-language examples.
    the ToC (topics/folders) and tags, and ask a local ollama model to **rephrase /
    expand** it into a retrieval-optimized query. Grounding the rephrase in the
    corpus's own ToC + tag vocabulary steers it toward terms that actually exist in
-   the index → better lexical (BM25), dense, and graph-RAG matching. (Closed 11-topic
+   the index → better lexical (BM25), dense, and graph-RAG matching. (Closed 15-topic
    vocab, so this is cheap: 1 call/query, no per-chunk LLM.)
 3. **Retrieve** — pass the expanded query to the engine's `retrieve` tool. It runs
    the parallel lanes (dense ‖ tsvector-BM25 ‖ community/graph, RRF-fused) → MMR →

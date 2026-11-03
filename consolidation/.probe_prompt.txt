@@ -1,0 +1,126 @@
+You are extracting atomic factual and behavioral claims from one AI-agent skill document.
+
+Return ONLY valid JSON as an array. Preserve source order. Deduplicate obvious repeats.
+Each array element must match this schema exactly:
+{
+  "subject": "short noun phrase",
+  "predicate": "short verb/relation phrase",
+  "object": "short noun phrase",
+  "polarity": "affirmed" | "negated",
+  "inference_type": "observed" | "inferred",
+  "confidence": 0.0 to 1.0
+}
+
+Rules:
+- Extract concrete claims only; skip boilerplate headings and examples.
+- Keep phrases short and copy-close to the source text.
+- Prefer 10-40 high-value claims over exhaustive low-value trivia.
+- If a skill states what it owns, when to use it, or what it does not own, those are valid claims.
+- Do not wrap the JSON in markdown fences.
+- The "object" field must NEVER be blank. Every triplet needs a concrete noun phrase as the object. If the verb phrase already contains the target concept, move it: e.g. "predicate": "is used for", "object": "loss weighting" rather than "predicate": "is used for loss weighting", "object": "".
+
+=== SKILL NAME ===
+active-inference
+
+=== DOCUMENT ===
+=== FILE: SKILL.md ===
+Use active-inference when:
+
+- The environment is **partially observable** (the agent doesn't know the full state)
+- **No clean scalar reward signal** exists until end-to-end task evaluation
+- You want **principled exploration** that naturally stops when beliefs converge
+  (no UCB tuning, no ε-annealing schedule)
+- Tool selection must be driven by **information gain** ("which tool resolves
+  the most uncertainty about the current state?")
+- You need **multi-modal observations** or an **online-learnable transition model**
+
+Use `deep-q-rl` instead when:
+- Full state observability is available
+- A reliable `evaluate(state)` function or reward correlate exists
+- You need the Russian Doll MCTS planning depth without a generative model
+
+---
+
+**Friston 2010** (Nature Reviews Neuroscience 11:127–138)
+
+A system minimizes **variational free energy** — a proxy for surprise — over its
+sensory states. This reduces to:
+
+Where `Q(s)` is the agent's belief over hidden states, `P(s | o)` is the true posterior.
+
+**Friston et al. 2015** (Cognitive Neuroscience 6(4):187–214)
+
+For future policy π, the EFE is:
+
+- High **pragmatic value** = policy reaches preferred observations `C`
+- High **epistemic value** = policy reduces uncertainty about hidden states
+- Action selection: softmax over `-G(π)` (prefer low EFE policies)
+
+**The key insight for agents:** EFE naturally trades off exploration (epistemic)
+vs. exploitation (pragmatic) without a scalar reward. When beliefs are uncertain,
+epistemic value dominates (probe). When beliefs are confident, pragmatic value
+dominates (act).
+
+**pymdp arXiv:** `2201.03904` (JOSS 2022)
+
+All matrices are parameterized as Dirichlet distributions, enabling online
+Bayesian learning from observations.
+
+---
+
+**Repo:** `infer-actively/pymdp` (MIT, ~1000★)
+**Install:** `pip install inferactively-pymdp`
+
+**JAX rewrite (pymdp v1.0, in progress):**
+
+---
+
+AIF maps naturally onto debugging/diagnostic agent scenarios:
+
+**EFE drives tool selection:**
+- `grep_fileA` when P(bug in fileA) is highest and uncertain → high epistemic value
+- `run_tests` after narrowing to one hypothesis → high pragmatic value
+- Agent stops probing when beliefs converge (EFE → 0 for diagnostic actions)
+
+**Key advantage over deep-q-rl for this scenario:**
+- No need to design a reward function
+- Handles partial observability (stochastic grep results, flaky tests) natively
+- EFE naturally prioritizes information-gathering before committing to a fix
+
+---
+
+**Russian Doll MCTS** (deep-q-rl) ≈ **Sophisticated Inference** (active-inference):
+both use tree search over policies; EFE replaces Q-value as the node scoring function.
+
+---
+
+EFE-based exploration is the principled Bayesian alternative to heuristic curiosity modules:
+
+ICM/RND are cheaper heuristics. EFE is theoretically grounded and requires no separate
+curiosity network — it emerges from the same generative model used for planning.
+
+---
+
+For SE agents with large tool sets: MCTS over EFE with `mctx` (JAX).
+
+---
+
+---
+
+---
+
+---
+
+- Friston 2010 (NRN 11:127): Free Energy Principle unified brain theory
+- Friston et al. 2015 (CogNeuro 6(4)): EFE epistemic + pragmatic decomposition
+- Heins et al. arXiv:2201.03904 (JOSS 2022): pymdp library paper
+- Da Costa & Friston arXiv:2201.06387 (Physics Reports 2023): FEP made simple
+- Sajid et al. arXiv:1909.10863 (Neural Computation 2021): AIF demystified
+- Tschantz et al. arXiv:2002.12636 (ICLR 2020 workshop): RL through Active Inference
+- Pathak et al. arXiv:1705.05363 (ICML 2017): ICM curiosity baseline
+- Burda et al. arXiv:1810.12894 (ICLR 2019): RND curiosity baseline
+- `infer-actively/pymdp`: `pip install inferactively-pymdp`
+<!-- consolidation:see-also:start -->
+
+[[continual-learning]]  [[spiral-radial-clustering-display]]  [[auto-ingest]]
+<!-- consolidation:see-also:end -->
