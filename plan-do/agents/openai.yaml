@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan and Do"
+  short_description: "Research, plan, execute, and track work"
+  default_prompt: "Use $plan-do to investigate this problem, maintain the workspace plan and burndown, and complete the work."

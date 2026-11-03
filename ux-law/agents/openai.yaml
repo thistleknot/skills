@@ -1,0 +1,4 @@
+interface:
+  display_name: "UX Law Review"
+  short_description: "Turn UX principles into testable design advice"
+  default_prompt: "Use $ux-law to review this interface with the full Laws of UX scope and the 54-card principles-and-methods deck, then give evidence-based recommendations."

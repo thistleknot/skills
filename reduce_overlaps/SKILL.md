@@ -55,9 +55,11 @@ Derive every parameter from the document's own distribution. **No magic constant
 1. SPLIT into sections on markdown headers  (^#{1,6}\s)
 2. COUNT paragraphs per section = blank-line-separated blocks; EXCLUDE zero-paragraph sections
    (bare headers carry no content and would drag the median down)
-3. m   = median(paragraphs per section)          <- robust centre, resists the long right tail
-   d   = MAD(paragraphs per section)             <- robust spread, resists outliers
-   hi  = m + 2*d                                 <- upper threshold
+3. Box-Cox transform the paragraph counts: bc_data, λ = boxcox(counts)
+   m   = median(bc_data)                         <- robust centre in normalized space
+   d   = MAD(bc_data)                            <- robust spread in normalized space
+   hi  = m + 2*d                                 <- upper threshold in Box-Cox space
+   Invert hi to natural scale for the split gate; invert m for the merge/stride target.
 4. MERGE consecutive sections with < m paragraphs, accumulating until they reach m
 5. SPLIT sections with > hi paragraphs into windows of m paragraphs, stepping by (m - d)
    -> an overlap of d paragraphs between consecutive windows
@@ -65,9 +67,13 @@ Derive every parameter from the document's own distribution. **No magic constant
    boundary does not become duplicated training text
 ```
 
-Median and MAD rather than mean and sd because section sizes are **log-normal with a heavy right
-tail** — one 41k-word appendix moves a mean and does not move a median. Overlap of exactly `d` (one
-robust unit of spread) keeps a thought that straddles a boundary intact in at least one chunk.
+Median and MAD rather than mean and sd because section sizes are **right-skewed** — one 41k-word
+appendix moves a mean and does not move a median. Apply **Box-Cox** (`scipy.stats.boxcox`) to the
+paragraph counts before computing median and MAD; Box-Cox finds the optimal normalizing power λ
+automatically (λ=0 is log, λ=0.5 is sqrt, etc.) rather than hardcoding a log assumption. Compute
+`m` and `d` in Box-Cox space, then invert to get the natural-scale thresholds. Overlap of exactly `d`
+(one robust unit of spread in the transformed space) keeps a thought that straddles a boundary intact
+in at least one chunk.
 
 ## De-overlapping
 

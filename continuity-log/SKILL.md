@@ -1,12 +1,14 @@
 ---
 name: continuity-log
 description: >
-  Compact-safe working-memory protocol. Use during long or multi-turn tasks to
+  Compact-safe working memory and project handoffs. Use during long or multi-turn tasks to
   persist distilled decisions, rejected approaches, blockers, and resume points
   to disk so future turns or post-compaction resumes do not repeat the same
   analysis. This is not a raw chain-of-thought capture skill.
-status: active
-last_validated: 2026-04-28
+metadata:
+  short-description: Compact-safe working memory and project handoffs
+  status: active
+  last_validated: 2026-04-28
 ---
 
 # Continuity Log Protocol
@@ -161,10 +163,9 @@ When using this skill, the final answer should make clear:
 
 ## Concrete Implementation: session_handoff.py
 
-When a task is complete, context is heavy, or a logical breakpoint is reached,
-invoke the shared handoff script to produce a standardized prompt.md:
+When work reaches a task boundary, pauses, or moves to a fresh context, invoke the shared handoff script with the objective and structured state:
 
-`ash
+```bash
 python ~/.harness/hooks/session_handoff.py --mode <migrate|close|handoff> \
   --workspace <cwd> \
   --objective "<current objective>" \
@@ -172,26 +173,43 @@ python ~/.harness/hooks/session_handoff.py --mode <migrate|close|handoff> \
   --decisions '["settled decision 1","..."]' \
   --files '["path/to/file1","..."]' \
   --next-steps '["step 1","step 2"]'
-`
+```
 
 Modes:
-- **migrate** — reset conversational memory, continue fresh from prompt.md
-- **close** — task complete, archive to ~/memory-bank/handoffs/
-- **handoff** — write prompt.md for the next session to pick up
+- **migrate** — write a handoff to reseed a fresh context immediately.
+- **close** — mark work complete; write a closed archive that resume never selects.
+- **handoff** — write a project-scoped continuation for a later session.
 
-The script writes to `~/memory-bank/projects/<repo>/prompt.md` (project) or
-`~/memory-bank/handoffs/` (archive/global). On next session start, this file
-is injected as seed context automatically (where the harness supports it).
+For handoff and migrate modes, the script writes
+`~/memory-bank/handoffs/projects/<identity-hash>/prompt-<timestamp>.md` with
+the normalized `Project-URI` and source `Session-ID`. Close mode writes a
+`closed-<timestamp>.md` beside those archives. It never overwrites the
+workspace's operator-maintained `prompt.md`.
 
-### When to invoke (autonomous triggers)
+At resume, `session_resume.py` chooses the newest readable candidate among
+the workspace prompt, Git-root prompt, and generated archives whose
+`Project-URI` exactly matches the normalized workspace identity. Equal
+timestamps use normalized absolute path order. A global newest handoff, a
+shared repository basename, a closed archive, or an archive with missing
+identity is never a fallback.
 
-1. All tasks are complete and the session should hand off cleanly
-2. Context window is approaching compaction threshold
-3. User explicitly says "handoff", "wrap up", or "migrate"
-4. A multi-agent handoff boundary is reached
+### Before resuming
 
-### Staleness guard
+1. Check that the handoff's project identity matches the active workspace.
+2. Compare its objective with the current user request; the current request sets the objective when they differ.
+3. Verify claimed state against current files and the active spec before continuing.
+4. Then load scoped memories and pending todos; retrieval alone does not promote memory.
 
-The script skips writing if an existing prompt.md was written less than 10
-minutes ago (prevents a bare Stop-hook invocation from clobbering a richer
-agent-written handoff). Explicit invocations with content always write.
+### Lifecycle coverage
+
+Check `manifest.toml` for the active harness route. Claude and Kiro have
+declared native lifecycle hooks; pi and OpenCode use instruction-driven
+handoffs. A declared route still needs a live transfer check before claiming
+cross-harness delivery is verified.
+
+### When to invoke
+
+1. All tasks are complete and the session should hand off cleanly.
+2. Context is approaching compaction.
+3. The user asks to hand off, wrap up, or migrate.
+4. Work reaches a multi-agent handoff boundary.

@@ -92,9 +92,19 @@ training_artifacts/
 
 ---
 
-#### 1a. SPO Training Pipeline Validation (Synthetic Pair Optimization)
+#### 1a. SPO (Soft Policy Optimization) Training Pipeline Validation
 
-**What to capture for SPO/synthetic pair training:**
+> **Acronym note.** "SPO" here means *Soft Policy Optimization* — see `deep-q-rl`, which
+> owns the technique. The other legal sense of SPO in this store is
+> *subject-predicate-object* (KG triplets); it is not what this section is about.
+> Terms: `~/.skills/GLOSSARY.md`.
+>
+> Corrected 2026-09-12. This section previously read "(Synthetic Pair Optimization)" —
+> a term that does not exist, invented by an AI session from the phrase "synthetic paired
+> data" below. Operator ruling: SPO is only ever subject-predicate-object or soft policy
+> optimization.
+
+**What to capture for SPO training on synthetic pairs:**
 
 When training models on synthetic paired data (original ↔ inferred), collect these specific artifacts:
 
@@ -176,7 +186,7 @@ spo_training_artifacts/
 - **Final model eval_loss**: Loss on full holdout set after training with best hyperparams (large dataset, full training)
 - These will differ; that's expected. Show both for comparison.
 
-**Validation gate:** Do NOT claim "SPO training complete" until:
+**Validation gate:** Do NOT claim "SPO (soft policy optimization) training complete" until:
 - [ ] Optuna tuning captured: all trials, best trial number, best_eval_loss
 - [ ] Optuna config documented: search space, pruner settings, sampler
 - [ ] Best hyperparameters extracted from Optuna and saved

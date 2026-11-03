@@ -1,0 +1,32 @@
+# Runtime contract: docs/python-server-environments.md, R1-R7.
+[project]
+name = "retrieve-skills"
+version = "0.1.0"
+description = "Persistent skill retrieval server with an isolated CPU runtime"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastmcp==2.14.2",
+    "numpy==2.2.6",
+    "pyyaml==6.0.3",
+    "sentence-transformers==5.3.0",
+    "starlette>=0.40,<1",
+    "torch>=2.6,<3",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10"]
+
+[tool.uv]
+package = false
+link-mode = "hardlink"
+environments = ["sys_platform == 'win32' and platform_machine == 'AMD64'"]
+# Avoid the known busy-poll regression in FastMCP's transitive scheduler.
+constraint-dependencies = ["fakeredis>=2.37.1"]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

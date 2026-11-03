@@ -523,7 +523,11 @@ code_rl_samples_per_level = [5, 3, 1]   # vs default [21,13,8,5,3,2,1]
 | Not checkpointing best patch | Always git-stash or checkpoint the highest-scoring patch before continuing |
 | Unbounded rollouts | Set `max_attempts` (e.g., 10); return best seen if not fully solved |
 
-## SPO / Offline Preference Optimization
+## SPO (Soft Policy Optimization) / Offline Preference Optimization
+
+> **Acronym note.** "SPO" here means *Soft Policy Optimization*. Most other skills use
+> "SPO" for *subject-predicate-object* triplets. Two unrelated things, both legal —
+> always expand on first use. Terms: `~/.skills/GLOSSARY.md`.
 
 Covers Soft Policy Optimization (SPO), DPO, and reward-weighted SFT — offline loops where the model is fine-tuned against pre-computed or batch-computed reward signals rather than an online simulator.
 
@@ -574,7 +578,7 @@ Validation protocol per epoch:
 2. Watch reward *variance* across training batches, not just mean — variance collapse early means local optimum on template compliance, not generalisation.
 3. Declare done only when OOD inputs produce clean structured output.
 
-### SPO Anti-Patterns
+### SPO (Soft Policy Optimization) Anti-Patterns
 
 | Anti-pattern | Fix |
 |---|---|

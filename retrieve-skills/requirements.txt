@@ -1,0 +1,6 @@
+# hook.py is stdlib-only; these are for server/indexer
+fastmcp
+numpy
+pyyaml
+sentence-transformers
+# Optional local reranker: pylate

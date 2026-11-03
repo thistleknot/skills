@@ -61,7 +61,7 @@ cross-entropy; the discriminative pressure is already baked into the data.
 
 ## Domain Instantiations
 
-### 1. Transformer / Reasoning Model Training (SPO)
+### 1. Transformer / Reasoning Model Training (SPO = subject-predicate-object triplets)
 
 **Axis:** entailment — does this premise load-bear the throughline (conclusion)?
 

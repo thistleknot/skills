@@ -318,14 +318,35 @@ def get_capabilities() -> str:
     return "Available tools:\n" + "\n".join([f"- {name}: {desc}" for name, desc in tools])
 
 
+# ── Health ──────────────────────────────────────────────────────────────────
+
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health(_: Request) -> JSONResponse:
+    return JSONResponse({
+        "status": "ok",
+        "global_db": str(GLOBAL_DB_PATH),
+        "workspace_db_pattern": "{workspace_root}/.todo/todos.db",
+    })
+
+
+# ── Main ────────────────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Todo MCP server")
-    parser.add_argument("--port", type=int, default=None, help="Run as HTTP server on this port")
+    parser.add_argument("--port", type=int, default=8056,
+                        help="HTTP port (default: 8056)")
+    parser.add_argument("--stdio", action="store_true",
+                        help="Run in stdio mode instead of HTTP")
     args = parser.parse_args()
 
-    if args.port:
-        mcp.run(transport="streamable-http", host="localhost", port=args.port)
+    if args.stdio:
+        mcp.run(transport="stdio")
     else:
-        mcp.run()
+        mcp.run(transport="streamable-http", host="127.0.0.1", port=args.port,
+                stateless_http=True)

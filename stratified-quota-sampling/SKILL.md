@@ -1,48 +1,63 @@
 ---
 name: stratified-quota-sampling
-description: Stratify a long-tailed dataset by normalizing raw counts via Box-Cox, bin into Fibonacci tiers at ±1σ, then sample within each tier using a relevance weight. Applies to any domain with imbalanced class frequency (text length distributions, image class imbalance, sparse entity coverage, hierarchical corpus building). Use when you need balanced representation without throwing away rare classes or flooding on frequent ones.
+description: Stratify a long-tailed dataset by normalizing raw counts via Box-Cox (or Yeo-Johnson for zero-containing data), bin into tiers at standard deviation cutoffs, then allocate quotas per tier. Never log-then-Box-Cox (redundant — Box-Cox contains log at lambda=0). Check dimension correlation via Cramer's V before multi-axis stratification. Allocate over cross-product cells, not per-dimension.
 status: active
-last_validated: 2026-04-30
+last_validated: 2026-08-10
 ---
 
 # Stratified Quota-Proportional Sampling
 
 ## Purpose
+
 Balance imbalanced datasets by:
-1. **Normalizing** raw class counts via Box-Cox to near-normality
-2. **Binning** into natural tiers (LOW/MID/HIGH) at ±1σ cutoffs
-3. **Allocating quotas** in Fibonacci ratios (5/8/13 — φ-spaced)
-4. **Sampling within tiers** using a per-item relevance weight (popularity, quality score, engagement)
+1. **Normalizing** raw class counts via Box-Cox (or Yeo-Johnson) to near-normality
+2. **Binning** into natural tiers at standard deviation cutoffs
+3. **Allocating quotas** proportional to tier structure
+4. **Sampling within tiers** using a per-item relevance weight
 
 This prevents both **under-sampling** of rare classes and **over-sampling** of frequent ones, while respecting the empirical distribution shape.
 
-## The Problem
+## When to Use
 
-Naive top-N sampling from long-tailed distributions yields:
-- All samples from the head (frequent class)
-- Nothing from the tail (rare class)
-- Skewed representation
+- Imbalanced class frequencies (text length distributions, image classes, sparse entities)
+- Multi-dimensional stratification (regime x dataset x answer_type)
+- Any domain where you need balanced representation without flooding on frequent classes
 
-Naive uniform sampling across classes yields:
-- Massive over-representation of tail classes
-- Loss of signal from frequent classes
+## The Trick
 
-**Solution**: Use the empirical frequency distribution itself as a signal. A class with 50 items in the corpus is legitimately different from one with 5 items. The Box-Cox transformation reveals the natural tier structure; Fibonacci quotas honor that while staying balanced.
+Box-Cox finds the optimal power lambda to bring a right-tailed distribution toward normal:
+
+```
+Box-Cox: y(lambda) = (x^lambda - 1) / lambda    (lambda != 0)
+                   = log(x)                       (lambda = 0)
+```
+
+That's it. One transform, one fitted parameter, the distribution is now approximately normal and you can bin on z-scores meaningfully.
+
+**Never log-then-Box-Cox** — Box-Cox already contains log as its lambda=0 case. Applying log first means Box-Cox is fitting a lambda to already-compressed data. That's double-compression with an uninterpretable parameter.
+
+**Yeo-Johnson** when counts contain zeros (Box-Cox requires strictly positive):
+
+```
+Yeo-Johnson: handles x <= 0 via a piecewise extension
+```
+
+Pick one:
+- Counts are always >= 1? → Box-Cox
+- Counts can be 0? → Yeo-Johnson
 
 ## The Approach
 
-### 1. Normalize via Box-Cox
+### 1. Transform via Box-Cox
 
 ```python
-ns = np.array([count_1, count_2, ...], dtype=float)
-bc, lam = boxcox(ns)
+from scipy.stats import boxcox
+import numpy as np
+
+counts = np.array([len(class_items[c]) for c in classes], dtype=float)
+# Box-Cox requires strictly positive
+bc, lam = boxcox(counts)  # lam is fitted to THIS distribution
 ```
-
-Box-Cox transforms `count` → `(count^λ - 1) / λ` (or `log(count)` when λ ≈ 0).
-This maps a power-law or geometric distribution toward normal.
-
-**Why**: Right-tailed distributions have different quantile positions in linear space than in log-space.
-Box-Cox finds the optimal power law to bring the distribution as close to normal as possible.
 
 ### 2. Standardize to z-scores
 
@@ -51,197 +66,182 @@ mu, sigma = bc.mean(), bc.std(ddof=0)
 z = (bc - mu) / sigma
 ```
 
-Now `z ∈ (-∞, +∞)` with mean=0, std=1. The quantiles are symmetric around zero.
-
-### 3. Bin at ±1σ into Fibonacci tiers
+### 3. Bin into tiers
 
 ```python
-LOW_QUOTA  = 5   # φ^4 ≈ 6.18
-MID_QUOTA  = 8   # φ^5 ≈ 10.0
-HIGH_QUOTA = 13  # φ^6 ≈ 16.2
+def assign_tier(z_val):
+    if z_val < -1.0:
+        return "LOW"    # rare classes (below -1 sigma)
+    elif z_val > 1.0:
+        return "HIGH"   # frequent classes (above +1 sigma)
+    else:
+        return "MID"    # bulk of distribution
 ```
 
-| Tier | z-score | Quota | Rationale |
-|------|---------|-------|-----------|
-| LOW | z < -1 | 5 | Rare class; allocate conservatively but ensure presence |
-| MID | -1 ≤ z ≤ +1 | 8 | Modal class; allocate more heavily |
-| HIGH | z > +1 | 13 | Very frequent class; allocate most, but stay sublinear (13 not 50) |
+### 4. Allocate quotas per tier
 
-**Fibonacci ratios**: 5 → 8 → 13 follow φ (golden ratio). Aesthetically and mathematically principled; avoids arbitrary thresholds like [3, 5, 10].
-
-### 4. Sample within each tier by relevance weight
-
-For each item in tier, assign a relevance score `w` (popularity, quality, engagement, citation count, etc.).
+Fibonacci ratios (5/8/13) or any monotone allocation that gives more budget to the middle where most classes live:
 
 ```python
-weights = item_scores / sum(item_scores)
-chosen = rng.choice(tier_items, size=quota, replace=False, p=weights)
+TIER_QUOTAS = {"LOW": 5, "MID": 8, "HIGH": 13}
+# Normalize to budget
+total_ratio = sum(TIER_QUOTAS.values())
+tier_budgets = {t: int(budget * q / total_ratio) for t, q in TIER_QUOTAS.items()}
 ```
 
-**Why**: Items within a class are not all equal. A text has an engagement score; an image has a quality label; a song has Spotify popularity. Use that signal to prefer high-value samples within the class.
+### 5. Sample within tiers using relevance weight
 
-**No replacement**: Each item sampled at most once.
+```python
+for tier, tier_classes in grouped_by_tier.items():
+    tier_budget = tier_budgets[tier]
+    per_class = tier_budget // len(tier_classes)
+    for cls in tier_classes:
+        pool = class_items[cls]
+        weights = np.array([item[weight_key] for item in pool])
+        weights /= weights.sum()
+        sampled = rng.choice(pool, size=min(per_class, len(pool)), replace=False, p=weights)
+```
 
-## Guarantees
+## Multi-Dimension: Allocate Over Cells, Not Dimensions
 
-1. **Sublinear scaling**: If a class has 1000 items, you take 13, not 1000. Prevents data imbalance from overwhelming the dataset.
-2. **Presence of rare classes**: Even classes with 5-9 items get represented (LOW tier, quota=5).
-3. **Proportional representation**: Tier allocation is derived from the empirical distribution, not arbitrary thresholds.
-4. **Deterministic (with seed)**: `np.random.default_rng(SEED)` makes draws reproducible.
+If doc_type x model x classification all matter, the strata are the **nonempty cells** of that cross-product:
+
+```python
+cells = df.groupby(['doc_type', 'model', 'classification']).size().reset_index(name='count')
+# Apply Box-Cox to cell counts, then tier/allocate
+bc_cells, lam = boxcox(cells['count'].values.astype(float))
+```
+
+Do NOT allocate per-dimension and multiply — correlated dimensions will misallocate.
+
+## Check Dimension Correlation First
+
+Before stratifying on multiple dimensions, verify they're not redundant:
+
+```python
+from scipy.stats import chi2_contingency
+import numpy as np
+
+def cramers_v(dim_a, dim_b):
+    """Cramer's V: association strength between two categorical variables."""
+    ct = pd.crosstab(dim_a, dim_b)
+    chi2 = chi2_contingency(ct)[0]
+    n = ct.values.sum()
+    r, c = ct.shape
+    return np.sqrt(chi2 / (n * (min(r, c) - 1)))
+```
+
+Decision rules:
+- V < 0.1: dimensions independent — cell allocation costs nothing extra
+- V > 0.3: per-dimension multiplication would misallocate — cell-based is mandatory
+- V near 1.0: one dimension is redundant — drop it, cut cell count for free
+
+For small expected cell counts (< 5), use NMI instead:
+```python
+from sklearn.metrics import normalized_mutual_info_score
+nmi = normalized_mutual_info_score(df['doc_type'], df['model'])
+```
+
+## Per-Cell Floor
+
+Never let a cell drop below a useful sample size:
+
+```python
+allocs = np.maximum(allocs, floor)  # floor=50 for stats, floor=1 for pure coverage
+```
+
+Then renormalize by trimming from the largest cells.
 
 ## Implementation Template
 
 ```python
 import numpy as np
-from scipy.stats import boxcox
+import pandas as pd
+from scipy.stats import boxcox, yeojohnson
 
 def stratified_quota_sample(
-    class_items: dict[str, list[dict]],
-    weight_key: str,
+    df: pd.DataFrame,
+    strat_cols: list[str],
+    budget: int,
+    floor: int = 50,
+    weight_col: str = None,
     seed: int = 42,
-    quotas: dict = None,
-) -> list[dict]:
-    """
-    Stratify class-imbalanced data into tiers, allocate quotas, sample within each tier.
-
-    Args:
-        class_items: {class_name: [item_dict, ...], ...}
-        weight_key: field in item_dict used for relevance weighting (e.g., 'popularity')
-        seed: RNG seed for reproducibility
-        quotas: override quotas; default {LOW: 5, MID: 8, HIGH: 13}
-
-    Returns:
-        list of selected items across all classes and tiers
-    """
-    if quotas is None:
-        quotas = {'LOW': 5, 'MID': 8, 'HIGH': 13}
-
+    allow_zeros: bool = False,
+) -> pd.DataFrame:
+    """Sample from df using Box-Cox tier allocation over cross-product cells."""
     rng = np.random.default_rng(seed)
-    classes = sorted(class_items.keys())
-    counts = np.array([len(class_items[c]) for c in classes], dtype=float)
-
-    # Box-Cox normalization
-    bc, lam = boxcox(counts)
+    
+    # Cross-product cells
+    cells = df.groupby(strat_cols).size().reset_index(name='_count')
+    counts = cells['_count'].values.astype(float)
+    
+    # Transform to normality
+    if allow_zeros or (counts.min() <= 0):
+        bc, lam = yeojohnson(counts)
+    else:
+        bc, lam = boxcox(counts)
+    
+    # Z-score and tier
     mu, sigma = bc.mean(), bc.std(ddof=0)
-    z = (bc - mu) / sigma
-
-    # Tier assignment
-    def tier_quota(z_val):
-        if z_val < -1.0:
-            return 'LOW'
-        if z_val > 1.0:
-            return 'HIGH'
-        return 'MID'
-
-    tiers = {c: tier_quota(z_val) for c, z_val in zip(classes, z)}
-
-    # Sample within each class
-    result = []
-    for cls in classes:
-        tier_name = tiers[cls]
-        quota = quotas[tier_name]
-        items = class_items[cls]
-
-        if len(items) == 0:
+    if sigma == 0:
+        # All cells same size — uniform allocation
+        allocs = np.full(len(counts), budget // len(counts))
+    else:
+        z = (bc - mu) / sigma
+        # Allocation proportional to position in transformed space
+        # Shift z to positive, then allocate
+        shifted = z - z.min() + 1.0
+        shares = shifted / shifted.sum()
+        allocs = np.maximum((shares * budget).astype(int), floor)
+    
+    # Cap at available pool size
+    allocs = np.minimum(allocs, counts.astype(int))
+    
+    # Renormalize if over budget
+    while allocs.sum() > budget:
+        excess_idx = (allocs - floor).argmax()
+        allocs[excess_idx] -= 1
+    
+    # Sample within each cell
+    sampled = []
+    for i, row in cells.iterrows():
+        mask = pd.Series(True, index=df.index)
+        for col in strat_cols:
+            mask &= (df[col] == row[col])
+        pool = df[mask]
+        n = min(int(allocs[i]), len(pool))
+        if n == 0:
             continue
-
-        # Popularity-weighted sampling
-        weights = np.array([
-            max(float(item.get(weight_key, 1)), 1.0) for item in items
-        ])
-        weights = weights / weights.sum()
-
-        n = min(quota, len(items))
-        chosen_idx = rng.choice(len(items), size=n, replace=False, p=weights)
-        result.extend([items[i] for i in chosen_idx])
-
-    return result
+        if weight_col and weight_col in pool.columns:
+            weights = pool[weight_col].values.astype(float)
+            weights /= weights.sum()
+            idx = rng.choice(pool.index, size=n, replace=False, p=weights)
+        else:
+            idx = rng.choice(pool.index, size=n, replace=False)
+        sampled.append(pool.loc[idx])
+    
+    return pd.concat(sampled, ignore_index=True)
 ```
-
-## Domain Examples
-
-### Text corpus by document length
-
-```python
-texts = {
-    'short': [doc1, doc2, ...],   # 5-50 pages
-    'medium': [...],              # 50-500 pages
-    'long': [...],                # 500+ pages
-}
-samples = stratified_quota_sample(
-    class_items=texts,
-    weight_key='engagement_score',  # citation count, upvote, etc.
-)
-# Result: balanced subset with natural tier structure preserved
-```
-
-### Image dataset by class frequency
-
-```python
-images_by_class = {
-    'cat': [img1, img2, ...],     # 10K images
-    'dog': [...],                 # 5K images
-    'bird': [...],                # 500 images (rare)
-}
-samples = stratified_quota_sample(
-    class_items=images_by_class,
-    weight_key='quality_score',   # ML model confidence, human rating
-)
-# Result: ~100-200 total images, balanced across classes by inherent frequency
-```
-
-### Entity coverage in hierarchical corpus
-
-```python
-entities = {
-    'author_1': [doc1, doc2, ...],   # 100 docs (prolific)
-    'author_2': [...],                # 20 docs (moderate)
-    'author_3': [doc],                # 1 doc (rare)
-}
-samples = stratified_quota_sample(
-    class_items=entities,
-    weight_key='novelty_score',   # TF-IDF uniqueness, temporal recency
-)
-# Result: ensure all authors represented; prolific authors don't drown out rare ones
-```
-
-## Key Parameters to Tune
-
-| Parameter | Default | Notes |
-|-----------|---------|-------|
-| QUOTA_LOW | 5 | Minimum presence for rare classes |
-| QUOTA_MID | 8 | Modal tier |
-| QUOTA_HIGH | 13 | Ceiling for frequent classes; adjust down if you want more aggressive sublinearity |
-| weight_key | None (uniform) | If omitted, sample uniformly within tier; if provided, weight by item quality/relevance |
-| seed | 42 | Set to None for fresh draws each run; leave fixed for reproducibility |
-
-## What This Avoids
-
-- ❌ Top-N determinism (always same 10 samples)
-- ❌ Uniform random across classes (rare classes drown frequent ones)
-- ❌ Per-class independent sampling (ignores global imbalance)
-- ❌ Arbitrary hard thresholds (tiers derived from data)
 
 ## Anti-Patterns
 
-- Mixing killed/timeout calls into the weight distribution (track only completions)
-- Using weight_key on sparse/missing data without a fallback default
-- Setting quotas smaller than 1 (defeats the purpose of presence)
-- Running without a seed if you need reproducibility
+- **Log-then-Box-Cox**: redundant. Box-Cox contains log at lambda=0. Never pre-transform.
+- **Per-dimension allocation multiplied**: misallocates when dimensions are correlated. Always allocate over cross-product cells.
+- **Collapsing a required axis**: if the spec defines N axes, implement N axes. Volume coverage != constructive coverage.
+- **No floor**: cells below ~50 samples are useless for stats. Always floor.
+- **Fitting lambda per-batch**: fit once on the full population counts, then reuse. Don't refit inside a sampling loop.
+
+## Relation to Other Skills
+
+- **cross-hatch-sampling**: applies allocation hierarchically (regime first, source second). Uses fixed lam=0.5 in its Box-Cox call.
+- **class-balancing**: operates at the training-batch level AFTER sampling decides what to include.
+- **bm25-corpus-sampling**: uses this for index-warming allocations across doc_type strata.
+- **stat-partitioning**: describes the general partition/transform toolkit including Box-Cox.
 
 ## References
 
-**Box-Cox transformation:**
 - Box, G. E. P., & Cox, D. R. (1964). An analysis of transformations.
-- SciPy: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.boxcox.html
-
-**Stratified sampling:**
+- Yeo, I.-K., & Johnson, R. A. (2000). A new family of power transformations.
 - Cochran, W. G. (1977). Sampling Techniques (3rd ed.).
-- Neyman allocation: proportional sampling from strata improves variance.
-
-**Fibonacci and golden ratio:**
-- Fibonacci ratios naturally appear in growth processes; aesthetically and empirically balanced.
-<!-- consolidation:see-also:start -->
-## See Also
-[[optuna-nested-cv]]  [[subtractive-debugging]]  [[continual-learning]]
-<!-- consolidation:see-also:end -->
+- Cramer, H. (1946). Mathematical Methods of Statistics.
+- SciPy: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.boxcox.html

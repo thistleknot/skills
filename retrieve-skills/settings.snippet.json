@@ -1,0 +1,16 @@
+{
+  "_comment": "Merge into ~/.claude/settings.json. Registers the deterministic per-prompt injection path. Do NOT deny the Skill tool in this design — skill-router itself is the one discovered skill and must stay invocable. Adjust the python3 path if needed.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/skills/retrieve-skills/hook.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

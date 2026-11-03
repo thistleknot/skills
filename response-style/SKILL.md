@@ -81,7 +81,9 @@ Prefer:
 
 Before you stop, confirm:
 
-1. The answer leads, not the setup.
+1. The answer leads, not the setup. A yes/no question starts with "Yes" or "No";
+   a number question starts with the number. No metaphor in place of measurement,
+   no shorthand the reader never named.
 2. Any bolded user phrasing is distinct from your additions.
 3. The prose sounds collaborative rather than theatrical.
 4. The response stays coherent with the goal and leaves no load-bearing gap.

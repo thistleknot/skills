@@ -1,0 +1,42 @@
+[
+  {
+    "prompt": "convert this PDF into structured markdown with tables",
+    "expected": ["pdf-extraction"]
+  },
+  {
+    "prompt": "write a formal EARS requirements specification",
+    "expected": ["spec", "spec-new"]
+  },
+  {
+    "prompt": "set up MLflow tracking for this experiment",
+    "expected": ["mlflow"]
+  },
+  {
+    "prompt": "isolate and fix this repeating null pointer error",
+    "expected": ["debugging"]
+  },
+  {
+    "prompt": "gather web evidence and produce a claim-backed research report",
+    "expected": ["deep-research"]
+  },
+  {
+    "prompt": "tune the hyperparameters for this search pipeline with cross-validation",
+    "expected": ["optuna-nested-cv"]
+  },
+  {
+    "prompt": "this session is running out of context, summarize and evict old turns",
+    "expected": ["context-compaction"]
+  },
+  {
+    "prompt": "audit this codebase for vulnerabilities before we deploy",
+    "expected": ["security-review"]
+  },
+  {
+    "prompt": "generate synthetic training examples for fine-tuning",
+    "expected": ["synthetic-data"]
+  },
+  {
+    "prompt": "push this feature branch and set up the merge to main",
+    "expected": ["git-workflow"]
+  }
+]
