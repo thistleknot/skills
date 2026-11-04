@@ -1,0 +1,3 @@
+interface:
+  display_name: "Windows Background Playtest"
+  short_description: "Playtest Windows apps without foreground input"
