@@ -89,7 +89,7 @@ Does not own:
 |---|---|---|---|---|
 | Factual | user and world facts across sessions | raw traces + BM25 (+ dense) index; full context while it fits | atomic facts / typed records with entity and temporal edges | multi-hop or temporal strata fail on the control AND the corpus exceeds the reader's context (R2, R5) |
 | Update | facts that change (job, address, config) | append-only timeline; each item has observed-at and valid-from; read newest, keep history | explicit arbitration (source priority, ask the user) | always test this stratum on its own; no method is reliable multi-hop (R10) |
-| Experiential | strategies and failure modes from past runs | itemized playbook bullets with helpful/harmful counters, delta-merged | retrieved distilled strategies at small k | a reliable outcome signal exists (R3, R12) |
+| Experiential | strategies and failure modes from past runs | itemized playbook bullets with helpful/harmful counters, delta-merged | retrieved distilled strategies at small k | a reliable outcome signal exists (R3, R12); when the signal is a human upvote/correct on a decision trace, the substrate is `context-graph` |
 | Procedural | skills, tool recipes | skill files retrieved by description | skill bundles | the library stays capped and retired by contribution (R12) |
 | Working | current task state | context editing / compaction + progress files that survive compaction | n/a | n/a |
 | Parametric | facts in weights (LoRA) | do not use for changing facts | n/a | stable domain knowledge only; it trails on test-time learning and fell below no-memory on code (R5) |
@@ -247,3 +247,43 @@ Do not re-test without new data.
 
 - frozen model; memory is harness state, not weights
 - text-only evidence; multimodal memory (MIRIX ScreenshotVQA) is out of scope here
+
+---
+
+## 2026-11-07 — Anthropic "components of agent memory" fold
+
+Source article: `~/.harness/docs/references/anthropic-agent-memory-components.md`
+(published 2026-11-06). This section records what the article confirmed, added, and
+where each piece now lives.
+
+**Confirmed (this harness already had it):** capture/judgment separation (events
+record without opinion, `dream.py` decides), transcript search as the foundation
+(conversation_store volleys + events), a salience gate with human review
+(candidate→approved, confidence cold-start, recursion guard).
+
+**Added (shipped same day, behind flags):**
+
+- **Verify** — `dream.py --verify [--apply]`: re-checks memories carrying
+  `source_session` against their transcript; the transcript is ground truth, the
+  memory is the prediction. Corrections land as candidates, never auto-approved.
+  Bounded at 25 memories per run. First run found 0 verifiable memories in the
+  existing corpus (predates the watermark) — the capability bites from the next
+  dream distillation onward.
+- **Promote** — `dream.py --promote`: rebuilds `MEMORY.md` as the injected top
+  layer within the article's budget (200 lines / 25 KB), preserving a hand-edited
+  `## Current goals` section. First build: 45/45 notes, 55 lines.
+- **Focus** — `dream.py --instructions FILE`: goal-tuned extraction, the
+  contract-page lesson (41/57 → 57/57 facts when instructions said what mattered).
+
+**Laws adopted** (`~/.rules/145-memory-steering.md`): salience (store what cannot be
+re-read — 413 files/1 badge vs 9 files/4 badges); steering (purpose not procedure for
+strong models; read-before-answer prompts for weak ones — fixed rules removed the
+memory gain); prediction (mark confirmed vs unconfirmed); correction (dreaming against
+transcripts, cadence on volatile data); hierarchy (injected layer stays an index);
+representation (wiki+search 61 > either alone; prune the Borges map).
+
+**Gate status:** verify/promote/instructions are mechanism, not yet evidence — the
+article's own numbers are its evidence, ours is one promote build. Effectiveness
+claims (does verify catch drift here? does promote raise recall?) require the
+no-memory/full-context/BM25 control arms this skill's own gate demands. Cadence
+tuning remains open, as the article leaves it.
